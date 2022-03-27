@@ -6,6 +6,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include "Matrix.hpp"
 #include "Gyrovector.hpp"
 
 template<class F, class G> auto compose(F f, G g) {
