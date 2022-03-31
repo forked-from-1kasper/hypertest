@@ -86,7 +86,7 @@ void display() {
 
     glColor3f(0.0f, 0.0f, 0.0f);
 
-    position = position + dt * velocity;
+    position = dt * velocity + position;
     auto origin = Möbius<double>::translate(position);
 
     drawRectangle(A, B, origin);
