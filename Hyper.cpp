@@ -9,6 +9,8 @@
 #include "Matrix.hpp"
 #include "Gyrovector.hpp"
 
+using namespace std::complex_literals;
+
 template<class F, class G> auto compose(F f, G g) {
     return [f, g](auto &&... args) {
         return f(g(std::forward<decltype(args)>(args)...));
@@ -68,18 +70,24 @@ const auto M2 = Möbius<double>::translate(j);
 const auto M3 = M1.inverse();
 const auto M4 = M2.inverse();
 
-const auto origin = Möbius<double>::translate(Gyrovector<double>(0, 0));
+const auto speed = 0.5;
 
-double globaltime;
+auto velocity = Gyrovector<double>(0, 0);
+auto position = Gyrovector<double>(0, 0);
+
+double globaltime = 0;
 void display() {
     auto dt = glfwGetTime() - globaltime; globaltime += dt;
 
-    glPushMatrix(); glRotatef(45, 0.0f, 0.0f, 1.0f);
+    glPushMatrix();
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f); glClear(GL_COLOR_BUFFER_BIT);
     glColor3f(1.0f, 1.0f, 1.0f); drawDisk(256);
 
     glColor3f(0.0f, 0.0f, 0.0f);
+
+    position = position + dt * velocity;
+    auto origin = Möbius<double>::translate(position);
 
     drawRectangle(A, B, origin);
     drawRectangle(A, B, origin * M1);
@@ -93,6 +101,12 @@ void display() {
 
     drawRectangle(A, B, origin * M3);
     drawRectangle(A, B, origin * M4);
+    drawRectangle(A, B, origin * M3 * M4);
+    drawRectangle(A, B, origin * M4 * M3);
+    drawRectangle(A, B, origin * M3 * M4 * M4);
+    drawRectangle(A, B, origin * M3 * M4 * M3);
+    drawRectangle(A, B, origin * M4 * M3 * M4);
+    drawRectangle(A, B, origin * M4 * M3 * M3);
 
     drawRectangle(A, B, origin * M1 * M2);
     drawRectangle(A, B, origin * M2 * M1);
@@ -106,11 +120,17 @@ void display() {
 
 void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    if (action != GLFW_PRESS) return;
-
-    switch (key) {
-        case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, GL_TRUE); break;
+    if (action == GLFW_PRESS) {
+        switch (key) {
+            case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, GL_TRUE); break;
+            case GLFW_KEY_W:      velocity.val = -speed * 1i; break;
+            case GLFW_KEY_S:      velocity.val = +speed * 1i; break;
+            case GLFW_KEY_D:      velocity.val = -speed; break;
+            case GLFW_KEY_A:      velocity.val = +speed; break;
+        }
     }
+
+    if (action == GLFW_RELEASE) velocity.val = 0;
 }
 
 int main() {
