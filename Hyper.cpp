@@ -11,6 +11,10 @@
 
 using namespace std::complex_literals;
 
+enum class Direction {
+    Forward, Staying, Backward
+};
+
 template<class F, class G> auto compose(F f, G g) {
     return [f, g](auto &&... args) {
         return f(g(std::forward<decltype(args)>(args)...));
@@ -72,22 +76,47 @@ const auto M4 = M2.inverse();
 
 const auto speed = 0.5;
 
+constexpr auto mouseSpeed = 0.7;
 auto velocity = Gyrovector<double>(0, 0);
 auto position = Gyrovector<double>(0, 0);
 
-double globaltime = 0;
-void display() {
-    auto dt = glfwGetTime() - globaltime; globaltime += dt;
+double horizontal = 0, vertical = 0.0;
+double xpos, ypos;
 
-    glPushMatrix();
+double globaltime = 0;
+void display(GLFWwindow* window) {
+    auto dt = glfwGetTime() - globaltime; globaltime += dt;
+    glfwGetCursorPos(window, &xpos, &ypos);
+    glfwSetCursorPos(window, 900/2, 900/2);
+
+    horizontal += mouseSpeed * dt * (900/2 - xpos);
+    vertical   += mouseSpeed * dt * (900/2 - ypos);
+
+    /*
+    auto dx = cos(vertical) * sin(horizontal);
+    auto dy = sin(vertical);
+    auto dz = cos(vertical) * cos(horizontal);
+    */
+
+    auto v = Gyrovector<double>(velocity.val * std::exp(-horizontal * 1i));
+
+    auto n₁ = Gyrovector<double>(0.0, 1.0);
+    auto P₁ = position;
+    auto P₂ = P₁ + dt * v;
+    auto n₂ = gyr(P₂, -P₁, n₁);
+    auto k = std::arg(n₁.val / n₂.val);
+
+    position = P₂;
+    horizontal += k;
+
+    auto origin = Möbius<double>::translate(position);
+
+    glPushMatrix(); glRotatef((360 / τ) * horizontal, 0.0f, 0.0f, 1.0f);
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f); glClear(GL_COLOR_BUFFER_BIT);
     glColor3f(1.0f, 1.0f, 1.0f); drawDisk(256);
 
     glColor3f(0.0f, 0.0f, 0.0f);
-
-    position = dt * velocity + position;
-    auto origin = Möbius<double>::translate(position);
 
     drawRectangle(A, B, origin);
     drawRectangle(A, B, origin * M1);
@@ -98,6 +127,10 @@ void display() {
     drawRectangle(A, B, origin * M2 * M2 * M2 * M2);
     drawRectangle(A, B, origin * M2 * M2 * M2 * M2 * M2);
     drawRectangle(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2);
+    drawRectangle(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2);
+    drawRectangle(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2);
+    drawRectangle(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2);
+    drawRectangle(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2);
 
     drawRectangle(A, B, origin * M3);
     drawRectangle(A, B, origin * M4);
@@ -146,6 +179,10 @@ int main() {
     auto window = glfwCreateWindow(900, 900, "Hypertest", nullptr, nullptr);
     if (!window) return -1;
 
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    if (glfwRawMouseMotionSupported())
+        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+
     glfwSetKeyCallback(window, keyboardCallback);
     glfwMakeContextCurrent(window);
 
@@ -157,7 +194,7 @@ int main() {
 
     while (!glfwWindowShouldClose(window))
     {
-        display();
+        display(window);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
