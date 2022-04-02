@@ -104,10 +104,10 @@ void display(GLFWwindow* window) {
     auto P₁ = position;
     auto P₂ = P₁ + dt * v;
     auto n₂ = gyr(P₂, -P₁, n₁);
-    auto k = std::arg(n₁.val / n₂.val);
+    auto Δφ = std::arg(n₁.val / n₂.val);
 
     position = P₂;
-    horizontal += k;
+    horizontal += Δφ;
 
     auto origin = Möbius<double>::translate(position);
 
