@@ -4,16 +4,16 @@ template<typename T>
 struct Gyrovector {
     std::complex<T> val;
 
-    inline double x() const { return val.real(); }
-    inline double y() const { return val.imag(); }
+    inline T x() const { return val.real(); }
+    inline T y() const { return val.imag(); }
 
-    inline double norm() const { return std::norm(val); }
-    inline double abs() const  { return std::abs(val); }
+    inline T norm() const { return std::norm(val); }
+    inline T abs() const  { return std::abs(val); }
     inline bool isZero() const { return val.real() == 0.0 && val.imag() == 0.0; }
 
-    Gyrovector(const double k) : val(std::complex(k, 0.0)) {}
-    Gyrovector(const double x, const double y) : val(std::complex(x, y)) {}
-    Gyrovector(const std::complex<double> z) : val(z) {}
+    Gyrovector(const T k) : val(std::complex(k, 0.0)) {}
+    Gyrovector(const T x, const T y) : val(std::complex(x, y)) {}
+    Gyrovector(const std::complex<T> z) : val(z) {}
 
     T operator,(const Gyrovector<T> & N) {
         return val.real() * N.val.real() + val.imag() * N.val.imag();
@@ -51,7 +51,7 @@ template<typename T> Gyrovector<T> Coadd(const Gyrovector<T> & A, const Gyrovect
 }
 
 template<typename T> std::function<Gyrovector<T>(T)> Line(const Gyrovector<T> & A, const Gyrovector<T> & B) {
-    auto N = (-A) + B; return [A, N](double t) { return A + (t * N); };
+    auto N = (-A) + B; return [A, N](T t) { return A + (t * N); };
 }
 
 template<typename T> Gyrovector<T> midpoint(const Gyrovector<T> & A, const Gyrovector<T> & B) {
