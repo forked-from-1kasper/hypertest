@@ -57,17 +57,25 @@ void drawRectangle(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> o
     drawCurve(compose(Transform(origin), Line(-i, -j)), 64, 0, 1);
 }
 
-double squareHalfDiag(double α) {
-    auto A = cos(α); return sqrt(2 * A) / (sqrt(1 + A) + sqrt(1 - A));
+double squareHalfDiag(double θ) {
+    return sqrt(1 / tan(θ / 2 + τ / 8));
+}
+
+double squareHalfMiddleLine(double θ) {
+    auto A = cos(θ / 2); constexpr auto B = 1.0 / sqrt(2);
+    return sqrt((A - B) / (A + B));
 }
 
 const auto k = τ / 5;
-const auto L = squareHalfDiag(k);
-const auto A = Gyrovector<double>(L, 0);
-const auto B = Gyrovector<double>(0, L);
 
-const auto i = 2.0 * midpoint(+A, +B);
-const auto j = 2.0 * midpoint(-A, +B);
+const auto L = squareHalfMiddleLine(k);
+const auto D = squareHalfDiag(k) / sqrt(2);
+
+const auto i = 2.0 * Gyrovector<double>(L, 0);
+const auto j = 2.0 * Gyrovector<double>(0, L);
+
+const auto A = Gyrovector<double>(+D, +D);
+const auto B = Gyrovector<double>(+D, -D);
 
 const auto M1 = Möbius<double>::translate(i);
 const auto M2 = Möbius<double>::translate(j);
@@ -80,7 +88,7 @@ constexpr auto mouseSpeed = 0.7;
 auto velocity = Gyrovector<double>(0, 0);
 auto position = Gyrovector<double>(0, 0);
 
-double horizontal = 0, vertical = 0.0;
+double horizontal = 0.0, vertical = 0.0;
 double xpos, ypos;
 
 double globaltime = 0;
@@ -184,6 +192,8 @@ int main() {
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 
     glfwSetKeyCallback(window, keyboardCallback);
+    glfwSetCursorPos(window, 900/2, 900/2);
+
     glfwMakeContextCurrent(window);
 
     glewExperimental = GL_TRUE;
