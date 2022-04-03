@@ -108,14 +108,11 @@ void display(GLFWwindow* window) {
 
     auto v = Gyrovector<double>(velocity.val * std::exp(-horizontal * 1i));
 
-    auto n₁ = Gyrovector<double>(0.0, 1.0);
     auto P₁ = position;
     auto P₂ = P₁ + dt * v;
-    auto n₂ = gyr(P₂, -P₁, n₁);
-    auto Δφ = std::arg(n₁.val / n₂.val);
+    auto Δφ = holonomy(P₁, P₂);
 
-    position = P₂;
-    horizontal += Δφ;
+    position = P₂; horizontal += Δφ;
 
     auto origin = Möbius<double>::translate(position);
 
