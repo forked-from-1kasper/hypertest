@@ -128,6 +128,7 @@ void display(GLFWwindow* window) {
     drawRectangle(A, B, origin * M1 * M1);
     drawRectangle(A, B, origin * M2);
     drawRectangle(A, B, origin * M2 * M2);
+
     drawRectangle(A, B, origin * M2 * M2 * M2);
     drawRectangle(A, B, origin * M2 * M2 * M2 * M2);
     drawRectangle(A, B, origin * M2 * M2 * M2 * M2 * M2);
@@ -139,15 +140,21 @@ void display(GLFWwindow* window) {
 
     drawRectangle(A, B, origin * M3);
     drawRectangle(A, B, origin * M4);
-    drawRectangle(A, B, origin * M3 * M4);
+
+    drawRectangle(A, B, origin * M4 * M1);
     drawRectangle(A, B, origin * M4 * M3);
+    drawRectangle(A, B, origin * M3 * M2);
+    drawRectangle(A, B, origin * M3 * M4);
+
     drawRectangle(A, B, origin * M3 * M4 * M4);
     drawRectangle(A, B, origin * M3 * M4 * M3);
     drawRectangle(A, B, origin * M4 * M3 * M4);
     drawRectangle(A, B, origin * M4 * M3 * M3);
 
     drawRectangle(A, B, origin * M1 * M2);
+    drawRectangle(A, B, origin * M1 * M4);
     drawRectangle(A, B, origin * M2 * M1);
+    drawRectangle(A, B, origin * M2 * M3);
 
     drawRectangle(A, B, origin * M1 * M1 * M2);
     drawRectangle(A, B, origin * M1 * M2 * M1);
