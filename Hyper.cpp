@@ -34,7 +34,7 @@ void drawDisk(size_t accuracy) {
     glBegin(GL_POLYGON);
     for (size_t idx = 0; idx <= accuracy; idx++) {
         auto φ = float(idx) * step;
-        glVertex3d(cos(φ), sin(φ), 0);
+        glVertex3d(cos(φ), 0, sin(φ));
     }
     glEnd();
 }
@@ -45,7 +45,7 @@ void drawCurve(std::function<Gyrovector<double>(double)> g, size_t steps, double
     glBegin(GL_LINE_STRIP);
     for (size_t idx = 0; idx <= steps; idx++) {
         auto N = g(t1 + idx * step);
-        glVertex3d(N.x(), N.y(), 0);
+        glVertex3d(N.x(), 0, N.y());
     }
     glEnd();
 }
@@ -65,6 +65,14 @@ double squareHalfMiddleLine(double θ) {
     auto A = cos(θ / 2); constexpr auto B = 1.0 / sqrt(2);
     return sqrt((A - B) / (A + B));
 }
+
+constexpr auto wsize = 900;
+
+constexpr auto fov  = 80;
+constexpr auto near = 0.01;
+constexpr auto far  = 50.0;
+
+constexpr double ground = 0.3;
 
 const auto k = τ / 5;
 
@@ -93,18 +101,9 @@ double xpos, ypos;
 
 double globaltime = 0;
 void display(GLFWwindow * window) {
+    constexpr auto ε = 0.001;
+
     auto dt = glfwGetTime() - globaltime; globaltime += dt;
-    glfwGetCursorPos(window, &xpos, &ypos);
-    glfwSetCursorPos(window, 900/2, 900/2);
-
-    horizontal += mouseSpeed * dt * (900/2 - xpos);
-    vertical   += mouseSpeed * dt * (900/2 - ypos);
-
-    /*
-    auto dx = cos(vertical) * sin(horizontal);
-    auto dy = sin(vertical);
-    auto dz = cos(vertical) * cos(horizontal);
-    */
 
     auto v = Gyrovector<double>(velocity.val * std::exp(-horizontal * 1i));
 
@@ -116,7 +115,27 @@ void display(GLFWwindow * window) {
 
     auto origin = Möbius<double>::translate(position);
 
-    glPushMatrix(); glRotatef((360 / τ) * horizontal, 0.0f, 0.0f, 1.0f);
+    glfwGetCursorPos(window, &xpos, &ypos);
+    glfwSetCursorPos(window, wsize/2, wsize/2);
+
+    horizontal += mouseSpeed * dt * (wsize/2 - xpos);
+    vertical   += mouseSpeed * dt * (wsize/2 - ypos);
+
+    horizontal = std::fmod(horizontal, τ);
+    vertical = std::max(std::min(vertical, τ/4 - ε), -τ/4 + ε);
+
+    auto dx = cos(vertical) * sin(horizontal);
+    auto dy = sin(vertical);
+    auto dz = cos(vertical) * cos(horizontal);
+
+    auto direction = vector(dx, dy, dz);
+    auto right     = vector(sin(horizontal - τ/4), 0.0, cos(horizontal - τ/4));
+    auto up        = cross(right, direction);
+
+    glPushMatrix();
+
+    gluLookAt(0, 0, 0, dx, dy, dz, up[0][0], up[1][0], up[2][0]);
+    glTranslatef(0, -ground, 0);
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f); glClear(GL_COLOR_BUFFER_BIT);
     glColor3f(1.0f, 1.0f, 1.0f); drawDisk(256);
@@ -170,8 +189,8 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
             case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, GL_TRUE); break;
             case GLFW_KEY_W:      velocity.val = -speed * 1i; break;
             case GLFW_KEY_S:      velocity.val = +speed * 1i; break;
-            case GLFW_KEY_D:      velocity.val = -speed; break;
-            case GLFW_KEY_A:      velocity.val = +speed; break;
+            case GLFW_KEY_A:      velocity.val = -speed; break;
+            case GLFW_KEY_D:      velocity.val = +speed; break;
         }
     }
 
@@ -188,7 +207,7 @@ int main() {
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
     glfwWindowHint(GLFW_SAMPLES, 16);
 
-    auto window = glfwCreateWindow(900, 900, "Hypertest", nullptr, nullptr);
+    auto window = glfwCreateWindow(wsize, wsize, "Hypertest", nullptr, nullptr);
     if (!window) return -1;
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -196,12 +215,16 @@ int main() {
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 
     glfwSetKeyCallback(window, keyboardCallback);
-    glfwSetCursorPos(window, 900/2, 900/2);
+    glfwSetCursorPos(window, wsize/2, wsize/2);
 
     glfwMakeContextCurrent(window);
 
     glewExperimental = GL_TRUE;
     glewInit();
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(fov, 1, near, far);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();

@@ -56,3 +56,31 @@ auto operator*(const T1 k, const Matrix<T2, N, M> A) {
 
     return B;
 }
+
+template<typename T, size_t N, size_t M>
+inline auto operator+(const Matrix<T, N, M> & A) { return A; }
+
+template<typename T, size_t N, size_t M>
+auto operator-(const Matrix<T, N, M> & A) {
+    Matrix<T, N, N> B = {};
+
+    for (size_t i = 0; i < N; i++)
+        for (size_t j = 0; j < M; j++)
+            B[i][j] = -A[i][j];
+
+    return B;
+}
+
+template<typename T> using Vector = Matrix<T, 3, 1>;
+
+template<typename T> inline Vector<T> vector(const T & x, const T & y, const T & z) {
+    return {{{x}, {y}, {z}}};
+}
+
+template<typename T> auto cross(const Vector<T> & A, const Vector<T> & B) {
+    return vector(
+        A[1][0] * B[2][0] - A[2][0] * B[1][0],
+        A[2][0] * B[0][0] - A[0][0] * B[2][0],
+        A[0][0] * B[1][0] - A[1][0] * B[0][0]
+    );
+}
