@@ -92,7 +92,7 @@ double horizontal = 0.0, vertical = 0.0;
 double xpos, ypos;
 
 double globaltime = 0;
-void display(GLFWwindow* window) {
+void display(GLFWwindow * window) {
     auto dt = glfwGetTime() - globaltime; globaltime += dt;
     glfwGetCursorPos(window, &xpos, &ypos);
     glfwSetCursorPos(window, 900/2, 900/2);
@@ -163,7 +163,7 @@ void display(GLFWwindow* window) {
     glPopMatrix();
 }
 
-void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, int mods)
 {
     if (action == GLFW_PRESS) {
         switch (key) {
