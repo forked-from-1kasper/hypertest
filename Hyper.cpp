@@ -4,6 +4,7 @@
 #include <functional>
 
 #include <GL/glew.h>
+#include <SOIL/SOIL.h>
 #include <GLFW/glfw3.h>
 
 #include "Matrix.hpp"
@@ -15,6 +16,10 @@ enum class Direction {
     Forward, Staying, Backward
 };
 
+enum class Side {
+    Top, Down, Left, Right
+};
+
 template<class F, class G> auto compose(F f, G g) {
     return [f, g](auto &&... args) {
         return f(g(std::forward<decltype(args)>(args)...));
@@ -22,6 +27,8 @@ template<class F, class G> auto compose(F f, G g) {
 }
 
 constexpr double τ = 2 * 3.141592653589793238462643383279502884197169399375105820974944;
+
+auto O = Gyrovector<double>(0, 0);
 
 void error_callback(int error, const char* description)
 {
@@ -39,22 +46,95 @@ void drawDisk(size_t accuracy) {
     glEnd();
 }
 
-void drawCurve(std::function<Gyrovector<double>(double)> g, size_t steps, double t1, double t2) {
+void drawVertical(std::function<Gyrovector<double>(double)> g, size_t steps, double t1, double t2, double height) {
     auto step = (t2 - t1) / steps;
+    auto P₁ = g(t1);
 
-    glBegin(GL_LINE_STRIP);
-    for (size_t idx = 0; idx <= steps; idx++) {
-        auto N = g(t1 + idx * step);
-        glVertex3d(N.x(), 0, N.y());
+    glBegin(GL_QUADS);
+
+    for (size_t idx = 1; idx <= steps; idx++) {
+        auto q₁ = (idx - 1) / double(steps), q₂ = idx / double(steps);
+        auto P₂ = g(t1 + idx * step);
+
+        auto v₁ = vector(0.0, -height, 0.0);
+        auto v₂ = vector(P₂.x() - P₁.x(), 0.0, P₂.y() - P₁.y());
+        auto n  = cross(v₁, v₂);
+
+        glNormal3d(n[0][0], n[1][0], n[2][0]);
+
+        glTexCoord2d(q₁, 0); glVertex3d(P₁.x(), 0, P₁.y());
+        glTexCoord2d(q₁, 1); glVertex3d(P₁.x(), height, P₁.y());
+        glTexCoord2d(q₂, 1); glVertex3d(P₂.x(), height, P₂.y());
+        glTexCoord2d(q₂, 0); glVertex3d(P₂.x(), 0, P₂.y());
+
+        P₁ = P₂;
     }
+
     glEnd();
 }
 
-void drawRectangle(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> origin) {
-    drawCurve(compose(Transform(origin), Line(+i, +j)), 64, 0, 1);
-    drawCurve(compose(Transform(origin), Line(-i, +j)), 64, 0, 1);
-    drawCurve(compose(Transform(origin), Line(+i, -j)), 64, 0, 1);
-    drawCurve(compose(Transform(origin), Line(-i, -j)), 64, 0, 1);
+void texCoordSide(Side side, double t) {
+    switch (side) {
+        case Side::Top:   glTexCoord2d(t, 1);     break;
+        case Side::Down:  glTexCoord2d(1 - t, 0); break;
+        case Side::Left:  glTexCoord2d(0, t);     break;
+        case Side::Right: glTexCoord2d(1, 1 - t); break;
+    }
+}
+
+void glVertexGyro(const Gyrovector<double> & vect, double height) {
+    glVertex3d(vect.x(), height, vect.y());
+}
+
+void drawHorizontal(std::function<Gyrovector<double>(double)> g, size_t steps, double t1, double t2, Vector<double> origin, Side side, double dir) {
+    auto step = (t2 - t1) / steps;
+    auto P₁ = g(t1);
+
+    glBegin(GL_TRIANGLES);
+    glNormal3d(0, dir, 0);
+
+    for (size_t idx = 1; idx <= steps; idx++) {
+        auto q₁ = (idx - 1) / double(steps), q₂ = idx / double(steps);
+        auto P₂ = g(t1 + idx * step);
+
+        texCoordSide(side, dir > 0 ? q₁ : q₂);
+        glVertexGyro(dir > 0 ? P₁ : P₂, origin[1][0]);
+
+        glTexCoord2d(0.5, 0.5);
+        glVertex3d(origin[0][0], origin[1][0], origin[2][0]);
+
+        texCoordSide(side, dir > 0 ? q₂ : q₁);
+        glVertexGyro(dir > 0 ? P₂ : P₁, origin[1][0]);
+
+        P₁ = P₂;
+    }
+
+    glEnd();
+
+}
+
+constexpr auto accuracy = 16;
+
+void drawSide(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> origin, double height) {
+    drawVertical(compose(Transform(origin), Line(+j, +i)), accuracy, 0, 1, height);
+    drawVertical(compose(Transform(origin), Line(+i, -j)), accuracy, 0, 1, height);
+    drawVertical(compose(Transform(origin), Line(-j, -i)), accuracy, 0, 1, height);
+    drawVertical(compose(Transform(origin), Line(-i, +j)), accuracy, 0, 1, height);
+}
+
+void drawCap(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> origin, double height, double dir) {
+    auto g = origin.apply(O); auto v = vector(g.x(), height, g.y());
+
+    drawHorizontal(compose(Transform(origin), Line(+j, +i)), accuracy, 0, 1, v, Side::Top, dir);
+    drawHorizontal(compose(Transform(origin), Line(+i, -j)), accuracy, 0, 1, v, Side::Right, dir);
+    drawHorizontal(compose(Transform(origin), Line(-j, -i)), accuracy, 0, 1, v, Side::Down, dir);
+    drawHorizontal(compose(Transform(origin), Line(-i, +j)), accuracy, 0, 1, v, Side::Left, dir);
+}
+
+void drawCube(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> origin, double height) {
+    drawSide(i, j, origin, height);
+    drawCap(i, j, origin, height, 1);
+    drawCap(i, j, origin, 0, -1);
 }
 
 double squareHalfDiag(double θ) {
@@ -72,12 +152,17 @@ constexpr auto fov  = 80;
 constexpr auto near = 0.01;
 constexpr auto far  = 50.0;
 
-constexpr double ground = 0.3;
+const GLfloat lightDiffuse[] = {1.0, 1.0, 1.0, 1.0};
+const GLfloat matDiffuse[] = {1.0, 1.0, 1.0, 1.0};
+
+const GLfloat lightPosition[] = {0.0f, 5.0f, 5.0f, 1.0f};
 
 const auto k = τ / 5;
 
 const auto L = squareHalfMiddleLine(k);
 const auto D = squareHalfDiag(k) / sqrt(2);
+
+const double ground = 3 * L;
 
 const auto i = 2.0 * Gyrovector<double>(L, 0);
 const auto j = 2.0 * Gyrovector<double>(0, L);
@@ -132,54 +217,95 @@ void display(GLFWwindow * window) {
     auto right     = vector(sin(horizontal - τ/4), 0.0, cos(horizontal - τ/4));
     auto up        = cross(right, direction);
 
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+
     glPushMatrix();
 
     gluLookAt(0, 0, 0, dx, dy, dz, up[0][0], up[1][0], up[2][0]);
-    glTranslatef(0, -ground, 0);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); glClear(GL_COLOR_BUFFER_BIT);
-    glColor3f(1.0f, 1.0f, 1.0f); drawDisk(256);
+    glTranslatef(0, -ground, 0);
 
     glColor3f(0.0f, 0.0f, 0.0f);
 
-    drawRectangle(A, B, origin);
-    drawRectangle(A, B, origin * M1);
-    drawRectangle(A, B, origin * M1 * M1);
-    drawRectangle(A, B, origin * M2);
-    drawRectangle(A, B, origin * M2 * M2);
+    drawCube(A, B, origin, 2 * L);
 
-    drawRectangle(A, B, origin * M2 * M2 * M2);
-    drawRectangle(A, B, origin * M2 * M2 * M2 * M2);
-    drawRectangle(A, B, origin * M2 * M2 * M2 * M2 * M2);
-    drawRectangle(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2);
-    drawRectangle(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2);
-    drawRectangle(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2);
-    drawRectangle(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2);
-    drawRectangle(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2);
+    drawCube(A, B, origin * M1, 2 * L);
+    drawCube(A, B, origin * M1 * M1, 2 * L);
+    drawCube(A, B, origin * M2, 2 * L);
+    drawCube(A, B, origin * M2 * M2, 2 * L);
 
-    drawRectangle(A, B, origin * M3);
-    drawRectangle(A, B, origin * M4);
+    drawCube(A, B, origin * M2 * M2 * M2, 2 * L);
+    drawCube(A, B, origin * M2 * M2 * M2 * M2, 2 * L);
+    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2, 2 * L);
+    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2, 2 * L);
+    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2, 2 * L);
+    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2, 2 * L);
+    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2, 2 * L);
+    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2, 2 * L);
 
-    drawRectangle(A, B, origin * M4 * M1);
-    drawRectangle(A, B, origin * M4 * M3);
-    drawRectangle(A, B, origin * M3 * M2);
-    drawRectangle(A, B, origin * M3 * M4);
+    drawCube(A, B, origin * M3, 2 * L);
+    drawCube(A, B, origin * M4, 2 * L);
 
-    drawRectangle(A, B, origin * M3 * M4 * M4);
-    drawRectangle(A, B, origin * M3 * M4 * M3);
-    drawRectangle(A, B, origin * M4 * M3 * M4);
-    drawRectangle(A, B, origin * M4 * M3 * M3);
+    drawCube(A, B, origin * M4 * M1, 2 * L);
+    drawCube(A, B, origin * M4 * M3, 2 * L);
+    drawCube(A, B, origin * M3 * M2, 2 * L);
+    drawCube(A, B, origin * M3 * M4, 2 * L);
 
-    drawRectangle(A, B, origin * M1 * M2);
-    drawRectangle(A, B, origin * M1 * M4);
-    drawRectangle(A, B, origin * M2 * M1);
-    drawRectangle(A, B, origin * M2 * M3);
+    drawCube(A, B, origin * M3 * M4 * M4, 2 * L);
+    drawCube(A, B, origin * M3 * M4 * M3, 2 * L);
+    drawCube(A, B, origin * M4 * M3 * M4, 2 * L);
+    drawCube(A, B, origin * M4 * M3 * M3, 2 * L);
 
-    drawRectangle(A, B, origin * M1 * M1 * M2);
-    drawRectangle(A, B, origin * M1 * M2 * M1);
-    drawRectangle(A, B, origin * M1 * M1 * M2 * M1);
+    drawCube(A, B, origin * M1 * M2, 2 * L);
+    drawCube(A, B, origin * M1 * M4, 2 * L);
+    drawCube(A, B, origin * M2 * M1, 2 * L);
+    drawCube(A, B, origin * M2 * M3, 2 * L);
+
+    drawCube(A, B, origin * M1 * M1 * M2, 2 * L);
+    drawCube(A, B, origin * M1 * M2 * M1, 2 * L);
+    drawCube(A, B, origin * M1 * M1 * M2 * M1, 2 * L);
+
+    glTranslatef(0, 4 * L, 0);
+    drawCube(A, B, origin, 2 * L);
 
     glPopMatrix();
+}
+
+int texWidth, texHeight;
+GLuint texture;
+
+void setupLighting() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_NORMALIZE);
+    glEnable(GL_LIGHT0);
+
+    glShadeModel(GL_SMOOTH);
+
+    glEnable(GL_DEPTH_TEST);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+}
+
+void setupTexture() {
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    auto image = SOIL_load_image("texture.jpg", &texWidth, &texHeight, 0, SOIL_LOAD_RGB);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+    SOIL_free_image_data(image);
+
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_CULL_FACE);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+}
+
+void setupMaterial() {
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, matDiffuse);
 }
 
 void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, int mods)
@@ -221,6 +347,10 @@ int main() {
 
     glewExperimental = GL_TRUE;
     glewInit();
+
+    setupTexture();
+    setupLighting();
+    setupMaterial();
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
