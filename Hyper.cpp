@@ -28,8 +28,6 @@ template<class F, class G> auto compose(F f, G g) {
 
 constexpr double τ = 2 * 3.141592653589793238462643383279502884197169399375105820974944;
 
-auto O = Gyrovector<double>(0, 0);
-
 void error_callback(int error, const char* description)
 {
     fprintf(stderr, "Error: %s\n", description);
@@ -115,26 +113,26 @@ void drawHorizontal(std::function<Gyrovector<double>(double)> g, size_t steps, d
 
 constexpr auto accuracy = 16;
 
-void drawSide(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> origin, double height) {
-    drawVertical(compose(Transform(origin), Line(+j, +i)), accuracy, 0, 1, height);
-    drawVertical(compose(Transform(origin), Line(+i, -j)), accuracy, 0, 1, height);
-    drawVertical(compose(Transform(origin), Line(-j, -i)), accuracy, 0, 1, height);
-    drawVertical(compose(Transform(origin), Line(-i, +j)), accuracy, 0, 1, height);
+void drawSide(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> M, double height) {
+    drawVertical(compose(Transform(M), Line(+j, +i)), accuracy, 0, 1, height);
+    drawVertical(compose(Transform(M), Line(+i, -j)), accuracy, 0, 1, height);
+    drawVertical(compose(Transform(M), Line(-j, -i)), accuracy, 0, 1, height);
+    drawVertical(compose(Transform(M), Line(-i, +j)), accuracy, 0, 1, height);
 }
 
-void drawCap(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> origin, double height, double dir) {
-    auto g = origin.apply(O); auto v = vector(g.x(), height, g.y());
+void drawCap(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> M, double height, double dir) {
+    auto v = M.origin().elevate(height);
 
-    drawHorizontal(compose(Transform(origin), Line(+j, +i)), accuracy, 0, 1, v, Side::Top, dir);
-    drawHorizontal(compose(Transform(origin), Line(+i, -j)), accuracy, 0, 1, v, Side::Right, dir);
-    drawHorizontal(compose(Transform(origin), Line(-j, -i)), accuracy, 0, 1, v, Side::Down, dir);
-    drawHorizontal(compose(Transform(origin), Line(-i, +j)), accuracy, 0, 1, v, Side::Left, dir);
+    drawHorizontal(compose(Transform(M), Line(+j, +i)), accuracy, 0, 1, v, Side::Top, dir);
+    drawHorizontal(compose(Transform(M), Line(+i, -j)), accuracy, 0, 1, v, Side::Right, dir);
+    drawHorizontal(compose(Transform(M), Line(-j, -i)), accuracy, 0, 1, v, Side::Down, dir);
+    drawHorizontal(compose(Transform(M), Line(-i, +j)), accuracy, 0, 1, v, Side::Left, dir);
 }
 
-void drawCube(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> origin, double height) {
-    drawSide(i, j, origin, height);
-    drawCap(i, j, origin, height, 1);
-    drawCap(i, j, origin, 0, -1);
+void drawCube(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> M, double height) {
+    drawSide(i, j, M, height);
+    drawCap(i, j, M, height, 1);
+    drawCap(i, j, M, 0, -1);
 }
 
 double squareHalfDiag(double θ) {

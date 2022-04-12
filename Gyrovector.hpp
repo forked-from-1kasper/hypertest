@@ -1,3 +1,5 @@
+#include "Matrix.hpp"
+
 #pragma once
 
 template<typename T>
@@ -18,6 +20,8 @@ struct Gyrovector {
     T operator,(const Gyrovector<T> & N) {
         return val.real() * N.val.real() + val.imag() * N.val.imag();
     }
+
+    Vector<T> elevate(const T & z) { return vector(x(), z, y()); }
 
     inline auto add(const Gyrovector<T> & N) const { return Gyrovector<T>(val + N.val); }
     inline auto conj() const { return Gyrovector<T>(std::conj(val)); }
@@ -84,8 +88,13 @@ struct Möbius {
     inline Möbius<T> div(std::complex<T> k) const { return {a / k, b / k, c / k, d / k}; }
     inline Möbius<T> normalize() const { return div(det()); }
 
-    Gyrovector<T> apply(Gyrovector<T> & w) const {
+    Gyrovector<T> apply(const Gyrovector<T> & w) const {
         return (a * w.val + b) / (c * w.val + d);
+    }
+
+    inline Gyrovector<T> origin() const {
+        const auto O = Gyrovector<T>(0, 0);
+        return apply(O);
     }
 
     inline Möbius<T> inverse() const { return Möbius<T>(d, -b, -c, a).normalize(); }
