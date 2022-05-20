@@ -33,15 +33,39 @@ void error_callback(int error, const char* description)
     fprintf(stderr, "Error: %s\n", description);
 }
 
-void drawDisk(size_t accuracy) {
-    auto step = τ / accuracy;
+enum class Model {
+    Poincaré, Klein, Gans
+};
 
-    glBegin(GL_POLYGON);
-    for (size_t idx = 0; idx <= accuracy; idx++) {
-        auto φ = float(idx) * step;
-        glVertex3d(cos(φ), 0, sin(φ));
+constexpr auto model = Model::Gans;
+
+Vector2<double> project(double y₁, double y₂) {
+    double x₁, x₂;
+
+    switch (model) {
+        case Model::Poincaré: x₁ = y₁; x₂ = y₂; break;
+
+        case Model::Klein: {
+            auto σ = 1 + y₁ * y₁ + y₂ * y₂;
+            x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ; break;
+        };
+
+        case Model::Gans: {
+            auto σ = 1 - y₁ * y₁ - y₂ * y₂;
+            x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ; break;
+        }
     }
-    glEnd();
+
+    return vector2(x₁, x₂);
+}
+
+void glVertexH(double y₁, double y₂, double t) {
+    auto v = project(y₁, y₂);
+    glVertex3d(v[0][0], t, v[1][0]);
+}
+
+inline void glVertexGyro(const Gyrovector<double> & vect, double height) {
+    glVertexH(vect.x(), vect.y(), height);
 }
 
 void drawVertical(std::function<Gyrovector<double>(double)> g, size_t steps, double t1, double t2, double height) {
@@ -60,10 +84,10 @@ void drawVertical(std::function<Gyrovector<double>(double)> g, size_t steps, dou
 
         glNormal3d(n[0][0], n[1][0], n[2][0]);
 
-        glTexCoord2d(q₁, 0); glVertex3d(P₁.x(), 0, P₁.y());
-        glTexCoord2d(q₁, 1); glVertex3d(P₁.x(), height, P₁.y());
-        glTexCoord2d(q₂, 1); glVertex3d(P₂.x(), height, P₂.y());
-        glTexCoord2d(q₂, 0); glVertex3d(P₂.x(), 0, P₂.y());
+        glTexCoord2d(q₁, 0); glVertexGyro(P₁, 0);
+        glTexCoord2d(q₁, 1); glVertexGyro(P₁, height);
+        glTexCoord2d(q₂, 1); glVertexGyro(P₂, height);
+        glTexCoord2d(q₂, 0); glVertexGyro(P₂, 0);
 
         P₁ = P₂;
     }
@@ -78,10 +102,6 @@ void texCoordSide(Side side, double t) {
         case Side::Left:  glTexCoord2d(0, t);     break;
         case Side::Right: glTexCoord2d(1, 1 - t); break;
     }
-}
-
-void glVertexGyro(const Gyrovector<double> & vect, double height) {
-    glVertex3d(vect.x(), height, vect.y());
 }
 
 void drawHorizontal(std::function<Gyrovector<double>(double)> g, size_t steps, double t1, double t2, Vector<double> origin, Side side, double dir) {
@@ -99,7 +119,7 @@ void drawHorizontal(std::function<Gyrovector<double>(double)> g, size_t steps, d
         glVertexGyro(dir > 0 ? P₁ : P₂, origin[1][0]);
 
         glTexCoord2d(0.5, 0.5);
-        glVertex3d(origin[0][0], origin[1][0], origin[2][0]);
+        glVertexH(origin[0][0], origin[2][0], origin[1][0]);
 
         texCoordSide(side, dir > 0 ? q₂ : q₁);
         glVertexGyro(dir > 0 ? P₂ : P₁, origin[1][0]);
@@ -148,19 +168,20 @@ constexpr auto wsize = 900;
 
 constexpr auto fov  = 80;
 constexpr auto near = 0.01;
-constexpr auto far  = 50.0;
+constexpr auto far  = 150.0;
 
 const GLfloat lightDiffuse[] = {1.0, 1.0, 1.0, 1.0};
 const GLfloat matDiffuse[] = {1.0, 1.0, 1.0, 1.0};
 
-const GLfloat lightPosition[] = {0.0f, 5.0f, 5.0f, 1.0f};
+const GLfloat lightPosition[] = {0.0f, 32.0f, 0.0f, 0.0f};
 
 const auto k = τ / 5;
 
 const auto L = squareHalfMiddleLine(k);
 const auto D = squareHalfDiag(k) / sqrt(2);
 
-const double ground = 3 * L;
+const double H      = 4 * L;
+const double ground = 12 * L;
 
 const auto i = 2.0 * Gyrovector<double>(L, 0);
 const auto j = 2.0 * Gyrovector<double>(0, L);
@@ -227,46 +248,49 @@ void display(GLFWwindow * window) {
 
     glColor3f(0.0f, 0.0f, 0.0f);
 
-    drawCube(A, B, origin, 2 * L);
+    drawCube(A, B, origin, H);
 
-    drawCube(A, B, origin * M1, 2 * L);
-    drawCube(A, B, origin * M1 * M1, 2 * L);
-    drawCube(A, B, origin * M2, 2 * L);
-    drawCube(A, B, origin * M2 * M2, 2 * L);
+    drawCube(A, B, origin * M1, H);
+    drawCube(A, B, origin * M1 * M1, H);
+    drawCube(A, B, origin * M2, H);
+    drawCube(A, B, origin * M2 * M2, H);
 
-    drawCube(A, B, origin * M2 * M2 * M2, 2 * L);
-    drawCube(A, B, origin * M2 * M2 * M2 * M2, 2 * L);
-    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2, 2 * L);
-    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2, 2 * L);
-    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2, 2 * L);
-    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2, 2 * L);
-    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2, 2 * L);
-    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2, 2 * L);
+    drawCube(A, B, origin * M2 * M2 * M2, H);
+    drawCube(A, B, origin * M2 * M2 * M2 * M2, H);
+    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2, H);
+    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2, H);
+    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2, H);
+    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2, H);
+    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2, H);
+    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2, H);
 
-    drawCube(A, B, origin * M3, 2 * L);
-    drawCube(A, B, origin * M4, 2 * L);
+    drawCube(A, B, origin * M3, H);
+    drawCube(A, B, origin * M4, H);
 
-    drawCube(A, B, origin * M4 * M1, 2 * L);
-    drawCube(A, B, origin * M4 * M3, 2 * L);
-    drawCube(A, B, origin * M3 * M2, 2 * L);
-    drawCube(A, B, origin * M3 * M4, 2 * L);
+    drawCube(A, B, origin * M4 * M1, H);
+    drawCube(A, B, origin * M4 * M3, H);
+    drawCube(A, B, origin * M3 * M2, H);
+    drawCube(A, B, origin * M3 * M4, H);
 
-    drawCube(A, B, origin * M3 * M4 * M4, 2 * L);
-    drawCube(A, B, origin * M3 * M4 * M3, 2 * L);
-    drawCube(A, B, origin * M4 * M3 * M4, 2 * L);
-    drawCube(A, B, origin * M4 * M3 * M3, 2 * L);
+    drawCube(A, B, origin * M3 * M4 * M4, H);
+    drawCube(A, B, origin * M3 * M4 * M3, H);
+    drawCube(A, B, origin * M4 * M3 * M4, H);
+    drawCube(A, B, origin * M4 * M3 * M3, H);
 
-    drawCube(A, B, origin * M1 * M2, 2 * L);
-    drawCube(A, B, origin * M1 * M4, 2 * L);
-    drawCube(A, B, origin * M2 * M1, 2 * L);
-    drawCube(A, B, origin * M2 * M3, 2 * L);
+    drawCube(A, B, origin * M1 * M2, H);
+    drawCube(A, B, origin * M1 * M4, H);
+    drawCube(A, B, origin * M2 * M1, H);
+    drawCube(A, B, origin * M2 * M3, H);
 
-    drawCube(A, B, origin * M1 * M1 * M2, 2 * L);
-    drawCube(A, B, origin * M1 * M2 * M1, 2 * L);
-    drawCube(A, B, origin * M1 * M1 * M2 * M1, 2 * L);
+    drawCube(A, B, origin * M1 * M1 * M2, H);
+    drawCube(A, B, origin * M1 * M2 * M1, H);
+    drawCube(A, B, origin * M1 * M1 * M2 * M1, H);
 
     glTranslatef(0, 4 * L, 0);
-    drawCube(A, B, origin, 2 * L);
+    drawCube(A, B, origin, H);
+
+    glTranslatef(0, 4 * L, 0);
+    drawCube(A, B, origin, H);
 
     glPopMatrix();
 }

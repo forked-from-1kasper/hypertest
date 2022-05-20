@@ -72,10 +72,10 @@ auto operator-(const Matrix<T, N, M> & A) {
 }
 
 template<typename T> using Vector = Matrix<T, 3, 1>;
+template<typename T> inline Vector<T> vector(const T & x, const T & y, const T & z) { return {{{x}, {y}, {z}}}; }
 
-template<typename T> inline Vector<T> vector(const T & x, const T & y, const T & z) {
-    return {{{x}, {y}, {z}}};
-}
+template<typename T> using Vector2 = Matrix<T, 2, 1>;
+template<typename T> inline Vector2<T> vector2(const T & x, const T & y) { return {{{x}, {y}}}; }
 
 template<typename T> auto cross(const Vector<T> & A, const Vector<T> & B) {
     return vector(
