@@ -15,14 +15,14 @@ struct Gyrovector {
     inline T y() const { return val.imag(); }
 
     constexpr inline T norm() const { return std::norm(val); }
-    constexpr inline T abs() const  { return std::abs(val); }
+    constexpr inline T abs() const { return std::abs(val); }
     constexpr inline bool isZero() const { return val.real() == 0.0 && val.imag() == 0.0; }
 
     constexpr Gyrovector(const T k) : val(std::complex(k, 0.0)) {}
     constexpr Gyrovector(const T x, const T y) : val(std::complex(x, y)) {}
     constexpr Gyrovector(const std::complex<T> z) : val(z) {}
 
-    constexpr T operator,(const Gyrovector<T> & N) { return val.real() * N.val.real() + val.imag() * N.val.imag(); }
+    constexpr T operator,(const Gyrovector<T> & N) const { return val.real() * N.val.real() + val.imag() * N.val.imag(); }
 
     constexpr inline auto add(const Gyrovector<T> & N) const { return Gyrovector<T>(val + N.val); }
     constexpr inline auto conj() const { return Gyrovector<T>(std::conj(val)); }
@@ -34,7 +34,7 @@ struct Gyrovector {
     constexpr inline auto operator-() const { return Gyrovector<T>(-val); }
     constexpr inline auto operator+() const { return *this; }
 
-    constexpr Vector3<T> elevate(const T & z) { return vector(x(), z, y()); }
+    constexpr Vector3<T> elevate(const T & z) const { return vector(x(), z, y()); }
 };
 
 template<typename T> constexpr auto operator+(const Gyrovector<T> & A, const Gyrovector<T> & B)
@@ -77,6 +77,12 @@ template<typename T> T holonomy(const Gyrovector<T> & P₁, const Gyrovector<T> 
     const auto n₂ = gyr(P₂, -P₁, n₁);
     return std::arg(n₁.val / n₂.val);
 }
+
+template<typename T> inline T gyrocos(const Gyrovector<T> & P₁, const Gyrovector<T> & P₂)
+{ return (P₁, P₂) / (P₁.abs() * P₂.abs()); }
+
+template<typename T> inline T gyroangle(const Gyrovector<T> & P₁, const Gyrovector<T> & P₂)
+{ return acos(gyrocos(P₁, P₂)); }
 
 namespace complex {
     template <typename T, typename U>
