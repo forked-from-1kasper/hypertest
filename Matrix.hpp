@@ -3,8 +3,62 @@
 template<typename T, size_t n, size_t m>
 struct Matrix {
     T val[n][m];
-    inline T* operator[](size_t k) { return val[k]; }
-    inline const T* operator[](size_t k) const { return val[k]; }
+
+    inline T * operator[](size_t k) { return val[k]; }
+    inline const T * operator[](size_t k) const { return val[k]; }
+};
+
+template<typename T> using Vector2 = Matrix<T, 2, 1>;
+template<typename T> using Vector3 = Matrix<T, 3, 1>;
+
+template<typename T>
+struct Matrix<T, 2, 1> {
+    T x; T y;
+
+    Matrix() = default;
+    constexpr Matrix(const T x, const T y) : x(x), y(y) {}
+
+    inline T * operator[](size_t k) {
+        switch (k) {
+            case 0:  return &x;
+            case 1:  return &y;
+            default: return nullptr;
+        }
+    }
+
+    inline const T * operator[](size_t k) const {
+        switch (k) {
+            case 0:  return &x;
+            case 1:  return &y;
+            default: return nullptr;
+        }
+    }
+};
+
+template<typename T>
+struct Matrix<T, 3, 1> {
+    T x; T y; T z;
+
+    Matrix() = default;
+    constexpr Matrix(const T x, const T y, const T z) : x(x), y(y), z(z) {}
+
+    inline T * operator[](size_t k) {
+        switch (k) {
+            case 0:  return &x;
+            case 1:  return &y;
+            case 2:  return &z;
+            default: return nullptr;
+        }
+    }
+
+    inline const T * operator[](size_t k) const {
+        switch (k) {
+            case 0:  return &x;
+            case 1:  return &y;
+            case 2:  return &z;
+            default: return nullptr;
+        }
+    }
 };
 
 template<typename T1, typename T2> using Sum =
@@ -62,7 +116,7 @@ inline auto operator+(const Matrix<T, N, M> & A) { return A; }
 
 template<typename T, size_t N, size_t M>
 auto operator-(const Matrix<T, N, M> & A) {
-    Matrix<T, N, N> B = {};
+    Matrix<T, N, M> B = {};
 
     for (size_t i = 0; i < N; i++)
         for (size_t j = 0; j < M; j++)
@@ -71,16 +125,10 @@ auto operator-(const Matrix<T, N, M> & A) {
     return B;
 }
 
-template<typename T> using Vector = Matrix<T, 3, 1>;
-template<typename T> inline Vector<T> vector(const T & x, const T & y, const T & z) { return {{{x}, {y}, {z}}}; }
-
-template<typename T> using Vector2 = Matrix<T, 2, 1>;
-template<typename T> inline Vector2<T> vector2(const T & x, const T & y) { return {{{x}, {y}}}; }
-
-template<typename T> auto cross(const Vector<T> & A, const Vector<T> & B) {
-    return vector(
-        A[1][0] * B[2][0] - A[2][0] * B[1][0],
-        A[2][0] * B[0][0] - A[0][0] * B[2][0],
-        A[0][0] * B[1][0] - A[1][0] * B[0][0]
+template<typename T> auto cross(const Vector3<T> & A, const Vector3<T> & B) {
+    return Vector3<T>(
+        A.y * B.z - A.z * B.y,
+        A.z * B.x - A.x * B.z,
+        A.x * B.y - A.y * B.x
     );
 }

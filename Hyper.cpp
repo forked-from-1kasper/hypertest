@@ -36,7 +36,7 @@ void error_callback(int error, const char* description)
 enum class Model { Poincaré, Klein, Gans };
 constexpr auto model = Model::Gans;
 
-Vector2<double> project(double y₁, double y₂) {
+auto project(double y₁, double y₂) {
     double x₁, x₂;
 
     switch (model) {
@@ -53,12 +53,12 @@ Vector2<double> project(double y₁, double y₂) {
         }
     }
 
-    return vector2(x₁, x₂);
+    return Vector2<double>(x₁, x₂);
 }
 
 void glVertexH(double y₁, double y₂, double t) {
     auto v = project(y₁, y₂);
-    glVertex3d(v[0][0], t, v[1][0]);
+    glVertex3d(v.x, t, v.y);
 }
 
 inline void glVertexGyro(const Gyrovector<double> & vect, double height) {
@@ -75,11 +75,11 @@ void drawVertical(std::function<Gyrovector<double>(double)> g, size_t steps, dou
         auto q₁ = (idx - 1) / double(steps), q₂ = idx / double(steps);
         auto P₂ = g(t1 + idx * step);
 
-        auto v₁ = vector(0.0, h₁ - h₂, 0.0);
-        auto v₂ = vector(P₂.x() - P₁.x(), 0.0, P₂.y() - P₁.y());
+        auto v₁ = Vector3<double>(0.0, h₁ - h₂, 0.0);
+        auto v₂ = Vector3<double>(P₂.x() - P₁.x(), 0.0, P₂.y() - P₁.y());
         auto n  = cross(v₁, v₂);
 
-        glNormal3d(n[0][0], n[1][0], n[2][0]);
+        glNormal3d(n.x, n.y, n.z);
 
         glTexCoord2d(q₁, 0); glVertexGyro(P₁, h₁);
         glTexCoord2d(q₁, 1); glVertexGyro(P₁, h₂);
@@ -257,8 +257,8 @@ void display(GLFWwindow * window) {
     auto dy = sin(vertical);
     auto dz = cos(vertical) * cos(horizontal);
 
-    auto direction = vector(dx, dy, dz);
-    auto right     = vector(sin(horizontal - τ/4), 0.0, cos(horizontal - τ/4));
+    auto direction = Vector3<double>(dx, dy, dz);
+    auto right     = Vector3<double>(sin(horizontal - τ/4), 0.0, cos(horizontal - τ/4));
     auto up        = cross(right, direction);
 
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -266,7 +266,7 @@ void display(GLFWwindow * window) {
 
     glPushMatrix();
 
-    gluLookAt(0, 0, 0, dx, dy, dz, up[0][0], up[1][0], up[2][0]);
+    gluLookAt(0, 0, 0, dx, dy, dz, up.x, up.y, up.z);
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
     glTranslatef(0, -ground, 0);

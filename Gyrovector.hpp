@@ -34,7 +34,7 @@ struct Gyrovector {
     constexpr inline auto operator-() const { return Gyrovector<T>(-val); }
     constexpr inline auto operator+() const { return *this; }
 
-    constexpr Vector<T> elevate(const T & z) { return vector(x(), z, y()); }
+    constexpr Vector3<T> elevate(const T & z) { return vector(x(), z, y()); }
 };
 
 template<typename T> constexpr auto operator+(const Gyrovector<T> & A, const Gyrovector<T> & B)
