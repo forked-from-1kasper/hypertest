@@ -33,10 +33,7 @@ void error_callback(int error, const char* description)
     fprintf(stderr, "Error: %s\n", description);
 }
 
-enum class Model {
-    Poincaré, Klein, Gans
-};
-
+enum class Model { Poincaré, Klein, Gans };
 constexpr auto model = Model::Gans;
 
 Vector2<double> project(double y₁, double y₂) {
@@ -46,12 +43,12 @@ Vector2<double> project(double y₁, double y₂) {
         case Model::Poincaré: x₁ = y₁; x₂ = y₂; break;
 
         case Model::Klein: {
-            auto σ = 1 + y₁ * y₁ + y₂ * y₂;
+            auto σ = s² + y₁ * y₁ + y₂ * y₂;
             x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ; break;
         };
 
         case Model::Gans: {
-            auto σ = 1 - y₁ * y₁ - y₂ * y₂;
+            auto σ = s² - y₁ * y₁ - y₂ * y₂;
             x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ; break;
         }
     }
@@ -68,7 +65,7 @@ inline void glVertexGyro(const Gyrovector<double> & vect, double height) {
     glVertexH(vect.x(), vect.y(), height);
 }
 
-void drawVertical(std::function<Gyrovector<double>(double)> g, size_t steps, double t1, double t2, double height) {
+void drawVertical(std::function<Gyrovector<double>(double)> g, size_t steps, double t1, double t2, double h₁, double h₂) {
     auto step = (t2 - t1) / steps;
     auto P₁ = g(t1);
 
@@ -78,16 +75,16 @@ void drawVertical(std::function<Gyrovector<double>(double)> g, size_t steps, dou
         auto q₁ = (idx - 1) / double(steps), q₂ = idx / double(steps);
         auto P₂ = g(t1 + idx * step);
 
-        auto v₁ = vector(0.0, -height, 0.0);
+        auto v₁ = vector(0.0, h₁ - h₂, 0.0);
         auto v₂ = vector(P₂.x() - P₁.x(), 0.0, P₂.y() - P₁.y());
         auto n  = cross(v₁, v₂);
 
         glNormal3d(n[0][0], n[1][0], n[2][0]);
 
-        glTexCoord2d(q₁, 0); glVertexGyro(P₁, 0);
-        glTexCoord2d(q₁, 1); glVertexGyro(P₁, height);
-        glTexCoord2d(q₂, 1); glVertexGyro(P₂, height);
-        glTexCoord2d(q₂, 0); glVertexGyro(P₂, 0);
+        glTexCoord2d(q₁, 0); glVertexGyro(P₁, h₁);
+        glTexCoord2d(q₁, 1); glVertexGyro(P₁, h₂);
+        glTexCoord2d(q₂, 1); glVertexGyro(P₂, h₂);
+        glTexCoord2d(q₂, 0); glVertexGyro(P₂, h₁);
 
         P₁ = P₂;
     }
@@ -104,7 +101,7 @@ void texCoordSide(Side side, double t) {
     }
 }
 
-void drawHorizontal(std::function<Gyrovector<double>(double)> g, size_t steps, double t1, double t2, Vector<double> origin, Side side, double dir) {
+void drawHorizontal(std::function<Gyrovector<double>(double)> g, size_t steps, double t1, double t2, Gyrovector<double> origin, double height, Side side, double dir) {
     auto step = (t2 - t1) / steps;
     auto P₁ = g(t1);
 
@@ -116,13 +113,13 @@ void drawHorizontal(std::function<Gyrovector<double>(double)> g, size_t steps, d
         auto P₂ = g(t1 + idx * step);
 
         texCoordSide(side, dir > 0 ? q₁ : q₂);
-        glVertexGyro(dir > 0 ? P₁ : P₂, origin[1][0]);
+        glVertexGyro(dir > 0 ? P₁ : P₂, height);
 
         glTexCoord2d(0.5, 0.5);
-        glVertexH(origin[0][0], origin[2][0], origin[1][0]);
+        glVertexGyro(origin, height);
 
         texCoordSide(side, dir > 0 ? q₂ : q₁);
-        glVertexGyro(dir > 0 ? P₂ : P₁, origin[1][0]);
+        glVertexGyro(dir > 0 ? P₂ : P₁, height);
 
         P₁ = P₂;
     }
@@ -133,35 +130,62 @@ void drawHorizontal(std::function<Gyrovector<double>(double)> g, size_t steps, d
 
 constexpr auto accuracy = 16;
 
-void drawSide(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> M, double height) {
-    drawVertical(compose(Transform(M), Line(+j, +i)), accuracy, 0, 1, height);
-    drawVertical(compose(Transform(M), Line(+i, -j)), accuracy, 0, 1, height);
-    drawVertical(compose(Transform(M), Line(-j, -i)), accuracy, 0, 1, height);
-    drawVertical(compose(Transform(M), Line(-i, +j)), accuracy, 0, 1, height);
+void drawSide(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> M, double h₁, double h₂) {
+    drawVertical(compose(Transform(M), Line(+j, +i)), accuracy, 0, 1, h₁, h₂);
+    drawVertical(compose(Transform(M), Line(+i, -j)), accuracy, 0, 1, h₁, h₂);
+    drawVertical(compose(Transform(M), Line(-j, -i)), accuracy, 0, 1, h₁, h₂);
+    drawVertical(compose(Transform(M), Line(-i, +j)), accuracy, 0, 1, h₁, h₂);
 }
 
 void drawCap(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> M, double height, double dir) {
-    auto v = M.origin().elevate(height);
-
-    drawHorizontal(compose(Transform(M), Line(+j, +i)), accuracy, 0, 1, v, Side::Top, dir);
-    drawHorizontal(compose(Transform(M), Line(+i, -j)), accuracy, 0, 1, v, Side::Right, dir);
-    drawHorizontal(compose(Transform(M), Line(-j, -i)), accuracy, 0, 1, v, Side::Down, dir);
-    drawHorizontal(compose(Transform(M), Line(-i, +j)), accuracy, 0, 1, v, Side::Left, dir);
+    drawHorizontal(compose(Transform(M), Line(+j, +i)), accuracy, 0, 1, M.origin(), height, Side::Top, dir);
+    drawHorizontal(compose(Transform(M), Line(+i, -j)), accuracy, 0, 1, M.origin(), height, Side::Right, dir);
+    drawHorizontal(compose(Transform(M), Line(-j, -i)), accuracy, 0, 1, M.origin(), height, Side::Down, dir);
+    drawHorizontal(compose(Transform(M), Line(-i, +j)), accuracy, 0, 1, M.origin(), height, Side::Left, dir);
 }
 
-void drawCube(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> M, double height) {
-    drawSide(i, j, M, height);
-    drawCap(i, j, M, height, 1);
-    drawCap(i, j, M, 0, -1);
+void drawCube(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> M, double h₁, double h₂) {
+    drawSide(i, j, M, h₁, h₂);
+    drawCap(i, j, M, h₁, -1);
+    drawCap(i, j, M, h₂, 1);
 }
 
-double squareHalfDiag(double θ) {
-    return sqrt(1 / tan(θ / 2 + τ / 8));
-}
+void drawGrid(Gyrovector<double> A, Gyrovector<double> B, Möbius<double> M, size_t chunkSize) {
+    {
+        auto Δ₁ = Line(+B, +A);
+        auto Δ₂ = Line(-A, -B);
 
-double squareHalfMiddleLine(double θ) {
-    auto A = cos(θ / 2); constexpr auto B = 1.0 / sqrt(2);
-    return sqrt((A - B) / (A + B));
+        for (size_t idx = 0; idx <= chunkSize; idx++) {
+            auto t₁ = idx / double(chunkSize);
+
+            auto Γ = Line(Δ₁(t₁), Δ₂(t₁));
+
+            glBegin(GL_LINE_STRIP);
+            for (size_t idy = 0; idy <= chunkSize; idy++) {
+                auto t₂ = idy / double(chunkSize);
+                glVertexGyro(M.apply(Γ(t₂)), 0);
+            }
+            glEnd();
+        }
+    }
+
+    {
+        auto Δ₁ = Line(+B, -A);
+        auto Δ₂ = Line(+A, -B);
+
+        for (size_t idx = 0; idx <= chunkSize; idx++) {
+            auto t₁ = idx / double(chunkSize);
+
+            auto Γ = Line(Δ₁(t₁), Δ₂(t₁));
+
+            glBegin(GL_LINE_STRIP);
+            for (size_t idy = 0; idy <= chunkSize; idy++) {
+                auto t₂ = idy / double(chunkSize);
+                glVertexGyro(M.apply(Γ(t₂)), 0);
+            }
+            glEnd();
+        }
+    }
 }
 
 constexpr auto wsize = 900;
@@ -175,26 +199,27 @@ const GLfloat matDiffuse[] = {1.0, 1.0, 1.0, 1.0};
 
 const GLfloat lightPosition[] = {0.0f, 32.0f, 0.0f, 0.0f};
 
-const auto k = τ / 5;
+constexpr auto k = τ / 6;                          // π/3
+constexpr auto D = s * sqrt(2/(tan(k/2) + 1) - 1); // s√(2 − √3)
+constexpr auto L = s * sqrt(cos(k));               // s/√2
 
-const auto L = squareHalfMiddleLine(k);
-const auto D = squareHalfDiag(k) / sqrt(2);
+constexpr auto A = Gyrovector<double>(+D, +0);
+constexpr auto B = Gyrovector<double>(+0, +D);
 
-const double H      = 4 * L;
-const double ground = 12 * L;
+constexpr auto i = Coadd(A,  B); // s(1 + i)/√6
+constexpr auto j = Coadd(A, -B); // s(1 − i)/√6
 
-const auto i = 2.0 * Gyrovector<double>(L, 0);
-const auto j = 2.0 * Gyrovector<double>(0, L);
+constexpr Möbius<int64_t> Δ1 {{+6, +0}, {+6, +6}, {+1, -1}, {+6, +0}};
+constexpr Möbius<int64_t> Δ2 {{+6, +0}, {+6, -6}, {+1, +1}, {+6, +0}};
+constexpr Möbius<int64_t> Δ3 {{+6, +0}, {-6, -6}, {-1, +1}, {+6, +0}};
+constexpr Möbius<int64_t> Δ4 {{+6, +0}, {-6, +6}, {-1, -1}, {+6, +0}};
 
-const auto A = Gyrovector<double>(+D, +D);
-const auto B = Gyrovector<double>(+D, -D);
+constexpr size_t chunkSize = 16;
 
-const auto M1 = Möbius<double>::translate(i);
-const auto M2 = Möbius<double>::translate(j);
-const auto M3 = M1.inverse();
-const auto M4 = M2.inverse();
+constexpr auto meter = L / chunkSize;
 
-const auto speed = 0.5;
+const double ground = 1.8 * meter;
+const auto speed = 10 * meter;
 
 constexpr auto mouseSpeed = 0.7;
 auto velocity = Gyrovector<double>(0, 0);
@@ -248,49 +273,17 @@ void display(GLFWwindow * window) {
 
     glColor3f(0.0f, 0.0f, 0.0f);
 
-    drawCube(A, B, origin, H);
+    drawGrid(A, B, origin, chunkSize);
+    drawGrid(A, B, origin * Δ1.cast<double>(), chunkSize);
+    drawGrid(A, B, origin * Δ2.cast<double>(), chunkSize);
+    drawGrid(A, B, origin * Δ3.cast<double>(), chunkSize);
+    drawGrid(A, B, origin * Δ4.cast<double>(), chunkSize);
 
-    drawCube(A, B, origin * M1, H);
-    drawCube(A, B, origin * M1 * M1, H);
-    drawCube(A, B, origin * M2, H);
-    drawCube(A, B, origin * M2 * M2, H);
+    auto M = Δ1 * Δ2;
 
-    drawCube(A, B, origin * M2 * M2 * M2, H);
-    drawCube(A, B, origin * M2 * M2 * M2 * M2, H);
-    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2, H);
-    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2, H);
-    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2, H);
-    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2, H);
-    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2, H);
-    drawCube(A, B, origin * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2 * M2, H);
-
-    drawCube(A, B, origin * M3, H);
-    drawCube(A, B, origin * M4, H);
-
-    drawCube(A, B, origin * M4 * M1, H);
-    drawCube(A, B, origin * M4 * M3, H);
-    drawCube(A, B, origin * M3 * M2, H);
-    drawCube(A, B, origin * M3 * M4, H);
-
-    drawCube(A, B, origin * M3 * M4 * M4, H);
-    drawCube(A, B, origin * M3 * M4 * M3, H);
-    drawCube(A, B, origin * M4 * M3 * M4, H);
-    drawCube(A, B, origin * M4 * M3 * M3, H);
-
-    drawCube(A, B, origin * M1 * M2, H);
-    drawCube(A, B, origin * M1 * M4, H);
-    drawCube(A, B, origin * M2 * M1, H);
-    drawCube(A, B, origin * M2 * M3, H);
-
-    drawCube(A, B, origin * M1 * M1 * M2, H);
-    drawCube(A, B, origin * M1 * M2 * M1, H);
-    drawCube(A, B, origin * M1 * M1 * M2 * M1, H);
-
-    glTranslatef(0, 4 * L, 0);
-    drawCube(A, B, origin, H);
-
-    glTranslatef(0, 4 * L, 0);
-    drawCube(A, B, origin, H);
+    drawGrid(A, B, origin * M.cast<double>(), chunkSize);
+    drawGrid(A, B, origin * (Δ1 * Δ2 * Δ3).cast<double>(), chunkSize);
+    drawGrid(A, B, origin * (Δ1 * Δ2 * Δ3 * Δ4).cast<double>(), chunkSize);
 
     glPopMatrix();
 }
