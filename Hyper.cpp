@@ -191,8 +191,7 @@ void drawGrid(Gyrovector<double> A, Gyrovector<double> B, Möbius<double> M, siz
     }
 }
 
-constexpr auto width  = 1920;
-constexpr auto height = 900;
+int width = 900, height = 900;
 
 constexpr auto fov  = 80;
 constexpr auto near = 0.01;
@@ -229,7 +228,7 @@ const auto speed = 10 * meter;
 
 constexpr auto mouseSpeed = 0.7;
 auto velocity = Gyrovector<double>(0, 0);
-auto position = Gyrovector<double>(0, 0);
+auto position = Gyrovector<double>(-D, 0);
 
 double horizontal = 0.0, vertical = 0.0;
 double xpos, ypos;
@@ -346,6 +345,15 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
     if (action == GLFW_RELEASE) velocity.val = 0;
 }
 
+void setupWindowSize(GLFWwindow * window, int newWidth, int newHeight) {
+    width = newWidth; height = newHeight;
+    glViewport(0, 0, width, height);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(fov, double(width) / double(height), near, far);
+}
+
 int main() {
     glfwSetErrorCallback(error_callback);
 
@@ -353,7 +361,6 @@ int main() {
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
     glfwWindowHint(GLFW_SAMPLES, 16);
 
     auto window = glfwCreateWindow(width, height, "Hypertest", nullptr, nullptr);
@@ -364,6 +371,8 @@ int main() {
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 
     glfwSetKeyCallback(window, keyboardCallback);
+    glfwSetWindowSizeCallback(window, setupWindowSize);
+
     glfwSetCursorPos(window, width/2, height/2);
 
     glfwMakeContextCurrent(window);
@@ -375,10 +384,7 @@ int main() {
     setupLighting();
     setupMaterial();
 
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(fov, double(width) / double(height), near, far);
-
+    setupWindowSize(window, width, height);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
