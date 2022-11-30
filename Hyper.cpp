@@ -151,46 +151,6 @@ void drawCube(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> M, dou
     drawCap(i, j, M, h₂, 1);
 }
 
-void drawGrid(Gyrovector<double> A, Gyrovector<double> B, Möbius<double> M, size_t chunkSize) {
-    {
-        auto Δ₁ = Line(+B, +A);
-        auto Δ₂ = Line(-A, -B);
-
-        for (size_t idx = 0; idx <= chunkSize; idx++) {
-            auto t₁ = idx / double(chunkSize);
-
-            auto u = Δ₁(t₁); auto v = Δ₂(t₁); auto n = -u + v;
-            auto Γ = [u, n](double t) { return u + n.scale(t); };
-
-            glBegin(GL_LINE_STRIP);
-            for (size_t idy = 0; idy <= chunkSize; idy++) {
-                auto t₂ = idy / double(chunkSize);
-                glVertexGyro(M.apply(Γ(t₂)), 0);
-            }
-            glEnd();
-        }
-    }
-
-    {
-        auto Δ₁ = Line(+B, -A);
-        auto Δ₂ = Line(+A, -B);
-
-        for (size_t idx = 0; idx <= chunkSize; idx++) {
-            auto t₁ = idx / double(chunkSize);
-
-            auto u = Δ₁(t₁); auto v = Δ₂(t₁); auto n = -u + v;
-            auto Γ = [u, n](double t) { return u + n.scale(t); };
-
-            glBegin(GL_LINE_STRIP);
-            for (size_t idy = 0; idy <= chunkSize; idy++) {
-                auto t₂ = idy / double(chunkSize);
-                glVertexGyro(M.apply(Γ(t₂)), 0);
-            }
-            glEnd();
-        }
-    }
-}
-
 int width = 900, height = 900;
 
 constexpr auto fov  = 80;
@@ -219,7 +179,7 @@ constexpr Fuchsian<int64_t> Δ2 {{+6, +0}, {+6, -6}, {+1, +1}, {+6, +0}};
 constexpr Fuchsian<int64_t> Δ3 {{+6, +0}, {-6, -6}, {-1, +1}, {+6, +0}};
 constexpr Fuchsian<int64_t> Δ4 {{+6, +0}, {-6, +6}, {-1, -1}, {+6, +0}};
 
-constexpr size_t chunkSize = 16;
+constexpr int chunkSize = 16;
 
 constexpr auto meter = 1.0/double(chunkSize);
 
@@ -228,10 +188,64 @@ const auto speed = 10 * meter;
 
 constexpr auto mouseSpeed = 0.7;
 auto velocity = Gyrovector<double>(0, 0);
-auto position = Gyrovector<double>(-D, 0);
+auto position = Gyrovector<double>(0, 0);
 
 double horizontal = 0.0, vertical = 0.0;
 double xpos, ypos;
+
+constexpr double sign(double x) { return (x > 0) - (x < 0); }
+
+constexpr auto Φ(double x, double y) {
+    if (x == 0 && y == 0) return Gyrovector<double>(0, 0);
+
+    auto L = fabs(x) + fabs(y);
+
+    Gyrovector<double> u(sign(x) * L, 0), v(0, sign(y) * L);
+    return u + fabs(y / L) * (-u + v);
+}
+
+constexpr auto Ψ(double x, double y) {
+    auto u = (x + y) / 2;
+    auto v = (x - y) / 2;
+
+    return Φ(u * D, v * D);
+}
+
+constexpr auto yieldGrid(int i, int j) {
+    auto x = double(2 * i - chunkSize) / double(chunkSize);
+    auto y = double(2 * j - chunkSize) / double(chunkSize);
+    return Ψ(x, y);
+}
+
+template<typename T, int N> using Array² = std::array<std::array<T, N>, N>;
+
+constexpr auto initGrid() {
+    Array²<Gyrovector<double>, chunkSize + 1> retval;
+
+    for (int i = 0; i <= chunkSize; i++)
+        for (int j = 0; j <= chunkSize; j++)
+            retval[i][j] = yieldGrid(i, j);
+
+    return retval;
+}
+
+constexpr auto grid = initGrid();
+
+void drawGrid(Möbius<double> M) {
+    glBegin(GL_QUADS);
+    glNormal3d(0, 1, 0);
+
+    for (int i = 0; i < chunkSize; i++) {
+        for (int j = 0; j < chunkSize; j++) {
+            glTexCoord2d(0, 0); glVertexGyro(M.apply(grid[i + 0][j + 0]), 0);
+            glTexCoord2d(1, 0); glVertexGyro(M.apply(grid[i + 1][j + 0]), 0);
+            glTexCoord2d(1, 1); glVertexGyro(M.apply(grid[i + 1][j + 1]), 0);
+            glTexCoord2d(0, 1); glVertexGyro(M.apply(grid[i + 0][j + 1]), 0);
+        }
+    }
+
+    glEnd();
+}
 
 double globaltime = 0;
 void display(GLFWwindow * window) {
@@ -278,17 +292,17 @@ void display(GLFWwindow * window) {
 
     glColor3f(0.0f, 0.0f, 0.0f);
 
-    drawGrid(A, B, origin, chunkSize);
-    drawGrid(A, B, origin * Δ1.field<double>(), chunkSize);
-    drawGrid(A, B, origin * Δ2.field<double>(), chunkSize);
-    drawGrid(A, B, origin * Δ3.field<double>(), chunkSize);
-    drawGrid(A, B, origin * Δ4.field<double>(), chunkSize);
+    drawGrid(origin);
+    drawGrid(origin * Δ1.field<double>());
+    drawGrid(origin * Δ2.field<double>());
+    drawGrid(origin * Δ3.field<double>());
+    drawGrid(origin * Δ4.field<double>());
 
     auto M = Δ1 * Δ2;
 
-    drawGrid(A, B, origin * M.field<double>(), chunkSize);
-    drawGrid(A, B, origin * (Δ1 * Δ2 * Δ3).field<double>(), chunkSize);
-    drawGrid(A, B, origin * (Δ1 * Δ2 * Δ3 * Δ4).field<double>(), chunkSize);
+    drawGrid(origin * M.field<double>());
+    drawGrid(origin * (Δ1 * Δ2 * Δ3).field<double>());
+    drawGrid(origin * (Δ1 * Δ2 * Δ3 * Δ4).field<double>());
 
     glPopMatrix();
 }
@@ -300,9 +314,6 @@ void setupLighting() {
     glEnable(GL_LIGHTING);
     glEnable(GL_NORMALIZE);
     glEnable(GL_LIGHT0);
-
-    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-    glEnable(GL_COLOR_MATERIAL);
 
     glShadeModel(GL_SMOOTH);
 

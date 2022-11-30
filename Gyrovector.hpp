@@ -1,4 +1,6 @@
 #include "Matrix.hpp"
+
+#include <type_traits>
 #include <numeric>
 
 #pragma once
@@ -7,13 +9,19 @@ template<typename T>
 struct Gyrovector {
     std::complex<T> val;
 
-    inline T x() const { return val.real(); }
-    inline T y() const { return val.imag(); }
+    constexpr inline T x() const { return val.real(); }
+    constexpr inline T y() const { return val.imag(); }
 
     constexpr inline T norm() const { return std::norm(val); }
-    constexpr inline T abs() const { return std::abs(val); }
     constexpr inline bool isZero() const { return val.real() == 0.0 && val.imag() == 0.0; }
 
+    constexpr T abs() const {
+        if (std::is_constant_evaluated())
+            return std::hypot(x(), y());
+        else return std::abs(val);
+    }
+
+    constexpr Gyrovector() : val(0) {}
     constexpr Gyrovector(const T k) : val(std::complex(k, 0.0)) {}
     constexpr Gyrovector(const T x, const T y) : val(std::complex(x, y)) {}
     constexpr Gyrovector(const std::complex<T> z) : val(z) {}
