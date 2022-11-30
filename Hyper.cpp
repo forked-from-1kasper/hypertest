@@ -193,7 +193,7 @@ auto position = Gyrovector<double>(0, 0);
 double horizontal = 0.0, vertical = 0.0;
 double xpos, ypos;
 
-constexpr double sign(double x) { return (x > 0) - (x < 0); }
+template<typename T> constexpr T sign(T x) { return (x > 0) - (x < 0); }
 
 constexpr auto Φ(double x, double y) {
     if (x == 0 && y == 0) return Gyrovector<double>(0, 0);
