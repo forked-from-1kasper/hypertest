@@ -1,8 +1,14 @@
-Hyper: Matrix.hpp Gyrovector.hpp Hyper.cpp
-	g++ -std=c++2a Hyper.cpp -o Hyper -lglfw -lSOIL -lGLEW -lGL -lGLU
+BINARY = Hyper
+CFLAGS = -std=c++2a
+CPP    = Hyper.cpp
+HPP    = Matrix.hpp Gyrovector.hpp Fuchsian.hpp
+LIBS   = -lglfw -lSOIL -lGLEW -lGL -lGLU -lgmpxx -lgmp
+
+Hyper: $(HPP) $(CPP)
+	g++ $(CFLAGS) $(CPP) -o $(BINARY) $(LIBS)
 
 run: Hyper
-	./Hyper
+	./$(BINARY)
 
 clean:
-	rm -f Hyper
+	rm -f $(BINARY)

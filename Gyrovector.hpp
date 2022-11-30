@@ -3,10 +3,6 @@
 
 #pragma once
 
-constexpr double s²  = 6;
-constexpr double s⁻² = 1/s²;
-constexpr double s   = sqrt(s²);
-
 template<typename T>
 struct Gyrovector {
     std::complex<T> val;
@@ -38,19 +34,19 @@ struct Gyrovector {
 };
 
 template<typename T> constexpr auto operator+(const Gyrovector<T> & A, const Gyrovector<T> & B)
-{ return A.add(B).div(A.conj().mult(B).scale(s⁻²).add(1)); }
+{ return A.add(B).div(A.conj().mult(B).add(1)); }
 
 template<typename T> constexpr auto operator*(const T k, const Gyrovector<T> & A)
-{ auto a = A.abs(); return A.isZero() ? A : A.scale(s * tanh(k * atanh(a / s)) / a); }
+{ auto a = A.abs(); return A.isZero() ? A : A.scale(tanh(k * atanh(a)) / a); }
 
 template<typename T> constexpr Gyrovector<T> gyr(const Gyrovector<T> & A, const Gyrovector<T> & B, const Gyrovector<T> & C) {
-    auto P = A.mult(B.conj()).add(s²);
-    auto Q = A.conj().mult(B).add(s²);
+    auto P = A.mult(B.conj()).add(1);
+    auto Q = A.conj().mult(B).add(1);
     return P.div(Q).mult(C);
 }
 
 template<typename T> constexpr Gyrovector<T> Coadd(const Gyrovector<T> & A, const Gyrovector<T> & B) {
-    auto a = A.norm() / s²; auto b = B.norm() / s²;
+    auto a = A.norm(); auto b = B.norm();
     return A.scale(1 - b).add(B.scale(1 - a)).scale(1 / (1 - a * b));
 }
 
@@ -84,12 +80,6 @@ template<typename T> inline T gyrocos(const Gyrovector<T> & P₁, const Gyrovect
 template<typename T> inline T gyroangle(const Gyrovector<T> & P₁, const Gyrovector<T> & P₂)
 { return acos(gyrocos(P₁, P₂)); }
 
-namespace complex {
-    template <typename T, typename U>
-    constexpr inline std::complex<U> cast(const std::complex<T> & z)
-    { return std::complex<U>(z.real(), z.imag()); }
-}
-
 template<typename T>
 struct Möbius {
     std::complex<T> a, b, c, d;
@@ -110,28 +100,10 @@ struct Möbius {
     constexpr static inline Möbius<T> identity() { return {1, 0, 0, 1}; }
 
     constexpr static Möbius<T> translate(const Gyrovector<T> & N)
-    { return {s², s² * N.val, std::conj(N.val), s²}; }
+    { return {1, N.val, std::conj(N.val), 1}; }
 
-    void simpl() {
-        auto σ = a.real();
-
-        σ = std::gcd(b.real(), σ);
-        σ = std::gcd(c.real(), σ);
-        σ = std::gcd(d.real(), σ);
-        σ = std::gcd(a.imag(), σ);
-        σ = std::gcd(b.imag(), σ);
-        σ = std::gcd(c.imag(), σ);
-        σ = std::gcd(d.imag(), σ);
-
-        a /= σ; b /= σ; c /= σ; d /= σ;
-    }
-
-    template<typename U> constexpr inline Möbius<U> cast() const {
-        return {
-            complex::cast<T, U>(a), complex::cast<T, U>(b),
-            complex::cast<T, U>(c), complex::cast<T, U>(d)
-        };
-    }
+    friend std::ostream & operator<< (std::ostream & stream, const Möbius<T> & M)
+    { return stream << "(" << M.a << ", " << M.b << ", " << M.c << ", " << M.d << ")"; }
 };
 
 template<typename T> Möbius<T> operator*(const Möbius<T> & A, const Möbius<T> & B) {

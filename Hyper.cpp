@@ -9,6 +9,7 @@
 
 #include "Matrix.hpp"
 #include "Gyrovector.hpp"
+#include "Fuchsian.hpp"
 
 using namespace std::complex_literals;
 
@@ -43,12 +44,12 @@ auto project(double y₁, double y₂) {
         case Model::Poincaré: x₁ = y₁; x₂ = y₂; break;
 
         case Model::Klein: {
-            auto σ = s² + y₁ * y₁ + y₂ * y₂;
+            auto σ = 1 + y₁ * y₁ + y₂ * y₂;
             x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ; break;
         };
 
         case Model::Gans: {
-            auto σ = s² - y₁ * y₁ - y₂ * y₂;
+            auto σ = 1 - y₁ * y₁ - y₂ * y₂;
             x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ; break;
         }
     }
@@ -158,7 +159,8 @@ void drawGrid(Gyrovector<double> A, Gyrovector<double> B, Möbius<double> M, siz
         for (size_t idx = 0; idx <= chunkSize; idx++) {
             auto t₁ = idx / double(chunkSize);
 
-            auto Γ = Line(Δ₁(t₁), Δ₂(t₁));
+            auto u = Δ₁(t₁); auto v = Δ₂(t₁); auto n = -u + v;
+            auto Γ = [u, n](double t) { return u + n.scale(t); };
 
             glBegin(GL_LINE_STRIP);
             for (size_t idy = 0; idy <= chunkSize; idy++) {
@@ -176,7 +178,8 @@ void drawGrid(Gyrovector<double> A, Gyrovector<double> B, Möbius<double> M, siz
         for (size_t idx = 0; idx <= chunkSize; idx++) {
             auto t₁ = idx / double(chunkSize);
 
-            auto Γ = Line(Δ₁(t₁), Δ₂(t₁));
+            auto u = Δ₁(t₁); auto v = Δ₂(t₁); auto n = -u + v;
+            auto Γ = [u, n](double t) { return u + n.scale(t); };
 
             glBegin(GL_LINE_STRIP);
             for (size_t idy = 0; idy <= chunkSize; idy++) {
@@ -188,7 +191,8 @@ void drawGrid(Gyrovector<double> A, Gyrovector<double> B, Möbius<double> M, siz
     }
 }
 
-constexpr auto wsize = 900;
+constexpr auto width  = 1920;
+constexpr auto height = 900;
 
 constexpr auto fov  = 80;
 constexpr auto near = 0.01;
@@ -199,9 +203,9 @@ const GLfloat matDiffuse[] = {1.0, 1.0, 1.0, 1.0};
 
 const GLfloat lightPosition[] = {0.0f, 32.0f, 0.0f, 0.0f};
 
-constexpr auto k = τ / 6;                          // π/3
-constexpr auto D = s * sqrt(2/(tan(k/2) + 1) - 1); // s√(2 − √3)
-constexpr auto L = s * sqrt(cos(k));               // s/√2
+constexpr auto k = τ / 6;                      // π/3
+constexpr auto D = sqrt(2/(tan(k/2) + 1) - 1); // s√(2 − √3)
+constexpr auto L = sqrt(cos(k));               // s/√2
 
 constexpr auto A = Gyrovector<double>(+D, +0);
 constexpr auto B = Gyrovector<double>(+0, +D);
@@ -209,16 +213,18 @@ constexpr auto B = Gyrovector<double>(+0, +D);
 constexpr auto i = Coadd(A,  B); // s(1 + i)/√6
 constexpr auto j = Coadd(A, -B); // s(1 − i)/√6
 
-constexpr Möbius<int64_t> Δ1 {{+6, +0}, {+6, +6}, {+1, -1}, {+6, +0}};
-constexpr Möbius<int64_t> Δ2 {{+6, +0}, {+6, -6}, {+1, +1}, {+6, +0}};
-constexpr Möbius<int64_t> Δ3 {{+6, +0}, {-6, -6}, {-1, +1}, {+6, +0}};
-constexpr Möbius<int64_t> Δ4 {{+6, +0}, {-6, +6}, {-1, -1}, {+6, +0}};
+constexpr auto M1 = Möbius<double>::translate(i);
+
+constexpr Fuchsian<int64_t> Δ1 {{+6, +0}, {+6, +6}, {+1, -1}, {+6, +0}};
+constexpr Fuchsian<int64_t> Δ2 {{+6, +0}, {+6, -6}, {+1, +1}, {+6, +0}};
+constexpr Fuchsian<int64_t> Δ3 {{+6, +0}, {-6, -6}, {-1, +1}, {+6, +0}};
+constexpr Fuchsian<int64_t> Δ4 {{+6, +0}, {-6, +6}, {-1, -1}, {+6, +0}};
 
 constexpr size_t chunkSize = 16;
 
-constexpr auto meter = L / chunkSize;
+constexpr auto meter = 1.0/double(chunkSize);
 
-const double ground = 1.8 * meter;
+const double ground = 1.8 / 16.0;
 const auto speed = 10 * meter;
 
 constexpr auto mouseSpeed = 0.7;
@@ -245,10 +251,10 @@ void display(GLFWwindow * window) {
     auto origin = Möbius<double>::translate(position);
 
     glfwGetCursorPos(window, &xpos, &ypos);
-    glfwSetCursorPos(window, wsize/2, wsize/2);
+    glfwSetCursorPos(window, width/2, height/2);
 
-    horizontal += mouseSpeed * dt * (wsize/2 - xpos);
-    vertical   += mouseSpeed * dt * (wsize/2 - ypos);
+    horizontal += mouseSpeed * dt * (width/2 - xpos);
+    vertical   += mouseSpeed * dt * (height/2 - ypos);
 
     horizontal = std::fmod(horizontal, τ);
     vertical = std::max(std::min(vertical, τ/4 - ε), -τ/4 + ε);
@@ -262,7 +268,7 @@ void display(GLFWwindow * window) {
     auto up        = cross(right, direction);
 
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glPushMatrix();
 
@@ -274,16 +280,16 @@ void display(GLFWwindow * window) {
     glColor3f(0.0f, 0.0f, 0.0f);
 
     drawGrid(A, B, origin, chunkSize);
-    drawGrid(A, B, origin * Δ1.cast<double>(), chunkSize);
-    drawGrid(A, B, origin * Δ2.cast<double>(), chunkSize);
-    drawGrid(A, B, origin * Δ3.cast<double>(), chunkSize);
-    drawGrid(A, B, origin * Δ4.cast<double>(), chunkSize);
+    drawGrid(A, B, origin * Δ1.field<double>(), chunkSize);
+    drawGrid(A, B, origin * Δ2.field<double>(), chunkSize);
+    drawGrid(A, B, origin * Δ3.field<double>(), chunkSize);
+    drawGrid(A, B, origin * Δ4.field<double>(), chunkSize);
 
     auto M = Δ1 * Δ2;
 
-    drawGrid(A, B, origin * M.cast<double>(), chunkSize);
-    drawGrid(A, B, origin * (Δ1 * Δ2 * Δ3).cast<double>(), chunkSize);
-    drawGrid(A, B, origin * (Δ1 * Δ2 * Δ3 * Δ4).cast<double>(), chunkSize);
+    drawGrid(A, B, origin * M.field<double>(), chunkSize);
+    drawGrid(A, B, origin * (Δ1 * Δ2 * Δ3).field<double>(), chunkSize);
+    drawGrid(A, B, origin * (Δ1 * Δ2 * Δ3 * Δ4).field<double>(), chunkSize);
 
     glPopMatrix();
 }
@@ -295,6 +301,9 @@ void setupLighting() {
     glEnable(GL_LIGHTING);
     glEnable(GL_NORMALIZE);
     glEnable(GL_LIGHT0);
+
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+    glEnable(GL_COLOR_MATERIAL);
 
     glShadeModel(GL_SMOOTH);
 
@@ -323,8 +332,7 @@ void setupMaterial() {
     glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, matDiffuse);
 }
 
-void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, int mods)
-{
+void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
         switch (key) {
             case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, GL_TRUE); break;
@@ -348,7 +356,7 @@ int main() {
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
     glfwWindowHint(GLFW_SAMPLES, 16);
 
-    auto window = glfwCreateWindow(wsize, wsize, "Hypertest", nullptr, nullptr);
+    auto window = glfwCreateWindow(width, height, "Hypertest", nullptr, nullptr);
     if (!window) return -1;
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -356,7 +364,7 @@ int main() {
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 
     glfwSetKeyCallback(window, keyboardCallback);
-    glfwSetCursorPos(window, wsize/2, wsize/2);
+    glfwSetCursorPos(window, width/2, height/2);
 
     glfwMakeContextCurrent(window);
 
@@ -369,7 +377,7 @@ int main() {
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(fov, 1, near, far);
+    gluPerspective(fov, double(width) / double(height), near, far);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
