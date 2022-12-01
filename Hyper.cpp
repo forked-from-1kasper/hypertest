@@ -13,13 +13,8 @@
 
 using namespace std::complex_literals;
 
-enum class Direction {
-    Forward, Staying, Backward
-};
-
-enum class Side {
-    Top, Down, Left, Right
-};
+enum class Direction { Forward, Staying, Backward };
+enum class Side { Top, Down, Left, Right };
 
 template<class F, class G> auto compose(F f, G g) {
     return [f, g](auto &&... args) {
@@ -159,10 +154,10 @@ void drawSide(const Vector2<double> & A, const Vector2<double> & B, double h₁,
     auto n  = cross(v₁, v₂);
 
     glNormal3d(n.x, n.y, n.z);
-    glTexCoord2d(0, 0); glVertex3d(A.x, h₁, A.y);
-    glTexCoord2d(0, 1); glVertex3d(A.x, h₂, A.y);
-    glTexCoord2d(1, 1); glVertex3d(B.x, h₂, B.y);
-    glTexCoord2d(1, 0); glVertex3d(B.x, h₁, B.y);
+    glTexCoord2d(1, 1); glVertex3d(A.x, h₁, A.y);
+    glTexCoord2d(1, 0); glVertex3d(A.x, h₂, A.y);
+    glTexCoord2d(0, 0); glVertex3d(B.x, h₂, B.y);
+    glTexCoord2d(0, 1); glVertex3d(B.x, h₁, B.y);
 }
 
 void drawRightParallelogrammicPrism(double h₁, double h₂, const Parallelogram<double> & P) {
