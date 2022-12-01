@@ -84,6 +84,8 @@ struct Fuchsian {
                  c.template field<U>() * s, d.template field<U>() };
     }
 
+    constexpr inline auto inverse() const { return Fuchsian<T>(d, -b, -c, a); }
+
     friend std::ostream & operator<< (std::ostream & stream, const Fuchsian<T> & G)
     { return stream << "(" << G.a << ", " << G.b << ", " << G.c << ", " << G.d << ")"; }
 };
