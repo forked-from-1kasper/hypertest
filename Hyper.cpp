@@ -37,7 +37,7 @@ void error_callback(int error, const char* description)
 enum class Model { Poincaré, Klein, Gans };
 constexpr auto model = Model::Gans;
 
-auto project(double y₁, double y₂) {
+constexpr auto projection(double y₁, double y₂) {
     double x₁, x₂;
 
     switch (model) {
@@ -57,99 +57,7 @@ auto project(double y₁, double y₂) {
     return Vector2<double>(x₁, x₂);
 }
 
-void glVertexH(double y₁, double y₂, double t) {
-    auto v = project(y₁, y₂);
-    glVertex3d(v.x, t, v.y);
-}
-
-inline void glVertexGyro(const Gyrovector<double> & vect, double height) {
-    glVertexH(vect.x(), vect.y(), height);
-}
-
-void drawVertical(std::function<Gyrovector<double>(double)> g, size_t steps, double t1, double t2, double h₁, double h₂) {
-    auto step = (t2 - t1) / steps;
-    auto P₁ = g(t1);
-
-    glBegin(GL_QUADS);
-
-    for (size_t idx = 1; idx <= steps; idx++) {
-        auto q₁ = (idx - 1) / double(steps), q₂ = idx / double(steps);
-        auto P₂ = g(t1 + idx * step);
-
-        auto v₁ = Vector3<double>(0.0, h₁ - h₂, 0.0);
-        auto v₂ = Vector3<double>(P₂.x() - P₁.x(), 0.0, P₂.y() - P₁.y());
-        auto n  = cross(v₁, v₂);
-
-        glNormal3d(n.x, n.y, n.z);
-
-        glTexCoord2d(q₁, 0); glVertexGyro(P₁, h₁);
-        glTexCoord2d(q₁, 1); glVertexGyro(P₁, h₂);
-        glTexCoord2d(q₂, 1); glVertexGyro(P₂, h₂);
-        glTexCoord2d(q₂, 0); glVertexGyro(P₂, h₁);
-
-        P₁ = P₂;
-    }
-
-    glEnd();
-}
-
-void texCoordSide(Side side, double t) {
-    switch (side) {
-        case Side::Top:   glTexCoord2d(t, 1);     break;
-        case Side::Down:  glTexCoord2d(1 - t, 0); break;
-        case Side::Left:  glTexCoord2d(0, t);     break;
-        case Side::Right: glTexCoord2d(1, 1 - t); break;
-    }
-}
-
-void drawHorizontal(std::function<Gyrovector<double>(double)> g, size_t steps, double t1, double t2, Gyrovector<double> origin, double height, Side side, double dir) {
-    auto step = (t2 - t1) / steps;
-    auto P₁ = g(t1);
-
-    glBegin(GL_TRIANGLES);
-    glNormal3d(0, dir, 0);
-
-    for (size_t idx = 1; idx <= steps; idx++) {
-        auto q₁ = (idx - 1) / double(steps), q₂ = idx / double(steps);
-        auto P₂ = g(t1 + idx * step);
-
-        texCoordSide(side, dir > 0 ? q₁ : q₂);
-        glVertexGyro(dir > 0 ? P₁ : P₂, height);
-
-        glTexCoord2d(0.5, 0.5);
-        glVertexGyro(origin, height);
-
-        texCoordSide(side, dir > 0 ? q₂ : q₁);
-        glVertexGyro(dir > 0 ? P₂ : P₁, height);
-
-        P₁ = P₂;
-    }
-
-    glEnd();
-
-}
-
-constexpr auto accuracy = 16;
-
-void drawSide(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> M, double h₁, double h₂) {
-    drawVertical(compose(Transform(M), Line(+j, +i)), accuracy, 0, 1, h₁, h₂);
-    drawVertical(compose(Transform(M), Line(+i, -j)), accuracy, 0, 1, h₁, h₂);
-    drawVertical(compose(Transform(M), Line(-j, -i)), accuracy, 0, 1, h₁, h₂);
-    drawVertical(compose(Transform(M), Line(-i, +j)), accuracy, 0, 1, h₁, h₂);
-}
-
-void drawCap(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> M, double height, double dir) {
-    drawHorizontal(compose(Transform(M), Line(+j, +i)), accuracy, 0, 1, M.origin(), height, Side::Top, dir);
-    drawHorizontal(compose(Transform(M), Line(+i, -j)), accuracy, 0, 1, M.origin(), height, Side::Right, dir);
-    drawHorizontal(compose(Transform(M), Line(-j, -i)), accuracy, 0, 1, M.origin(), height, Side::Down, dir);
-    drawHorizontal(compose(Transform(M), Line(-i, +j)), accuracy, 0, 1, M.origin(), height, Side::Left, dir);
-}
-
-void drawCube(Gyrovector<double> i, Gyrovector<double> j, Möbius<double> M, double h₁, double h₂) {
-    drawSide(i, j, M, h₁, h₂);
-    drawCap(i, j, M, h₁, -1);
-    drawCap(i, j, M, h₂, 1);
-}
+constexpr auto projectGyro(const Gyrovector<double> & v) { return projection(v.x(), v.y()); }
 
 int width = 900, height = 900;
 
@@ -181,10 +89,10 @@ constexpr Fuchsian<int64_t> Δ4 {{+6, +0}, {-6, +6}, {-1, -1}, {+6, +0}};
 
 constexpr int chunkSize = 16;
 
-constexpr auto meter = 1.0/double(chunkSize);
+constexpr auto meter = projectGyro(A).abs() / double(chunkSize);
 
-const double ground = 1.8 / 16.0;
-const auto speed = 10 * meter;
+const double ground = 1.8 * meter;
+const auto speed = 4.317 * meter;
 
 constexpr auto mouseSpeed = 0.7;
 auto velocity = Gyrovector<double>(0, 0);
@@ -231,20 +139,59 @@ constexpr auto initGrid() {
 
 constexpr auto grid = initGrid();
 
-void drawGrid(Möbius<double> M) {
-    glBegin(GL_QUADS);
-    glNormal3d(0, 1, 0);
+template<typename T> struct Parallelogram {
+    Vector2<T> A, B, C, D;
 
-    for (int i = 0; i < chunkSize; i++) {
-        for (int j = 0; j < chunkSize; j++) {
-            glTexCoord2d(0, 0); glVertexGyro(M.apply(grid[i + 0][j + 0]), 0);
-            glTexCoord2d(1, 0); glVertexGyro(M.apply(grid[i + 1][j + 0]), 0);
-            glTexCoord2d(1, 1); glVertexGyro(M.apply(grid[i + 1][j + 1]), 0);
-            glTexCoord2d(0, 1); glVertexGyro(M.apply(grid[i + 0][j + 1]), 0);
-        }
-    }
+    constexpr auto rev() const { return Parallelogram<T>(D, C, B, A); }
+};
+
+void drawParallelogram(const Parallelogram<double> & P, const Vector3<double> n, double h) {
+    glNormal3d(n.x, n.y, n.z);
+    glTexCoord2d(0, 0); glVertex3d(P.A.x, h, P.A.y);
+    glTexCoord2d(1, 0); glVertex3d(P.B.x, h, P.B.y);
+    glTexCoord2d(1, 1); glVertex3d(P.C.x, h, P.C.y);
+    glTexCoord2d(0, 1); glVertex3d(P.D.x, h, P.D.y);
+}
+
+void drawSide(const Vector2<double> & A, const Vector2<double> & B, double h₁, double h₂) {
+    auto v₁ = Vector3<double>(0.0, h₂ - h₁, 0.0);
+    auto v₂ = Vector3<double>(B.x - A.x, 0.0, B.y - A.y);
+    auto n  = cross(v₁, v₂);
+
+    glNormal3d(n.x, n.y, n.z);
+    glTexCoord2d(0, 0); glVertex3d(A.x, h₁, A.y);
+    glTexCoord2d(0, 1); glVertex3d(A.x, h₂, A.y);
+    glTexCoord2d(1, 1); glVertex3d(B.x, h₂, B.y);
+    glTexCoord2d(1, 0); glVertex3d(B.x, h₁, B.y);
+}
+
+void drawRightParallelogrammicPrism(double h₁, double h₂, const Parallelogram<double> & P) {
+    glBegin(GL_QUADS);
+
+    drawParallelogram(P, Vector3<double>(0, +1, 0), h₂); // Top
+    drawParallelogram(P.rev(), Vector3<double>(0, -1, 0), h₁); // Bottom
+
+    drawSide(P.B, P.A, h₁, h₂);
+    drawSide(P.C, P.B, h₁, h₂);
+    drawSide(P.D, P.C, h₁, h₂);
+    drawSide(P.A, P.D, h₁, h₂);
 
     glEnd();
+}
+
+void drawNode(Möbius<double> M, uint16_t x, uint16_t y, uint16_t z) {
+    drawRightParallelogrammicPrism(double(y) * meter, double(y + 1) * meter,
+        { projectGyro(M.apply(grid[x + 0][z + 0])),
+          projectGyro(M.apply(grid[x + 1][z + 0])),
+          projectGyro(M.apply(grid[x + 1][z + 1])),
+          projectGyro(M.apply(grid[x + 0][z + 1])) }
+    );
+}
+
+void drawGrid(Möbius<double> M) {
+    for (uint16_t i = 0; i < chunkSize; i++)
+        for (uint16_t j = 0; j < chunkSize; j++)
+            drawNode(M, i, 0, j);
 }
 
 double globaltime = 0;
@@ -288,9 +235,12 @@ void display(GLFWwindow * window) {
     gluLookAt(0, 0, 0, dx, dy, dz, up.x, up.y, up.z);
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
-    glTranslatef(0, -ground, 0);
+    glTranslatef(0, -ground - meter, 0);
 
     glColor3f(0.0f, 0.0f, 0.0f);
+
+    drawNode(origin, 9, 1, 9);
+    drawNode(origin, 9, 3, 9);
 
     drawGrid(origin);
     drawGrid(origin * Δ1.field<double>());

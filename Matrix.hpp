@@ -18,6 +18,8 @@ struct Matrix<T, 2, 1> {
     Matrix() = default;
     constexpr Matrix(const T x, const T y) : x(x), y(y) {}
 
+    constexpr T abs() const { return std::hypot(x, y);}
+
     inline T * operator[](size_t k) {
         switch (k) {
             case 0:  return &x;
