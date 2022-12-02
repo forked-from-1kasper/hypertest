@@ -1,3 +1,4 @@
+#include <map>
 #include <cmath>
 #include <complex>
 #include <iostream>
@@ -13,7 +14,6 @@
 
 using namespace std::complex_literals;
 
-enum class Direction { Forward, Staying, Backward };
 enum class Side { Top, Down, Left, Right };
 
 template<class F, class G> auto compose(F f, G g) {
@@ -82,15 +82,27 @@ constexpr Fuchsian<int64_t> Δ2 {{+6, +0}, {+6, -6}, {+1, +1}, {+6, +0}};
 constexpr Fuchsian<int64_t> Δ3 {{+6, +0}, {-6, -6}, {-1, +1}, {+6, +0}};
 constexpr Fuchsian<int64_t> Δ4 {{+6, +0}, {-6, +6}, {-1, -1}, {+6, +0}};
 
-constexpr int chunkSize = 16;
+constexpr int chunkSize   = 16;
+constexpr int worldHeight = 256;
 
 constexpr auto meter = projectGyro(A).abs() / double(chunkSize);
 
-const double ground = 1.8 * meter;
-const auto speed = 4.317 * meter;
+const double speed       = 4.317 * meter;
+const double normalSpeed = 1.0;
 
 constexpr auto mouseSpeed = 0.7;
-auto velocity = Gyrovector<double>(0, 0);
+
+double level = 2.8 * meter;
+
+namespace Keyboard {
+    bool forward  = false;
+    bool backward = false;
+    bool left     = false;
+    bool right    = false;
+    bool up       = false;
+    bool down     = false;
+};
+
 auto position = Gyrovector<double>(0, 0);
 
 double horizontal = 0.0, vertical = 0.0;
@@ -189,21 +201,79 @@ void drawGrid(Möbius<double> M) {
             drawNode(M, i, 0, j);
 }
 
+using NodeId = uint64_t;
+
+struct NodeDef { std::string name; };
+struct Node    { NodeId id; };
+struct Chunk   { Fuchsian<int64_t> pos; Node data[chunkSize][worldHeight][chunkSize]; };
+
+using NodeRegistry = std::map<NodeId, NodeDef>;
+using Atlas = std::vector<Chunk>;
+
+Chunk * lookup(Atlas atlas, Fuchsian<int64_t> key) {
+    for (auto & chunk : atlas)
+        if (chunk.pos == key)
+            return &chunk;
+
+    return nullptr;
+}
+
+NodeRegistry nodeRegistry;
+Atlas localAtlas;
+
+bool inCell(const Gyrovector<double> & w, uint16_t i, int16_t j) {
+    auto A = grid[i + 0][j + 0];
+    auto B = grid[i + 1][j + 0];
+    auto C = grid[i + 1][j + 1];
+    auto D = grid[i + 0][j + 1];
+
+    auto α = (w.x() - A.x()) * (B.y() - A.y()) - (B.x() - A.x()) * (w.y() - A.y());
+    auto β = (w.x() - B.x()) * (C.y() - B.y()) - (C.x() - B.x()) * (w.y() - B.y());
+    auto γ = (w.x() - C.x()) * (D.y() - C.y()) - (D.x() - C.x()) * (w.y() - C.y());
+    auto δ = (w.x() - D.x()) * (A.y() - D.y()) - (A.x() - D.x()) * (w.y() - D.y());
+
+    return (α < 0) == (β < 0) && (β < 0) == (γ < 0) && (γ < 0) == (δ < 0);
+}
+
+std::pair<uint16_t, uint16_t> roundOff(const Gyrovector<double> & w) {
+    for (uint16_t i = 0; i < chunkSize; i++)
+        for (uint16_t j = 0; j < chunkSize; j++)
+            if (inCell(w, i, j)) return std::pair(i, j);
+
+    return std::pair(255, 255);
+}
+
 double globaltime = 0;
 void display(GLFWwindow * window) {
     constexpr auto ε = 0.001;
 
     auto dt = glfwGetTime() - globaltime; globaltime += dt;
 
-    auto v = Gyrovector<double>(velocity.val * std::exp(-horizontal * 1i));
+    auto dir = 0i;
+    if (Keyboard::forward)  dir += +1i;
+    if (Keyboard::backward) dir += -1i;
+    if (Keyboard::left)     dir += +1;
+    if (Keyboard::right)    dir += -1;
+
+    if (dir != 0.0) dir /= std::abs(dir);
+
+    auto normalDir = 0;
+    if (Keyboard::up)   normalDir += 1;
+    if (Keyboard::down) normalDir -= 1;
+
+    auto velocity = Gyrovector<double>(speed * dir * std::polar(1.0, -horizontal));
 
     auto P₁ = position;
-    auto P₂ = P₁ + dt * v;
+    auto P₂ = P₁ + dt * velocity;
     auto Δφ = holonomy(P₁, P₂);
 
     position = P₂; horizontal += Δφ;
+    level += dt * normalDir * normalSpeed;
 
-    auto origin = Möbius<double>::translate(position);
+    auto [X, Y] = roundOff(position);
+    std::cout << X << " " << Y << std::endl;
+
+    auto origin = Möbius<double>::translate(-position);
 
     glfwGetCursorPos(window, &xpos, &ypos);
     glfwSetCursorPos(window, width/2, height/2);
@@ -230,7 +300,7 @@ void display(GLFWwindow * window) {
     gluLookAt(0, 0, 0, dx, dy, dz, up.x, up.y, up.z);
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
-    glTranslatef(0, -ground - meter, 0);
+    glTranslatef(0, -level, 0);
 
     glColor3f(0.0f, 0.0f, 0.0f);
 
@@ -290,15 +360,26 @@ void setupMaterial() {
 void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
         switch (key) {
-            case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, GL_TRUE); break;
-            case GLFW_KEY_W:      velocity.val = -speed * 1i; break;
-            case GLFW_KEY_S:      velocity.val = +speed * 1i; break;
-            case GLFW_KEY_A:      velocity.val = -speed; break;
-            case GLFW_KEY_D:      velocity.val = +speed; break;
+            case GLFW_KEY_ESCAPE:       glfwSetWindowShouldClose(window, GL_TRUE); break;
+            case GLFW_KEY_W:            Keyboard::forward  = true; break;
+            case GLFW_KEY_S:            Keyboard::backward = true; break;
+            case GLFW_KEY_A:            Keyboard::left     = true; break;
+            case GLFW_KEY_D:            Keyboard::right    = true; break;
+            case GLFW_KEY_LEFT_SHIFT:   Keyboard::up       = true; break;
+            case GLFW_KEY_LEFT_CONTROL: Keyboard::down     = true; break;
         }
     }
 
-    if (action == GLFW_RELEASE) velocity.val = 0;
+    if (action == GLFW_RELEASE) {
+        switch (key) {
+            case GLFW_KEY_W:            Keyboard::forward  = false; break;
+            case GLFW_KEY_S:            Keyboard::backward = false; break;
+            case GLFW_KEY_A:            Keyboard::left     = false; break;
+            case GLFW_KEY_D:            Keyboard::right    = false; break;
+            case GLFW_KEY_LEFT_SHIFT:   Keyboard::up       = false; break;
+            case GLFW_KEY_LEFT_CONTROL: Keyboard::down     = false; break;
+        }
+    }
 }
 
 void setupWindowSize(GLFWwindow * window, int newWidth, int newHeight) {
@@ -311,6 +392,9 @@ void setupWindowSize(GLFWwindow * window, int newWidth, int newHeight) {
 }
 
 int main() {
+    nodeRegistry.insert({0UL, NodeDef("Air")});
+    nodeRegistry.insert({1UL, NodeDef("Stuff")});
+
     glfwSetErrorCallback(error_callback);
 
     if (!glfwInit()) return -1;
@@ -353,5 +437,6 @@ int main() {
 
     glfwDestroyWindow(window);
     glfwTerminate();
+
     return 0;
 }

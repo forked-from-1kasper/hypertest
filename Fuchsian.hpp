@@ -12,6 +12,7 @@ inline auto hcf(mpz_class & n, mpz_class & m) { return gcd(n, m); }
 
 template<typename T> concept EuclideanDomain =
 requires(T a, T b) {
+    {    -a     } -> std::convertible_to<T>;
     {   a + b   } -> std::convertible_to<T>;
     {   a - b   } -> std::convertible_to<T>;
     {   a * b   } -> std::convertible_to<T>;
@@ -51,6 +52,11 @@ struct Gaussian {
     auto operator/(const T & k) const { return Gaussian<T>(real / k, imag / k); }
     auto operator/=(const T & k) { real /= k; imag /= k; return *this; }
 
+    constexpr auto operator==(const Gaussian<T> & w) const
+    { return real == w.real && imag == w.imag; }
+
+    inline void negate() { real = -real; imag = -imag; }
+
     template<typename U> auto field() const { return std::complex<U>(real, imag); }
     template<EuclideanDomain U> auto transform() const { return Gaussian<U>(real, imag); }
 
@@ -77,6 +83,8 @@ struct Fuchsian {
         σ = hcf(d.imag, σ);
 
         a /= σ; b /= σ; c /= σ; d /= σ;
+
+        if (a.real < 0) { a.negate(); b.negate(); c.negate(); d.negate(); }
     }
 
     template<typename U> constexpr inline Möbius<U> field() const {
@@ -85,6 +93,9 @@ struct Fuchsian {
     }
 
     constexpr inline auto inverse() const { return Fuchsian<T>(d, -b, -c, a); }
+
+    constexpr auto operator==(const Fuchsian<T> & G) const
+    { return a == G.a && b == G.b && c == G.b && d == G.d; }
 
     friend std::ostream & operator<< (std::ostream & stream, const Fuchsian<T> & G)
     { return stream << "(" << G.a << ", " << G.b << ", " << G.c << ", " << G.d << ")"; }
