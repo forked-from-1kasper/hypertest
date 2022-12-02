@@ -432,6 +432,11 @@ void buildTestStructure(Chunk * chunk) {
             setNode(chunk, i, 16, j, {3 - id});
         }
     }
+
+    for (size_t i = 0; i < chunkSize; i += chunkSize - 1)
+        for (size_t k = 0; k < chunkSize; k += chunkSize - 1)
+            for (size_t j = 1; j < 16; j++)
+                setNode(chunk, i, j, k, {2});
 }
 
 int main() {
