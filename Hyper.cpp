@@ -77,6 +77,7 @@ constexpr auto j = Coadd(A, -B); // s(1 − i)/√6
 
 constexpr auto M1 = Möbius<double>::translate(i);
 
+constexpr Fuchsian<int64_t> I  {{+1, +0}, {+0, +0}, {+0, +0}, {+1, +0}};
 constexpr Fuchsian<int64_t> Δ1 {{+6, +0}, {+6, +6}, {+1, -1}, {+6, +0}};
 constexpr Fuchsian<int64_t> Δ2 {{+6, +0}, {+6, -6}, {+1, +1}, {+6, +0}};
 constexpr Fuchsian<int64_t> Δ3 {{+6, +0}, {-6, -6}, {-1, +1}, {+6, +0}};
@@ -195,29 +196,67 @@ void drawNode(Möbius<double> M, uint16_t x, uint16_t y, uint16_t z) {
     );
 }
 
-void drawGrid(Möbius<double> M) {
-    for (uint16_t i = 0; i < chunkSize; i++)
-        for (uint16_t j = 0; j < chunkSize; j++)
-            drawNode(M, i, 0, j);
-}
-
 using NodeId = uint64_t;
 
-struct NodeDef { std::string name; };
+struct NodeDef { std::string name; GLuint texture; };
 struct Node    { NodeId id; };
 struct Chunk   { Fuchsian<int64_t> pos; Node data[chunkSize][worldHeight][chunkSize]; };
 
 using NodeRegistry = std::map<NodeId, NodeDef>;
-using Atlas = std::vector<Chunk>;
+using Atlas = std::vector<Chunk*>;
 
-Chunk * lookup(Atlas atlas, Fuchsian<int64_t> key) {
-    for (auto & chunk : atlas)
-        if (chunk.pos == key)
-            return &chunk;
+Chunk * lookup(Atlas & atlas, Fuchsian<int64_t> key) {
+    for (auto chunk : atlas)
+        if (chunk->pos == key)
+            return chunk;
 
     return nullptr;
 }
 
+void drawChunk(NodeRegistry & nodeRegistry, Möbius<double> & M, const Fuchsian<int64_t> G, const Chunk * chunk) {
+    auto N = M * (G.inverse() * chunk->pos).field<double>();
+
+    for (uint16_t i = 0; i < chunkSize; i++) {
+        for (uint16_t k = 0; k < chunkSize; k++) {
+            for (uint16_t j = 0; j < worldHeight; j++) {
+                auto id = chunk->data[i][j][k].id;
+
+                if (id == 0) continue; // don’t draw air
+
+                auto nodeDef = nodeRegistry[id];
+
+                glBindTexture(GL_TEXTURE_2D, nodeDef.texture);
+                drawNode(N, i, j, k);
+            }
+        }
+    }
+}
+
+Chunk * pollChunk(Atlas & atlas, const Fuchsian<int64_t> & pos) {
+    for (auto chunk : atlas)
+        if (chunk->pos == pos)
+            return chunk;
+
+    auto chunk = new Chunk(pos, {});
+    atlas.push_back(chunk);
+    return chunk;
+}
+
+void unloadChunk(Atlas & atlas, const Fuchsian<int64_t> & pos) {
+    std::remove_if(atlas.begin(), atlas.end(), [&pos](Chunk * chunk) {
+        return chunk->pos == pos;
+    });
+}
+
+void freeAtlas(Atlas & atlas) {
+    for (auto chunk : atlas)
+        delete chunk;
+}
+
+inline void setNode(Chunk * chunk, size_t i, size_t j, size_t k, const Node & node)
+{ chunk->data[i][j][k] = node; }
+
+Fuchsian<int64_t> currentChunk(I);
 NodeRegistry nodeRegistry;
 Atlas localAtlas;
 
@@ -270,9 +309,6 @@ void display(GLFWwindow * window) {
     position = P₂; horizontal += Δφ;
     level += dt * normalDir * normalSpeed;
 
-    auto [X, Y] = roundOff(position);
-    std::cout << X << " " << Y << std::endl;
-
     auto origin = Möbius<double>::translate(-position);
 
     glfwGetCursorPos(window, &xpos, &ypos);
@@ -304,26 +340,13 @@ void display(GLFWwindow * window) {
 
     glColor3f(0.0f, 0.0f, 0.0f);
 
-    drawNode(origin, 9, 1, 9);
-    drawNode(origin, 9, 3, 9);
-
-    drawGrid(origin);
-    drawGrid(origin * Δ1.field<double>());
-    drawGrid(origin * Δ2.field<double>());
-    drawGrid(origin * Δ3.field<double>());
-    drawGrid(origin * Δ4.field<double>());
-
-    auto M = Δ1 * Δ2;
-
-    drawGrid(origin * M.field<double>());
-    drawGrid(origin * (Δ1 * Δ2 * Δ3).field<double>());
-    drawGrid(origin * (Δ1 * Δ2 * Δ3 * Δ4).field<double>());
+    for (auto & chunk : localAtlas)
+        drawChunk(nodeRegistry, origin, currentChunk, chunk);
 
     glPopMatrix();
 }
 
-int texWidth, texHeight;
-GLuint texture;
+GLuint texture1, texture2;
 
 void setupLighting() {
     glEnable(GL_LIGHTING);
@@ -336,21 +359,30 @@ void setupLighting() {
     glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
 }
 
-void setupTexture() {
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
+void loadTexture(GLuint & ptr, const char * filepath) {
+    int texWidth, texHeight;
 
-    auto image = SOIL_load_image("texture.jpg", &texWidth, &texHeight, 0, SOIL_LOAD_RGB);
+    glGenTextures(1, &ptr);
+    glBindTexture(GL_TEXTURE_2D, ptr);
+
+    auto image = SOIL_load_image(filepath, &texWidth, &texHeight, 0, SOIL_LOAD_RGB);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
     SOIL_free_image_data(image);
-
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_CULL_FACE);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+}
+
+void setupTexture() {
+    loadTexture(texture1, "texture1.jpg");
+    loadTexture(texture2, "texture2.jpg");
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_CULL_FACE);
 }
 
 void setupMaterial() {
@@ -360,24 +392,24 @@ void setupMaterial() {
 void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
         switch (key) {
-            case GLFW_KEY_ESCAPE:       glfwSetWindowShouldClose(window, GL_TRUE); break;
-            case GLFW_KEY_W:            Keyboard::forward  = true; break;
-            case GLFW_KEY_S:            Keyboard::backward = true; break;
-            case GLFW_KEY_A:            Keyboard::left     = true; break;
-            case GLFW_KEY_D:            Keyboard::right    = true; break;
-            case GLFW_KEY_LEFT_SHIFT:   Keyboard::up       = true; break;
-            case GLFW_KEY_LEFT_CONTROL: Keyboard::down     = true; break;
+            case GLFW_KEY_ESCAPE:     glfwSetWindowShouldClose(window, GL_TRUE); break;
+            case GLFW_KEY_W:          Keyboard::forward  = true; break;
+            case GLFW_KEY_S:          Keyboard::backward = true; break;
+            case GLFW_KEY_A:          Keyboard::left     = true; break;
+            case GLFW_KEY_D:          Keyboard::right    = true; break;
+            case GLFW_KEY_SPACE:      Keyboard::up       = true; break;
+            case GLFW_KEY_LEFT_SHIFT: Keyboard::down     = true; break;
         }
     }
 
     if (action == GLFW_RELEASE) {
         switch (key) {
-            case GLFW_KEY_W:            Keyboard::forward  = false; break;
-            case GLFW_KEY_S:            Keyboard::backward = false; break;
-            case GLFW_KEY_A:            Keyboard::left     = false; break;
-            case GLFW_KEY_D:            Keyboard::right    = false; break;
-            case GLFW_KEY_LEFT_SHIFT:   Keyboard::up       = false; break;
-            case GLFW_KEY_LEFT_CONTROL: Keyboard::down     = false; break;
+            case GLFW_KEY_W:          Keyboard::forward  = false; break;
+            case GLFW_KEY_S:          Keyboard::backward = false; break;
+            case GLFW_KEY_A:          Keyboard::left     = false; break;
+            case GLFW_KEY_D:          Keyboard::right    = false; break;
+            case GLFW_KEY_SPACE:      Keyboard::up       = false; break;
+            case GLFW_KEY_LEFT_SHIFT: Keyboard::down     = false; break;
         }
     }
 }
@@ -391,10 +423,18 @@ void setupWindowSize(GLFWwindow * window, int newWidth, int newHeight) {
     gluPerspective(fov, double(width) / double(height), near, far);
 }
 
-int main() {
-    nodeRegistry.insert({0UL, NodeDef("Air")});
-    nodeRegistry.insert({1UL, NodeDef("Stuff")});
+void buildTestStructure(Chunk * chunk) {
+    for (size_t i = 0; i < chunkSize; i++) {
+        for (size_t j = 0; j < chunkSize; j++) {
+            NodeId id = (i + j) % 2 == 0 ? 1 : 2;
 
+            setNode(chunk, i, 0, j, {id});
+            setNode(chunk, i, 16, j, {3 - id});
+        }
+    }
+}
+
+int main() {
     glfwSetErrorCallback(error_callback);
 
     if (!glfwInit()) return -1;
@@ -428,6 +468,16 @@ int main() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
+    nodeRegistry.insert({0UL, NodeDef("Air", 0)});
+    nodeRegistry.insert({1UL, NodeDef("Stuff", texture1)});
+    nodeRegistry.insert({2UL, NodeDef("Weird Stuff", texture2)});
+
+    buildTestStructure(pollChunk(localAtlas, I));
+    buildTestStructure(pollChunk(localAtlas, Δ1));
+    buildTestStructure(pollChunk(localAtlas, Δ2));
+    buildTestStructure(pollChunk(localAtlas, Δ3));
+    buildTestStructure(pollChunk(localAtlas, Δ4));
+
     while (!glfwWindowShouldClose(window))
     {
         display(window);
@@ -437,6 +487,8 @@ int main() {
 
     glfwDestroyWindow(window);
     glfwTerminate();
+
+    freeAtlas(localAtlas);
 
     return 0;
 }
