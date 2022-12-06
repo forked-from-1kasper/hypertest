@@ -64,11 +64,11 @@ void drawParallelogram(const Parallelogram<Real> & P, const Vector3<Real> n, Rea
 }
 
 void drawSide(const Vector2<Real> & A, const Vector2<Real> & B, Real h₁, Real h₂) {
-    auto v₁ = Vector3<Real>(0.0, h₂ - h₁, 0.0);
-    auto v₂ = Vector3<Real>(B.x - A.x, 0.0, B.y - A.y);
-    auto n  = cross(v₁, v₂);
+    Vector3<Real> v₁(0.0, h₂ - h₁, 0.0), v₂(B.x - A.x, 0.0, B.y - A.y);
 
+    auto n = cross(v₁, v₂);
     glNormal3d(n.x, n.y, n.z);
+
     glTexCoord2d(1, 1); glVertex3d(A.x, h₁, A.y);
     glTexCoord2d(1, 0); glVertex3d(A.x, h₂, A.y);
     glTexCoord2d(0, 0); glVertex3d(B.x, h₂, B.y);
@@ -214,7 +214,7 @@ void display(GLFWwindow * window) {
     if (Keyboard::up)   normalDir += 1;
     if (Keyboard::down) normalDir -= 1;
 
-    auto velocity = Gyrovector<Real>(speed * dir * std::polar(1.0, -horizontal));
+    Gyrovector<Real> velocity(speed * dir * std::polar(1.0, -horizontal));
 
     position = position * Möbius<Real>::translate(dt * velocity);
     position = position.normalize();
@@ -252,9 +252,8 @@ void display(GLFWwindow * window) {
     auto dy = sin(vertical);
     auto dz = cos(vertical) * cos(horizontal);
 
-    auto direction = Vector3<Real>(dx, dy, dz);
-    auto right     = Vector3<Real>(sin(horizontal - τ/4), 0.0, cos(horizontal - τ/4));
-    auto up        = cross(right, direction);
+    Vector3<Real> direction(dx, dy, dz), right(sin(horizontal - τ/4), 0.0, cos(horizontal - τ/4));
+    auto up = cross(right, direction);
 
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

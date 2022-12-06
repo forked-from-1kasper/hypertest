@@ -77,7 +77,7 @@ template<typename T> std::function<Gyrovector<T>(Gyrovector<T>)> Scalar(const T 
 { return [k](Gyrovector<T> A) { return k * A; }; }
 
 template<typename T> T holonomy(const Gyrovector<T> & P₁, const Gyrovector<T> & P₂) {
-    const auto n₁ = Gyrovector<double>(0.0, 1.0);
+    const Gyrovector<double> n₁(0.0, 1.0);
     const auto n₂ = gyr(P₂, -P₁, n₁);
     return std::arg(n₁.val / n₂.val);
 }
@@ -90,6 +90,8 @@ template<typename T> inline T gyroangle(const Gyrovector<T> & P₁, const Gyrove
 
 template<typename T>
 struct Möbius {
+    constexpr static auto zero = Gyrovector<T>(0, 0);
+
     std::complex<T> a, b, c, d;
 
     constexpr std::complex<T> det() const { return a * d - b * c; }
@@ -100,8 +102,7 @@ struct Möbius {
     constexpr Gyrovector<T> apply(const Gyrovector<T> & w) const
     { return (a * w.val + b) / (c * w.val + d); }
 
-    constexpr inline Gyrovector<T> origin() const
-    { const auto O = Gyrovector<T>(0, 0); return apply(O); }
+    constexpr inline Gyrovector<T> origin() const { return apply(zero); }
 
     constexpr inline Möbius<T> inverse() const { return Möbius<T>(d, -b, -c, a); }
 
