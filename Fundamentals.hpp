@@ -126,3 +126,9 @@ namespace Tesselation {
 
     constexpr auto neighbours⁻¹ = Array::inverse<neighbours.size(), Integer, Real>(neighbours);
 }
+
+template<class F, class G> auto compose(F f, G g) {
+    return [f, g](auto &&... args) {
+        return f(g(std::forward<decltype(args)>(args)...));
+    };
+}

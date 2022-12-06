@@ -17,32 +17,16 @@ using namespace std::complex_literals;
 
 enum class Side { Top, Down, Left, Right };
 
-template<class F, class G> auto compose(F f, G g) {
-    return [f, g](auto &&... args) {
-        return f(g(std::forward<decltype(args)>(args)...));
-    };
-}
+template<typename T> struct Parallelogram {
+    Vector2<T> A, B, C, D;
+
+    constexpr auto rev() const { return Parallelogram<T>(D, C, B, A); }
+};
 
 void error_callback(int error, const char* description)
 {
     fprintf(stderr, "Error: %s\n", description);
 }
-
-constexpr auto fov  = 80;
-constexpr auto near = 0.01;
-constexpr auto far  = 150.0;
-
-int width = 900, height = 900;
-
-const GLfloat lightDiffuse[] = {1.0, 1.0, 1.0, 1.0};
-const GLfloat matDiffuse[] = {1.0, 1.0, 1.0, 1.0};
-
-const GLfloat lightPosition[] = {0.0f, 32.0f, 0.0f, 0.0f};
-
-Real speed       = 4.317 * Fundamentals::meter;
-Real normalSpeed = 1.0;
-
-auto mouseSpeed = 0.7;
 
 namespace Keyboard {
     bool forward  = false;
@@ -53,17 +37,23 @@ namespace Keyboard {
     bool down     = false;
 };
 
+constexpr auto fov  = 80;
+constexpr auto near = 0.01;
+constexpr auto far  = 150.0;
+
+const GLfloat lightDiffuse[] = {1.0, 1.0, 1.0, 1.0};
+const GLfloat matDiffuse[] = {1.0, 1.0, 1.0, 1.0};
+
+const GLfloat lightPosition[] = {0.0f, 32.0f, 0.0f, 0.0f};
+
+int width = 900, height = 900;
+
+Real speed = 4.317 * Fundamentals::meter, normalSpeed = 1.0, mouseSpeed = 0.7;
+
 Möbius<Real> position {1, 0, 0, 1};
 Real level = 2.8 * Fundamentals::meter;
 
-Real horizontal = 0, vertical = 0;
-Real xpos, ypos;
-
-template<typename T> struct Parallelogram {
-    Vector2<T> A, B, C, D;
-
-    constexpr auto rev() const { return Parallelogram<T>(D, C, B, A); }
-};
+Real horizontal = 0, vertical = 0, xpos, ypos;
 
 void drawParallelogram(const Parallelogram<Real> & P, const Vector3<Real> n, Real h) {
     glNormal3d(n.x, n.y, n.z);
