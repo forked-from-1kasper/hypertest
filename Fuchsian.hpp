@@ -27,37 +27,37 @@ struct Gaussian {
     constexpr inline auto operator-() const { return Gaussian(-real, -imag); }
     constexpr inline auto operator+() const { return *this; }
 
-    auto operator+(const Gaussian<T> & w) const
+    constexpr auto operator+(const Gaussian<T> & w) const
     { return Gaussian<T>(real + w.real, imag + w.imag); }
 
-    auto operator+=(const Gaussian<T> & w)
+    constexpr auto operator+=(const Gaussian<T> & w)
     { real += w.real; imag += w.imag; return *this; }
 
-    auto operator-(const Gaussian<T> & w) const
+    constexpr auto operator-(const Gaussian<T> & w) const
     { return Gaussian<T>(real - w.real, imag - w.imag); }
 
-    auto operator-=(const Gaussian<T> & w)
+    constexpr auto operator-=(const Gaussian<T> & w)
     { real -= w.real; imag -= w.imag; return *this; }
 
-    auto operator*(const Gaussian<T> & w) const
+    constexpr auto operator*(const Gaussian<T> & w) const
     { return Gaussian<T>(real * w.real - imag * w.imag, real * w.imag + imag * w.real); }
 
-    auto operator*=(const Gaussian<T> & w) {
+    constexpr auto operator*=(const Gaussian<T> & w) {
         auto α(real), β(w.real);
         real = α * β - imag * w.imag;
         imag = α * w.imag + imag * β;
         return *this;
     }
 
-    auto operator/(const T & k) const { return Gaussian<T>(real / k, imag / k); }
-    auto operator/=(const T & k) { real /= k; imag /= k; return *this; }
+    constexpr auto operator/(const T & k) const { return Gaussian<T>(real / k, imag / k); }
+    constexpr auto operator/=(const T & k) { real /= k; imag /= k; return *this; }
 
     constexpr auto operator==(const Gaussian<T> & w) const
     { return real == w.real && imag == w.imag; }
 
-    inline void negate() { real = -real; imag = -imag; }
+    constexpr void negate() { real = -real; imag = -imag; }
 
-    template<typename U> auto field() const { return std::complex<U>(real, imag); }
+    template<typename U> constexpr auto field() const { return std::complex<U>(real, imag); }
     template<EuclideanDomain U> auto transform() const { return Gaussian<U>(real, imag); }
 
     friend std::ostream & operator<< (std::ostream & stream, const Gaussian<T> & z)
@@ -101,7 +101,7 @@ struct Fuchsian {
     { return stream << "(" << G.a << ", " << G.b << ", " << G.c << ", " << G.d << ")"; }
 };
 
-template<typename T> Fuchsian<T> operator*(const Fuchsian<T> & A, const Fuchsian<T> & B) {
+template<typename T> constexpr Fuchsian<T> operator*(const Fuchsian<T> & A, const Fuchsian<T> & B) {
     return {
         A.a * B.a + A.b * B.c,
         A.a * B.b + A.b * B.d,

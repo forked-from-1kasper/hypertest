@@ -95,7 +95,7 @@ struct Möbius {
     constexpr std::complex<T> det() const { return a * d - b * c; }
 
     constexpr inline Möbius<T> div(std::complex<T> k) const { return {a / k, b / k, c / k, d / k}; }
-    constexpr inline Möbius<T> normalize() const { return div(det()); }
+    constexpr inline Möbius<T> normalize() const { return div(sqrt(det())); }
 
     constexpr Gyrovector<T> apply(const Gyrovector<T> & w) const
     { return (a * w.val + b) / (c * w.val + d); }
@@ -103,7 +103,7 @@ struct Möbius {
     constexpr inline Gyrovector<T> origin() const
     { const auto O = Gyrovector<T>(0, 0); return apply(O); }
 
-    constexpr inline Möbius<T> inverse() const { return Möbius<T>(d, -b, -c, a).normalize(); }
+    constexpr inline Möbius<T> inverse() const { return Möbius<T>(d, -b, -c, a); }
 
     constexpr static inline Möbius<T> identity() { return {1, 0, 0, 1}; }
 

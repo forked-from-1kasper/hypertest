@@ -66,14 +66,14 @@ const GLfloat matDiffuse[] = {1.0, 1.0, 1.0, 1.0};
 const GLfloat lightPosition[] = {0.0f, 32.0f, 0.0f, 0.0f};
 
 constexpr auto k = τ / 6;                      // π/3
-constexpr auto D = sqrt(2/(tan(k/2) + 1) - 1); // s√(2 − √3)
-constexpr auto L = sqrt(cos(k));               // s/√2
+constexpr auto D = sqrt(2/(tan(k/2) + 1) - 1); // √(2 − √3)
+constexpr auto L = sqrt(cos(k));               // 1/√2
 
 constexpr auto A = Gyrovector<double>(+D, +0);
 constexpr auto B = Gyrovector<double>(+0, +D);
 
-constexpr auto i = Coadd(A,  B); // s(1 + i)/√6
-constexpr auto j = Coadd(A, -B); // s(1 − i)/√6
+constexpr auto i = Coadd(A,  B); // (1 + i)/√6
+constexpr auto j = Coadd(A, -B); // (1 − i)/√6
 
 constexpr auto M1 = Möbius<double>::translate(i);
 
@@ -82,6 +82,29 @@ constexpr Fuchsian<int64_t> Δ1 {{+6, +0}, {+6, +6}, {+1, -1}, {+6, +0}};
 constexpr Fuchsian<int64_t> Δ2 {{+6, +0}, {+6, -6}, {+1, +1}, {+6, +0}};
 constexpr Fuchsian<int64_t> Δ3 {{+6, +0}, {-6, -6}, {-1, +1}, {+6, +0}};
 constexpr Fuchsian<int64_t> Δ4 {{+6, +0}, {-6, +6}, {-1, -1}, {+6, +0}};
+
+namespace Array {
+    template<std::size_t N, typename T, typename U>
+    constexpr auto inverse(const std::array<Fuchsian<T>, N> & xs) {
+        std::array<Möbius<U>, N> retval;
+
+        for (size_t i = 0; i < N; i++)
+            retval[i] = xs[i].inverse().template field<U>();
+
+        return retval;
+    }
+}
+
+constexpr std::array neighbours {
+    Δ1, Δ2, Δ3, Δ4,
+    // corners
+    Δ1 * Δ2, Δ1 * Δ2 * Δ3, Δ1 * Δ2 * Δ3 * Δ4,
+    Δ1 * Δ4, Δ1 * Δ4 * Δ3, Δ1 * Δ4 * Δ3 * Δ2,
+    Δ3 * Δ2, Δ3 * Δ2 * Δ1, Δ3 * Δ2 * Δ1 * Δ4,
+    Δ3 * Δ4, Δ3 * Δ4 * Δ1, Δ3 * Δ4 * Δ1 * Δ2
+};
+
+constexpr auto neighbours⁻¹ = Array::inverse<neighbours.size(), int64_t, double>(neighbours);
 
 constexpr int chunkSize   = 16;
 constexpr int worldHeight = 256;
@@ -104,7 +127,7 @@ namespace Keyboard {
     bool down     = false;
 };
 
-auto position = Gyrovector<double>(0, 0);
+Möbius<double> position {1, 0, 0, 1};
 
 double horizontal = 0.0, vertical = 0.0;
 double xpos, ypos;
@@ -302,14 +325,27 @@ void display(GLFWwindow * window) {
 
     auto velocity = Gyrovector<double>(speed * dir * std::polar(1.0, -horizontal));
 
-    auto P₁ = position;
-    auto P₂ = P₁ + dt * velocity;
-    auto Δφ = holonomy(P₁, P₂);
+    position = position * Möbius<double>::translate(dt * velocity);
+    position = position.normalize();
 
-    position = P₂; horizontal += Δφ;
+    auto [i, j] = roundOff(position.origin());
+
+    if (i == 255 && j == 255)
+    for (std::size_t k = 0; k < neighbours.size(); k++) {
+        auto Δ   = neighbours[k];
+        auto Δ⁻¹ = neighbours⁻¹[k];
+        auto P   = (Δ⁻¹ * position).normalize();
+
+        std::tie(i, j) = roundOff(P.origin());
+
+        if (i != 255 && j != 255) { currentChunk *= Δ; position = P; break; }
+    }
+
+    //std::cout << i << ", " << j << "; " << currentChunk << " " << position << std::endl;
+
     level += dt * normalDir * normalSpeed;
 
-    auto origin = Möbius<double>::translate(-position);
+    auto origin = position.inverse();
 
     glfwGetCursorPos(window, &xpos, &ypos);
     glfwSetCursorPos(window, width/2, height/2);
@@ -423,7 +459,7 @@ void setupWindowSize(GLFWwindow * window, int newWidth, int newHeight) {
     gluPerspective(fov, double(width) / double(height), near, far);
 }
 
-void buildTestStructure(Chunk * chunk) {
+Chunk * buildTestStructure(Chunk * chunk) {
     for (size_t i = 0; i < chunkSize; i++) {
         for (size_t j = 0; j < chunkSize; j++) {
             NodeId id = (i + j) % 2 == 0 ? 1 : 2;
@@ -437,6 +473,15 @@ void buildTestStructure(Chunk * chunk) {
         for (size_t k = 0; k < chunkSize; k += chunkSize - 1)
             for (size_t j = 1; j < 16; j++)
                 setNode(chunk, i, j, k, {2});
+
+    return chunk;
+}
+
+Chunk * markChunk(Chunk * chunk) {
+    setNode(chunk, 3, 1, 9, {2});
+    setNode(chunk, 3, 2, 9, {2});
+    setNode(chunk, 3, 3, 9, {2});
+    return chunk;
 }
 
 int main() {
@@ -479,7 +524,7 @@ int main() {
 
     buildTestStructure(pollChunk(localAtlas, I));
     buildTestStructure(pollChunk(localAtlas, Δ1));
-    buildTestStructure(pollChunk(localAtlas, Δ2));
+    markChunk(buildTestStructure(pollChunk(localAtlas, Δ2)));
     buildTestStructure(pollChunk(localAtlas, Δ3));
     buildTestStructure(pollChunk(localAtlas, Δ4));
 
