@@ -4,6 +4,38 @@
 
 constexpr double τ = 2 * 3.141592653589793238462643383279502884197169399375105820974944;
 
+using Real    = double;
+using Integer = int64_t;
+using NodeId  = uint64_t;
+
+enum class Model { Poincaré, Klein, Gans };
+constexpr auto model = Model::Gans;
+
+namespace Projection {
+    constexpr auto apply(Real y₁, Real y₂) {
+        Real x₁, x₂;
+
+        switch (model) {
+            case Model::Poincaré: x₁ = y₁; x₂ = y₂; break;
+
+            case Model::Klein: {
+                auto σ = 1 + y₁ * y₁ + y₂ * y₂;
+                x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ; break;
+            };
+
+            case Model::Gans: {
+                auto σ = 1 - y₁ * y₁ - y₂ * y₂;
+                x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ; break;
+            }
+        }
+
+        return Vector2<Real>(x₁, x₂);
+    }
+
+    constexpr auto apply(const Gyrovector<Real> & v)
+    { return apply(v.x(), v.y()); }
+}
+
 namespace Fundamentals {
     constexpr int chunkSize   = 16;
     constexpr int worldHeight = 256;
@@ -11,11 +43,10 @@ namespace Fundamentals {
     constexpr auto k = τ / 6;                      // π/3
     constexpr auto D = sqrt(2/(tan(k/2) + 1) - 1); // √(2 − √3)
     constexpr auto L = sqrt(cos(k));               // 1/√2
-}
 
-using Real    = double;
-using Integer = int64_t;
-using NodeId  = uint64_t;
+    constexpr auto gauge = Gyrovector<Real>(D, +0);
+    constexpr auto meter = Projection::apply(gauge).abs() / Real(chunkSize);
+}
 
 template<typename T, int N> using Array² = std::array<std::array<T, N>, N>;
 

@@ -28,31 +28,6 @@ void error_callback(int error, const char* description)
     fprintf(stderr, "Error: %s\n", description);
 }
 
-enum class Model { Poincaré, Klein, Gans };
-constexpr auto model = Model::Gans;
-
-constexpr auto projection(Real y₁, Real y₂) {
-    Real x₁, x₂;
-
-    switch (model) {
-        case Model::Poincaré: x₁ = y₁; x₂ = y₂; break;
-
-        case Model::Klein: {
-            auto σ = 1 + y₁ * y₁ + y₂ * y₂;
-            x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ; break;
-        };
-
-        case Model::Gans: {
-            auto σ = 1 - y₁ * y₁ - y₂ * y₂;
-            x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ; break;
-        }
-    }
-
-    return Vector2<Real>(x₁, x₂);
-}
-
-constexpr auto projectGyro(const Gyrovector<Real> & v) { return projection(v.x(), v.y()); }
-
 constexpr auto fov  = 80;
 constexpr auto near = 0.01;
 constexpr auto far  = 150.0;
@@ -64,10 +39,7 @@ const GLfloat matDiffuse[] = {1.0, 1.0, 1.0, 1.0};
 
 const GLfloat lightPosition[] = {0.0f, 32.0f, 0.0f, 0.0f};
 
-constexpr auto gauge = Gyrovector<Real>(Fundamentals::D, +0);
-constexpr auto meter = projectGyro(gauge).abs() / Real(Fundamentals::chunkSize);
-
-Real speed       = 4.317 * meter;
+Real speed       = 4.317 * Fundamentals::meter;
 Real normalSpeed = 1.0;
 
 auto mouseSpeed = 0.7;
@@ -82,7 +54,7 @@ namespace Keyboard {
 };
 
 Möbius<Real> position {1, 0, 0, 1};
-Real level = 2.8 * meter;
+Real level = 2.8 * Fundamentals::meter;
 
 Real horizontal = 0, vertical = 0;
 Real xpos, ypos;
@@ -130,11 +102,11 @@ void drawRightParallelogrammicPrism(double h, double Δh, const Parallelogram<do
 }
 
 void drawNode(Möbius<Real> M, uint16_t x, uint16_t y, uint16_t z) {
-    drawRightParallelogrammicPrism(Real(y) * meter, meter,
-        { projectGyro(M.apply(grid[x + 0][z + 0])),
-          projectGyro(M.apply(grid[x + 1][z + 0])),
-          projectGyro(M.apply(grid[x + 1][z + 1])),
-          projectGyro(M.apply(grid[x + 0][z + 1])) }
+    drawRightParallelogrammicPrism(Real(y) * Fundamentals::meter, Fundamentals::meter,
+        { Projection::apply(M.apply(grid[x + 0][z + 0])),
+          Projection::apply(M.apply(grid[x + 1][z + 0])),
+          Projection::apply(M.apply(grid[x + 1][z + 1])),
+          Projection::apply(M.apply(grid[x + 0][z + 1])) }
     );
 }
 
