@@ -85,13 +85,13 @@ void drawSide(const Vector2<Real> & A, const Vector2<Real> & B, Real h₁, Real 
     glTexCoord2d(0, 1); glVertex3d(B.x, h₁, B.y);
 }
 
-void drawRightParallelogrammicPrism(double h, double Δh, const Parallelogram<double> & P) {
-    auto h₁ = h, h₂ = h + Δh;
+void drawRightParallelogrammicPrism(Real h, Real Δh, const Parallelogram<Real> & P) {
+    const auto h₁ = h, h₂ = h + Δh;
 
     glBegin(GL_QUADS);
 
-    drawParallelogram(P, Vector3<double>(0, +1, 0), h₂); // Top
-    drawParallelogram(P.rev(), Vector3<double>(0, -1, 0), h₁); // Bottom
+    drawParallelogram(P, Vector3<Real>(0, +1, 0), h₂); // Top
+    drawParallelogram(P.rev(), Vector3<Real>(0, -1, 0), h₁); // Bottom
 
     drawSide(P.B, P.A, h₁, h₂);
     drawSide(P.C, P.B, h₁, h₂);
