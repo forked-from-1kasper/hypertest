@@ -11,6 +11,7 @@
 #include "Matrix.hpp"
 #include "Gyrovector.hpp"
 #include "Fuchsian.hpp"
+#include "Fundamentals.hpp"
 
 using namespace std::complex_literals;
 
@@ -22,8 +23,6 @@ template<class F, class G> auto compose(F f, G g) {
     };
 }
 
-constexpr double τ = 2 * 3.141592653589793238462643383279502884197169399375105820974944;
-
 void error_callback(int error, const char* description)
 {
     fprintf(stderr, "Error: %s\n", description);
@@ -32,8 +31,8 @@ void error_callback(int error, const char* description)
 enum class Model { Poincaré, Klein, Gans };
 constexpr auto model = Model::Gans;
 
-constexpr auto projection(double y₁, double y₂) {
-    double x₁, x₂;
+constexpr auto projection(Real y₁, Real y₂) {
+    Real x₁, x₂;
 
     switch (model) {
         case Model::Poincaré: x₁ = y₁; x₂ = y₂; break;
@@ -49,74 +48,29 @@ constexpr auto projection(double y₁, double y₂) {
         }
     }
 
-    return Vector2<double>(x₁, x₂);
+    return Vector2<Real>(x₁, x₂);
 }
 
-constexpr auto projectGyro(const Gyrovector<double> & v) { return projection(v.x(), v.y()); }
-
-int width = 900, height = 900;
+constexpr auto projectGyro(const Gyrovector<Real> & v) { return projection(v.x(), v.y()); }
 
 constexpr auto fov  = 80;
 constexpr auto near = 0.01;
 constexpr auto far  = 150.0;
+
+int width = 900, height = 900;
 
 const GLfloat lightDiffuse[] = {1.0, 1.0, 1.0, 1.0};
 const GLfloat matDiffuse[] = {1.0, 1.0, 1.0, 1.0};
 
 const GLfloat lightPosition[] = {0.0f, 32.0f, 0.0f, 0.0f};
 
-constexpr auto k = τ / 6;                      // π/3
-constexpr auto D = sqrt(2/(tan(k/2) + 1) - 1); // √(2 − √3)
-constexpr auto L = sqrt(cos(k));               // 1/√2
+constexpr auto gauge = Gyrovector<Real>(Fundamentals::D, +0);
+constexpr auto meter = projectGyro(gauge).abs() / Real(Fundamentals::chunkSize);
 
-constexpr auto A = Gyrovector<double>(+D, +0);
-constexpr auto B = Gyrovector<double>(+0, +D);
+Real speed       = 4.317 * meter;
+Real normalSpeed = 1.0;
 
-constexpr auto i = Coadd(A,  B); // (1 + i)/√6
-constexpr auto j = Coadd(A, -B); // (1 − i)/√6
-
-constexpr auto M1 = Möbius<double>::translate(i);
-
-constexpr Fuchsian<int64_t> I  {{+1, +0}, {+0, +0}, {+0, +0}, {+1, +0}};
-constexpr Fuchsian<int64_t> Δ1 {{+6, +0}, {+6, +6}, {+1, -1}, {+6, +0}};
-constexpr Fuchsian<int64_t> Δ2 {{+6, +0}, {+6, -6}, {+1, +1}, {+6, +0}};
-constexpr Fuchsian<int64_t> Δ3 {{+6, +0}, {-6, -6}, {-1, +1}, {+6, +0}};
-constexpr Fuchsian<int64_t> Δ4 {{+6, +0}, {-6, +6}, {-1, -1}, {+6, +0}};
-
-namespace Array {
-    template<std::size_t N, typename T, typename U>
-    constexpr auto inverse(const std::array<Fuchsian<T>, N> & xs) {
-        std::array<Möbius<U>, N> retval;
-
-        for (size_t i = 0; i < N; i++)
-            retval[i] = xs[i].inverse().template field<U>();
-
-        return retval;
-    }
-}
-
-constexpr std::array neighbours {
-    Δ1, Δ2, Δ3, Δ4,
-    // corners
-    Δ1 * Δ2, Δ1 * Δ2 * Δ3, Δ1 * Δ2 * Δ3 * Δ4,
-    Δ1 * Δ4, Δ1 * Δ4 * Δ3, Δ1 * Δ4 * Δ3 * Δ2,
-    Δ3 * Δ2, Δ3 * Δ2 * Δ1, Δ3 * Δ2 * Δ1 * Δ4,
-    Δ3 * Δ4, Δ3 * Δ4 * Δ1, Δ3 * Δ4 * Δ1 * Δ2
-};
-
-constexpr auto neighbours⁻¹ = Array::inverse<neighbours.size(), int64_t, double>(neighbours);
-
-constexpr int chunkSize   = 16;
-constexpr int worldHeight = 256;
-
-constexpr auto meter = projectGyro(A).abs() / double(chunkSize);
-
-const double speed       = 4.317 * meter;
-const double normalSpeed = 1.0;
-
-constexpr auto mouseSpeed = 0.7;
-
-double level = 2.8 * meter;
+auto mouseSpeed = 0.7;
 
 namespace Keyboard {
     bool forward  = false;
@@ -127,48 +81,11 @@ namespace Keyboard {
     bool down     = false;
 };
 
-Möbius<double> position {1, 0, 0, 1};
+Möbius<Real> position {1, 0, 0, 1};
+Real level = 2.8 * meter;
 
-double horizontal = 0.0, vertical = 0.0;
-double xpos, ypos;
-
-template<typename T> constexpr T sign(T x) { return (x > 0) - (x < 0); }
-
-constexpr auto Φ(double x, double y) {
-    if (x == 0 && y == 0) return Gyrovector<double>(0, 0);
-
-    auto L = fabs(x) + fabs(y);
-
-    Gyrovector<double> u(sign(x) * L, 0), v(0, sign(y) * L);
-    return u + fabs(y / L) * (-u + v);
-}
-
-constexpr auto Ψ(double x, double y) {
-    auto u = (x + y) / 2;
-    auto v = (x - y) / 2;
-
-    return Φ(u * D, v * D);
-}
-
-constexpr auto yieldGrid(int i, int j) {
-    auto x = double(2 * i - chunkSize) / double(chunkSize);
-    auto y = double(2 * j - chunkSize) / double(chunkSize);
-    return Ψ(x, y);
-}
-
-template<typename T, int N> using Array² = std::array<std::array<T, N>, N>;
-
-constexpr auto initGrid() {
-    Array²<Gyrovector<double>, chunkSize + 1> retval;
-
-    for (int i = 0; i <= chunkSize; i++)
-        for (int j = 0; j <= chunkSize; j++)
-            retval[i][j] = yieldGrid(i, j);
-
-    return retval;
-}
-
-constexpr auto grid = initGrid();
+Real horizontal = 0, vertical = 0;
+Real xpos, ypos;
 
 template<typename T> struct Parallelogram {
     Vector2<T> A, B, C, D;
@@ -176,7 +93,7 @@ template<typename T> struct Parallelogram {
     constexpr auto rev() const { return Parallelogram<T>(D, C, B, A); }
 };
 
-void drawParallelogram(const Parallelogram<double> & P, const Vector3<double> n, double h) {
+void drawParallelogram(const Parallelogram<Real> & P, const Vector3<Real> n, Real h) {
     glNormal3d(n.x, n.y, n.z);
     glTexCoord2d(0, 0); glVertex3d(P.A.x, h, P.A.y);
     glTexCoord2d(1, 0); glVertex3d(P.B.x, h, P.B.y);
@@ -184,9 +101,9 @@ void drawParallelogram(const Parallelogram<double> & P, const Vector3<double> n,
     glTexCoord2d(0, 1); glVertex3d(P.D.x, h, P.D.y);
 }
 
-void drawSide(const Vector2<double> & A, const Vector2<double> & B, double h₁, double h₂) {
-    auto v₁ = Vector3<double>(0.0, h₂ - h₁, 0.0);
-    auto v₂ = Vector3<double>(B.x - A.x, 0.0, B.y - A.y);
+void drawSide(const Vector2<Real> & A, const Vector2<Real> & B, Real h₁, Real h₂) {
+    auto v₁ = Vector3<Real>(0.0, h₂ - h₁, 0.0);
+    auto v₂ = Vector3<Real>(B.x - A.x, 0.0, B.y - A.y);
     auto n  = cross(v₁, v₂);
 
     glNormal3d(n.x, n.y, n.z);
@@ -196,7 +113,9 @@ void drawSide(const Vector2<double> & A, const Vector2<double> & B, double h₁,
     glTexCoord2d(0, 1); glVertex3d(B.x, h₁, B.y);
 }
 
-void drawRightParallelogrammicPrism(double h₁, double h₂, const Parallelogram<double> & P) {
+void drawRightParallelogrammicPrism(double h, double Δh, const Parallelogram<double> & P) {
+    auto h₁ = h, h₂ = h + Δh;
+
     glBegin(GL_QUADS);
 
     drawParallelogram(P, Vector3<double>(0, +1, 0), h₂); // Top
@@ -210,8 +129,8 @@ void drawRightParallelogrammicPrism(double h₁, double h₂, const Parallelogra
     glEnd();
 }
 
-void drawNode(Möbius<double> M, uint16_t x, uint16_t y, uint16_t z) {
-    drawRightParallelogrammicPrism(double(y) * meter, double(y + 1) * meter,
+void drawNode(Möbius<Real> M, uint16_t x, uint16_t y, uint16_t z) {
+    drawRightParallelogrammicPrism(Real(y) * meter, meter,
         { projectGyro(M.apply(grid[x + 0][z + 0])),
           projectGyro(M.apply(grid[x + 1][z + 0])),
           projectGyro(M.apply(grid[x + 1][z + 1])),
@@ -219,16 +138,19 @@ void drawNode(Möbius<double> M, uint16_t x, uint16_t y, uint16_t z) {
     );
 }
 
-using NodeId = uint64_t;
-
 struct NodeDef { std::string name; GLuint texture; };
-struct Node    { NodeId id; };
-struct Chunk   { Fuchsian<int64_t> pos; Node data[chunkSize][worldHeight][chunkSize]; };
+
+struct Node { NodeId id; };
+
+struct Chunk {
+    Fuchsian<Integer> pos;
+    Node data[Fundamentals::chunkSize][Fundamentals::worldHeight][Fundamentals::chunkSize];
+};
 
 using NodeRegistry = std::map<NodeId, NodeDef>;
 using Atlas = std::vector<Chunk*>;
 
-Chunk * lookup(Atlas & atlas, Fuchsian<int64_t> key) {
+Chunk * lookup(Atlas & atlas, Fuchsian<Integer> key) {
     for (auto chunk : atlas)
         if (chunk->pos == key)
             return chunk;
@@ -236,8 +158,10 @@ Chunk * lookup(Atlas & atlas, Fuchsian<int64_t> key) {
     return nullptr;
 }
 
-void drawChunk(NodeRegistry & nodeRegistry, Möbius<double> & M, const Fuchsian<int64_t> G, const Chunk * chunk) {
-    auto N = M * (G.inverse() * chunk->pos).field<double>();
+void drawChunk(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsian<Integer> G, const Chunk * chunk) {
+    using namespace Fundamentals;
+
+    auto N = M * (G.inverse() * chunk->pos).field<Real>();
 
     for (uint16_t i = 0; i < chunkSize; i++) {
         for (uint16_t k = 0; k < chunkSize; k++) {
@@ -255,7 +179,7 @@ void drawChunk(NodeRegistry & nodeRegistry, Möbius<double> & M, const Fuchsian<
     }
 }
 
-Chunk * pollChunk(Atlas & atlas, const Fuchsian<int64_t> & pos) {
+Chunk * pollChunk(Atlas & atlas, const Fuchsian<Integer> & pos) {
     for (auto chunk : atlas)
         if (chunk->pos == pos)
             return chunk;
@@ -265,7 +189,7 @@ Chunk * pollChunk(Atlas & atlas, const Fuchsian<int64_t> & pos) {
     return chunk;
 }
 
-void unloadChunk(Atlas & atlas, const Fuchsian<int64_t> & pos) {
+void unloadChunk(Atlas & atlas, const Fuchsian<Integer> & pos) {
     std::remove_if(atlas.begin(), atlas.end(), [&pos](Chunk * chunk) {
         return chunk->pos == pos;
     });
@@ -279,11 +203,11 @@ void freeAtlas(Atlas & atlas) {
 inline void setNode(Chunk * chunk, size_t i, size_t j, size_t k, const Node & node)
 { chunk->data[i][j][k] = node; }
 
-Fuchsian<int64_t> currentChunk(I);
+Fuchsian<Integer> currentChunk(Tesselation::I);
 NodeRegistry nodeRegistry;
 Atlas localAtlas;
 
-bool inCell(const Gyrovector<double> & w, uint16_t i, int16_t j) {
+bool inCell(const Gyrovector<Real> & w, uint16_t i, int16_t j) {
     auto A = grid[i + 0][j + 0];
     auto B = grid[i + 1][j + 0];
     auto C = grid[i + 1][j + 1];
@@ -297,7 +221,9 @@ bool inCell(const Gyrovector<double> & w, uint16_t i, int16_t j) {
     return (α < 0) == (β < 0) && (β < 0) == (γ < 0) && (γ < 0) == (δ < 0);
 }
 
-std::pair<uint16_t, uint16_t> roundOff(const Gyrovector<double> & w) {
+std::pair<uint16_t, uint16_t> roundOff(const Gyrovector<Real> & w) {
+    using namespace Fundamentals;
+
     for (uint16_t i = 0; i < chunkSize; i++)
         for (uint16_t j = 0; j < chunkSize; j++)
             if (inCell(w, i, j)) return std::pair(i, j);
@@ -323,17 +249,17 @@ void display(GLFWwindow * window) {
     if (Keyboard::up)   normalDir += 1;
     if (Keyboard::down) normalDir -= 1;
 
-    auto velocity = Gyrovector<double>(speed * dir * std::polar(1.0, -horizontal));
+    auto velocity = Gyrovector<Real>(speed * dir * std::polar(1.0, -horizontal));
 
-    position = position * Möbius<double>::translate(dt * velocity);
+    position = position * Möbius<Real>::translate(dt * velocity);
     position = position.normalize();
 
     auto [i, j] = roundOff(position.origin());
 
     if (i == 255 && j == 255)
-    for (std::size_t k = 0; k < neighbours.size(); k++) {
-        auto Δ   = neighbours[k];
-        auto Δ⁻¹ = neighbours⁻¹[k];
+    for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++) {
+        auto Δ   = Tesselation::neighbours[k];
+        auto Δ⁻¹ = Tesselation::neighbours⁻¹[k];
         auto P   = (Δ⁻¹ * position).normalize();
 
         std::tie(i, j) = roundOff(P.origin());
@@ -360,8 +286,8 @@ void display(GLFWwindow * window) {
     auto dy = sin(vertical);
     auto dz = cos(vertical) * cos(horizontal);
 
-    auto direction = Vector3<double>(dx, dy, dz);
-    auto right     = Vector3<double>(sin(horizontal - τ/4), 0.0, cos(horizontal - τ/4));
+    auto direction = Vector3<Real>(dx, dy, dz);
+    auto right     = Vector3<Real>(sin(horizontal - τ/4), 0.0, cos(horizontal - τ/4));
     auto up        = cross(right, direction);
 
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -456,10 +382,12 @@ void setupWindowSize(GLFWwindow * window, int newWidth, int newHeight) {
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(fov, double(width) / double(height), near, far);
+    gluPerspective(fov, Real(width) / Real(height), near, far);
 }
 
 Chunk * buildTestStructure(Chunk * chunk) {
+    using namespace Fundamentals;
+
     for (size_t i = 0; i < chunkSize; i++) {
         for (size_t j = 0; j < chunkSize; j++) {
             NodeId id = (i + j) % 2 == 0 ? 1 : 2;
@@ -522,11 +450,13 @@ int main() {
     nodeRegistry.insert({1UL, NodeDef("Stuff", texture1)});
     nodeRegistry.insert({2UL, NodeDef("Weird Stuff", texture2)});
 
+    using namespace Tesselation;
+
     buildTestStructure(pollChunk(localAtlas, I));
-    buildTestStructure(pollChunk(localAtlas, Δ1));
-    markChunk(buildTestStructure(pollChunk(localAtlas, Δ2)));
-    buildTestStructure(pollChunk(localAtlas, Δ3));
-    buildTestStructure(pollChunk(localAtlas, Δ4));
+    buildTestStructure(pollChunk(localAtlas, U));
+    markChunk(buildTestStructure(pollChunk(localAtlas, L)));
+    buildTestStructure(pollChunk(localAtlas, D));
+    buildTestStructure(pollChunk(localAtlas, R));
 
     while (!glfwWindowShouldClose(window))
     {

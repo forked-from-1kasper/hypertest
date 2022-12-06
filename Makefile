@@ -1,7 +1,7 @@
 BINARY = Hyper
 CFLAGS = -std=c++2a
 CPP    = Hyper.cpp
-HPP    = Matrix.hpp Gyrovector.hpp Fuchsian.hpp
+HPP    = Matrix.hpp Gyrovector.hpp Fuchsian.hpp Fundamentals.hpp
 LIBS   = -lglfw -lSOIL -lGLEW -lGL -lGLU -lgmpxx -lgmp
 
 Hyper: $(HPP) $(CPP)
