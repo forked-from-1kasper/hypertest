@@ -91,7 +91,7 @@ void drawRightParallelogrammicPrism(Real h, Real Δh, const Parallelogram<Real> 
     glEnd();
 }
 
-void drawNode(Möbius<Real> M, uint16_t x, uint16_t y, uint16_t z) {
+void drawNode(Möbius<Real> M, Rank x, Level y, Rank z) {
     drawRightParallelogrammicPrism(Real(y) * Fundamentals::meter, Fundamentals::meter,
         { Projection::apply(M.apply(grid[x + 0][z + 0])),
           Projection::apply(M.apply(grid[x + 1][z + 0])),
@@ -125,17 +125,20 @@ void drawChunk(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsian<In
 
     auto N = M * (G.inverse() * chunk->pos).field<Real>();
 
-    for (uint16_t i = 0; i < chunkSize; i++) {
-        for (uint16_t k = 0; k < chunkSize; k++) {
-            for (uint16_t j = 0; j < worldHeight; j++) {
+    NodeDef nodeDef;
+    for (Rank i = 0; i < chunkSize; i++) {
+        for (Rank k = 0; k < chunkSize; k++) {
+            for (Level j = 0; true; j++) {
                 auto id = chunk->data[i][j][k].id;
 
-                if (id == 0) continue; // don’t draw air
+                if (id == 0) goto finish; // don’t draw air
 
-                auto nodeDef = nodeRegistry[id];
+                nodeDef = nodeRegistry[id];
 
                 glBindTexture(GL_TEXTURE_2D, nodeDef.texture);
                 drawNode(N, i, j, k);
+
+                finish: if (j == worldTop) break;
             }
         }
     }
@@ -169,7 +172,7 @@ Fuchsian<Integer> currentChunk(Tesselation::I);
 NodeRegistry nodeRegistry;
 Atlas localAtlas;
 
-bool inCell(const Gyrovector<Real> & w, uint16_t i, int16_t j) {
+bool inCell(const Gyrovector<Real> & w, Rank i, Rank j) {
     auto A = grid[i + 0][j + 0];
     auto B = grid[i + 1][j + 0];
     auto C = grid[i + 1][j + 1];
@@ -183,19 +186,19 @@ bool inCell(const Gyrovector<Real> & w, uint16_t i, int16_t j) {
     return (α < 0) == (β < 0) && (β < 0) == (γ < 0) && (γ < 0) == (δ < 0);
 }
 
-std::pair<uint16_t, uint16_t> roundOff(const Gyrovector<Real> & w) {
+std::pair<Rank, Rank> roundOff(const Gyrovector<Real> & w) {
     using namespace Fundamentals;
 
-    for (uint16_t i = 0; i < chunkSize; i++)
-        for (uint16_t j = 0; j < chunkSize; j++)
+    for (Rank i = 0; i < chunkSize; i++)
+        for (Rank j = 0; j < chunkSize; j++)
             if (inCell(w, i, j)) return std::pair(i, j);
 
-    return std::pair(255, 255);
+    return std::pair(exterior, exterior);
 }
 
 double globaltime = 0;
 void display(GLFWwindow * window) {
-    constexpr auto ε = 0.001;
+    constexpr auto ε = 10e-5;
 
     auto dt = glfwGetTime() - globaltime; globaltime += dt;
 
@@ -218,18 +221,19 @@ void display(GLFWwindow * window) {
 
     auto [i, j] = roundOff(position.origin());
 
-    if (i == 255 && j == 255)
+    if (i == Fundamentals::exterior && j == Fundamentals::exterior)
     for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++) {
-        auto Δ   = Tesselation::neighbours[k];
-        auto Δ⁻¹ = Tesselation::neighbours⁻¹[k];
-        auto P   = (Δ⁻¹ * position).normalize();
+        const auto Δ   = Tesselation::neighbours[k];
+        const auto Δ⁻¹ = Tesselation::neighbours⁻¹[k];
+        const auto P   = (Δ⁻¹ * position).normalize();
 
         std::tie(i, j) = roundOff(P.origin());
 
-        if (i != 255 && j != 255) { currentChunk *= Δ; position = P; break; }
+        if (i != Fundamentals::exterior && j != Fundamentals::exterior)
+        { currentChunk *= Δ; position = P; break; }
     }
 
-    //std::cout << i << ", " << j << "; " << currentChunk << " " << position << std::endl;
+    //std::cout << +i << ", " << +j << "; " << currentChunk << " " << position << std::endl;
 
     level += dt * normalDir * normalSpeed;
 

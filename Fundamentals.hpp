@@ -8,6 +8,9 @@ using Real    = double;
 using Integer = int64_t;
 using NodeId  = uint64_t;
 
+using Rank  = uint8_t;
+using Level = uint8_t;
+
 // Some helpful definitions
 template<typename T, int N> using Array² = std::array<std::array<T, N>, N>;
 
@@ -49,14 +52,18 @@ namespace Projection {
 }
 
 namespace Fundamentals {
+    constexpr Level worldTop = 255;
+
+    constexpr Rank exterior = 255;
+
     constexpr int chunkSize   = 16;
-    constexpr int worldHeight = 256;
+    constexpr int worldHeight = worldTop + 1;
 
     constexpr auto k = τ / 6;                      // π/3
     constexpr auto D = sqrt(2/(tan(k/2) + 1) - 1); // √(2 − √3)
     constexpr auto L = sqrt(cos(k));               // 1/√2
 
-    constexpr auto gauge = Gyrovector<Real>(D, +0);
+    constexpr auto gauge = Gyrovector<Real>(D, 0);
     constexpr auto meter = Projection::apply(gauge).abs() / Real(chunkSize);
 }
 
