@@ -8,6 +8,18 @@ using Real    = double;
 using Integer = int64_t;
 using NodeId  = uint64_t;
 
+// Some helpful definitions
+template<typename T, int N> using Array² = std::array<std::array<T, N>, N>;
+
+template<typename T> constexpr T sign(T x) { return (x > 0) - (x < 0); }
+
+template<class F, class G> auto compose(F f, G g) {
+    return [f, g](auto &&... args) {
+        return f(g(std::forward<decltype(args)>(args)...));
+    };
+}
+
+// Various machinery for projections
 enum class Model { Poincaré, Klein, Gans };
 constexpr auto model = Model::Gans;
 
@@ -47,10 +59,6 @@ namespace Fundamentals {
     constexpr auto gauge = Gyrovector<Real>(D, +0);
     constexpr auto meter = Projection::apply(gauge).abs() / Real(chunkSize);
 }
-
-template<typename T, int N> using Array² = std::array<std::array<T, N>, N>;
-
-template<typename T> constexpr T sign(T x) { return (x > 0) - (x < 0); }
 
 // Generation of chunk’s grid
 constexpr auto Φ(Real x, Real y) {
@@ -125,10 +133,4 @@ namespace Tesselation {
     };
 
     constexpr auto neighbours⁻¹ = Array::inverse<neighbours.size(), Integer, Real>(neighbours);
-}
-
-template<class F, class G> auto compose(F f, G g) {
-    return [f, g](auto &&... args) {
-        return f(g(std::forward<decltype(args)>(args)...));
-    };
 }
