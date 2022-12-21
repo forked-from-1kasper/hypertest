@@ -1,4 +1,5 @@
 #include "Gyrovector.hpp"
+#include "Enumerable.hpp"
 #include <gmpxx.h>
 
 #pragma once
@@ -52,8 +53,61 @@ struct Gaussian {
     constexpr auto operator/(const T & k) const { return Gaussian<T>(real / k, imag / k); }
     constexpr auto operator/=(const T & k) { real /= k; imag /= k; return *this; }
 
+    constexpr auto norm() const { return real * real + imag * imag; }
+
+    constexpr auto operator/(const Gaussian<T> & w) const {
+        auto N = w.norm();
+        auto x = real * w.real + imag * w.imag;
+        auto y = imag * w.real - real * w.imag;
+        return Gaussian<T>(x / N, y / N);
+    }
+
+    constexpr auto isZero() const { return real == 0 && imag == 0; }
+    constexpr auto isUnit() const { return (abs(real) == 1 && imag == 0)
+                                        || (real == 0 && abs(imag) == 1); }
+
+    constexpr auto twice() { real <<= 1; imag <<= 1; }
+    constexpr auto half()  { real >>= 1; imag >>= 1; }
+    constexpr auto mulω()  { real -= imag; imag <<= 1; imag += real; }
+    constexpr auto muli()  { std::swap(real, imag); real = -real; }
+    constexpr auto divω()  { real += imag; imag <<= 1; imag -= real; half(); }
+
+    constexpr auto kind() const { return std::pair(bool(real % 2), bool(imag % 2)); }
+
+    // https://www.researchgate.net/publication/269005874_A_Paper-and-Pencil_gcd_Algorithm_for_Gaussian_Integers
+    // https://www.researchgate.net/publication/325472716_PERFORMANCE_OF_A_GCD_ALGO-RITHM_FOR_GAUSSIAN_INTEGERS
+    constexpr static auto hcf(Gaussian<T> α, Gaussian<T> β) {
+        Gaussian<T> δ(1, 0);
+
+        for (;;) {
+            if (α == β || α == -β) return α * δ;
+            if (α.isUnit() || β.isUnit()) return δ;
+            if (α.isZero()) return β * δ;
+            if (β.isZero()) return α * δ;
+
+            switch (Ord(std::pair(α.kind(), β.kind()))) {
+                case Digit(0, 0, 0, 0): α.half(); β.half(); δ.twice(); break;
+                case Digit(0, 0, 1, 1): α.half(); β.divω(); δ.mulω();  break;
+                case Digit(1, 1, 0, 0): α.divω(); β.half(); δ.mulω();  break;
+                case Digit(1, 1, 1, 1): α.divω(); β.divω(); δ.mulω();  break;
+
+                case Digit(0, 1, 0, 0): case Digit(1, 0, 0, 0): β.half(); break;
+                case Digit(0, 0, 0, 1): case Digit(0, 0, 1, 0): α.half(); break;
+                case Digit(1, 0, 0, 1): case Digit(0, 1, 1, 0): β.muli(); break;
+                case Digit(1, 1, 0, 1): case Digit(1, 1, 1, 0): α.divω(); break;
+                case Digit(0, 1, 1, 1): case Digit(1, 0, 1, 1): β.divω(); break;
+
+                case Digit(1, 0, 1, 0): case Digit(0, 1, 0, 1):
+                α += β; β.twice(); β -= α; α.half(); β.half(); break;
+            }
+        }
+    }
+
     constexpr auto operator==(const Gaussian<T> & w) const
     { return real == w.real && imag == w.imag; }
+
+    constexpr auto operator!=(const Gaussian<T> & w) const
+    { return real != w.real || imag != w.imag; }
 
     constexpr void negate() { real = -real; imag = -imag; }
 
@@ -72,19 +126,13 @@ struct Fuchsian {
     constexpr Gaussian<T> det() const { return a * d - b * c; }
 
     void simpl() {
-        auto σ = a.real;
+        auto σ(a);
 
-        σ = hcf(b.real, σ);
-        σ = hcf(c.real, σ);
-        σ = hcf(d.real, σ);
-        σ = hcf(a.imag, σ);
-        σ = hcf(b.imag, σ);
-        σ = hcf(c.imag, σ);
-        σ = hcf(d.imag, σ);
+        σ = Gaussian<T>::hcf(b, σ);
+        σ = Gaussian<T>::hcf(c, σ);
+        σ = Gaussian<T>::hcf(d, σ);
 
-        a /= σ; b /= σ; c /= σ; d /= σ;
-
-        if (a.real < 0) { a.negate(); b.negate(); c.negate(); d.negate(); }
+        a = a / σ; b = b / σ; c = c / σ; d = d / σ;
     }
 
     template<typename U> constexpr inline Möbius<U> field() const {
