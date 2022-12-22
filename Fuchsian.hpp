@@ -63,11 +63,12 @@ struct Gaussian {
     constexpr auto isUnit() const { return (abs(real) == 1 && imag == 0)
                                         || (real == 0 && abs(imag) == 1); }
 
-    constexpr auto twice() { real <<= 1; imag <<= 1; }
-    constexpr auto half()  { real >>= 1; imag >>= 1; }
-    constexpr auto mulω()  { real -= imag; imag <<= 1; imag += real; }
-    constexpr auto muli()  { std::swap(real, imag); real = -real; }
-    constexpr auto divω()  { real += imag; imag <<= 1; imag -= real; half(); }
+    constexpr void negate() { real = -real; imag = -imag; }
+    constexpr void twice()  { real <<= 1; imag <<= 1; }
+    constexpr void half()   { real >>= 1; imag >>= 1; }
+    constexpr void mulω()   { real -= imag; imag <<= 1; imag += real; }
+    constexpr void muli()   { std::swap(real, imag); real = -real; }
+    constexpr void divω()   { real += imag; imag <<= 1; imag -= real; half(); }
 
     constexpr auto kind() const { return std::pair(bool(real % 2), bool(imag % 2)); }
 
@@ -100,13 +101,22 @@ struct Gaussian {
         }
     }
 
+    // Given two Gaussian integers α and β, it multiplies them by ±1/±i
+    // so that both of α components become positive
+    constexpr auto normalizeRational(Gaussian<T> & δ) {
+        switch (Ord(std::pair(real >= 0, imag >= 0))) {
+            /* −1 */ case Ord²(false, false): negate(); δ.negate(); break;
+            /* +i */ case Ord²(true,  false): muli(); δ.muli(); break;
+            /* −i */ case Ord²(false, true):  muli(); negate(); δ.muli(); δ.negate(); break;
+            /* +1 */ case Ord²(true,  true):  break;
+        }
+    }
+
     constexpr auto operator==(const Gaussian<T> & w) const
     { return real == w.real && imag == w.imag; }
 
     constexpr auto operator!=(const Gaussian<T> & w) const
     { return real != w.real || imag != w.imag; }
-
-    constexpr void negate() { real = -real; imag = -imag; }
 
     template<typename U> constexpr auto field() const { return std::complex<U>(real, imag); }
     template<EuclideanDomain U> auto transform() const { return Gaussian<U>(real, imag); }
@@ -114,6 +124,9 @@ struct Gaussian {
     friend std::ostream & operator<< (std::ostream & stream, const Gaussian<T> & z)
     { return stream << z.real << " + " << z.imag << "i"; }
 };
+
+template<EuclideanDomain T>
+using Gaussian² = std::pair<Gaussian<T>, Gaussian<T>>;
 
 template<EuclideanDomain T>
 struct Fuchsian {
@@ -138,6 +151,11 @@ struct Fuchsian {
     }
 
     constexpr inline auto inverse() const { return Fuchsian<T>(d, -b, -c, a); }
+
+    constexpr inline auto origin() const {
+        Gaussian<T> σ = Gaussian<T>::hcf(b, d), α = b / σ, β = d / σ;
+        α.normalizeRational(β); return std::pair(α, β);
+    }
 
     constexpr auto operator==(const Fuchsian<T> & G) const
     { return a == G.a && b == G.b && c == G.b && d == G.d; }

@@ -105,14 +105,15 @@ struct NodeDef { std::string name; GLuint texture; };
 struct Node { NodeId id; };
 
 struct Chunk {
-    Fuchsian<Integer> pos;
+    Fuchsian<Integer> isometry; // used only for drawing
+    Gaussian²<Integer> pos; // used for indexing, should be equal to `isometry.origin()`
     Node data[Fundamentals::chunkSize][Fundamentals::worldHeight][Fundamentals::chunkSize];
 };
 
 using NodeRegistry = std::map<NodeId, NodeDef>;
 using Atlas = std::vector<Chunk*>;
 
-Chunk * lookup(Atlas & atlas, Fuchsian<Integer> key) {
+Chunk * lookup(Atlas & atlas, Gaussian²<Integer> & key) {
     for (auto chunk : atlas)
         if (chunk->pos == key)
             return chunk;
@@ -120,10 +121,10 @@ Chunk * lookup(Atlas & atlas, Fuchsian<Integer> key) {
     return nullptr;
 }
 
-void drawChunk(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsian<Integer> G, const Chunk * chunk) {
+void drawChunk(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsian<Integer> & G, const Chunk * chunk) {
     using namespace Fundamentals;
 
-    auto N = M * (G.inverse() * chunk->pos).field<Real>();
+    auto N = M * (G.inverse() * chunk->isometry).field<Real>();
 
     NodeDef nodeDef;
     for (Rank i = 0; i < chunkSize; i++) {
@@ -144,17 +145,19 @@ void drawChunk(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsian<In
     }
 }
 
-Chunk * pollChunk(Atlas & atlas, const Fuchsian<Integer> & pos) {
+Chunk * pollChunk(Atlas & atlas, const Fuchsian<Integer> & isometry) {
+    auto pos = isometry.origin();
+
     for (auto chunk : atlas)
         if (chunk->pos == pos)
             return chunk;
 
-    auto chunk = new Chunk(pos, {});
+    auto chunk = new Chunk(isometry, pos, {});
     atlas.push_back(chunk);
     return chunk;
 }
 
-void unloadChunk(Atlas & atlas, const Fuchsian<Integer> & pos) {
+void unloadChunk(Atlas & atlas, const Gaussian²<Integer> & pos) {
     std::remove_if(atlas.begin(), atlas.end(), [&pos](Chunk * chunk) {
         return chunk->pos == pos;
     });
@@ -168,7 +171,9 @@ void freeAtlas(Atlas & atlas) {
 inline void setNode(Chunk * chunk, size_t i, size_t j, size_t k, const Node & node)
 { chunk->data[i][j][k] = node; }
 
-Fuchsian<Integer> currentChunk(Tesselation::I);
+Fuchsian<Integer> localIsometry(Tesselation::I);
+auto currentChunk = localIsometry.origin();
+
 NodeRegistry nodeRegistry;
 Atlas localAtlas;
 
@@ -230,10 +235,12 @@ void display(GLFWwindow * window) {
         std::tie(i, j) = roundOff(P.origin());
 
         if (i != Fundamentals::exterior && j != Fundamentals::exterior)
-        { currentChunk *= Δ; position = P; break; }
+        { localIsometry *= Δ; currentChunk = localIsometry.origin(); position = P; break; }
     }
 
-    //std::cout << +i << ", " << +j << "; " << currentChunk << " " << position << std::endl;
+    std::cout << +i << ", " << +j << "; "
+              << currentChunk.first << ", " << currentChunk.second << "; "
+              << position << std::endl;
 
     level += dt * normalDir * normalSpeed;
 
@@ -268,7 +275,7 @@ void display(GLFWwindow * window) {
     glColor3f(0.0f, 0.0f, 0.0f);
 
     for (auto & chunk : localAtlas)
-        drawChunk(nodeRegistry, origin, currentChunk, chunk);
+        drawChunk(nodeRegistry, origin, localIsometry, chunk);
 
     glPopMatrix();
 }
