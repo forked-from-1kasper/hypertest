@@ -172,7 +172,7 @@ inline void setNode(Chunk * chunk, size_t i, size_t j, size_t k, const Node & no
 { chunk->data[i][j][k] = node; }
 
 Fuchsian<Integer> localIsometry(Tesselation::I);
-auto currentChunk = localIsometry.origin();
+auto chunkPos = localIsometry.origin();
 
 NodeRegistry nodeRegistry;
 Atlas localAtlas;
@@ -235,11 +235,11 @@ void display(GLFWwindow * window) {
         std::tie(i, j) = roundOff(P.origin());
 
         if (i != Fundamentals::exterior && j != Fundamentals::exterior)
-        { localIsometry *= Δ; currentChunk = localIsometry.origin(); position = P; break; }
+        { localIsometry *= Δ; chunkPos = localIsometry.origin(); position = P; break; }
     }
 
     std::cout << +i << ", " << +j << "; "
-              << currentChunk.first << ", " << currentChunk.second << "; "
+              << chunkPos.first << ", " << chunkPos.second << "; "
               << position << std::endl;
 
     level += dt * normalDir * normalSpeed;
