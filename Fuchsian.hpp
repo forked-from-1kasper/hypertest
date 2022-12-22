@@ -153,7 +153,7 @@ struct Fuchsian {
     constexpr inline auto inverse() const { return Fuchsian<T>(d, -b, -c, a); }
 
     constexpr inline auto origin() const {
-        Gaussian<T> σ = Gaussian<T>::hcf(b, d), α = b / σ, β = d / σ;
+        auto σ = Gaussian<T>::hcf(b, d), α = b / σ, β = d / σ;
         α.normalizeRational(β); return std::pair(α, β);
     }
 
