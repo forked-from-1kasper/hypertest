@@ -4,21 +4,18 @@
 
 #pragma once
 
-template<typename T> T hcf(T &, T &) = delete;
-
-inline auto hcf(int16_t & n, int16_t & m) { return std::gcd(n, m); }
-inline auto hcf(int32_t & n, int32_t & m) { return std::gcd(n, m); }
-inline auto hcf(int64_t & n, int64_t & m) { return std::gcd(n, m); }
-inline auto hcf(mpz_class & n, mpz_class & m) { return gcd(n, m); }
-
 template<typename T> concept EuclideanDomain =
 requires(T a, T b) {
+    {     0     } -> std::convertible_to<T>;
+    {     1     } -> std::convertible_to<T>;
     {    -a     } -> std::convertible_to<T>;
     {   a + b   } -> std::convertible_to<T>;
     {   a - b   } -> std::convertible_to<T>;
     {   a * b   } -> std::convertible_to<T>;
     {   a / b   } -> std::convertible_to<T>;
-    { hcf(a, b) } -> std::convertible_to<T>;
+    {   a % b   } -> std::convertible_to<T>;
+    {   a << b  } -> std::convertible_to<T>;
+    {   a >> b  } -> std::convertible_to<T>;
 };
 
 template<EuclideanDomain T>
