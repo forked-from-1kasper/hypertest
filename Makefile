@@ -8,11 +8,11 @@ HPP    = Matrix.hpp Gyrovector.hpp Fuchsian.hpp Fundamentals.hpp Enumerable.hpp
 UNAME := $(shell uname)
 
 ifeq ($(UNAME), Linux)
-LIBS := -L/usr/local/lib -lglfw -lSOIL -lGLEW -lGL -lGLU -framework OpenGL
+LIBS := -L/usr/local/lib -lglfw -lSOIL -lGLEW -lGL -lGLU
 endif
 
 ifeq ($(UNAME), Darwin)
-LIBS := -lglfw -lSOIL -lGLEW -lGL -lGLU -lgmpxx -lgmp
+LIBS := -lglfw -lSOIL -lGLEW -lGL -lGLU
 endif
 
 Hyper: $(HPP) $(CPP)
