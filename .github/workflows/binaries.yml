@@ -15,8 +15,10 @@ jobs:
 
       - name: Install SOIL
         run: |
-          brew tap zmarcantel/libsoil
-          brew install libsoil
+          git clone https://github.com/littlstar/soil
+          cd soil
+          make
+          make install
 
       - name: Build code
         run: make all
