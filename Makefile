@@ -15,6 +15,8 @@ ifeq ($(UNAME), Darwin)
 LIBS := -lglfw -lSOIL -lGLEW -lGL -lGLU
 endif
 
+all: Hyper
+
 Hyper: $(HPP) $(CPP)
 	$(CXX) $(CFLAGS) $(CPP) -o $(BINARY) $(LIBS)
 
