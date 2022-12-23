@@ -8,7 +8,7 @@ HPP    = Matrix.hpp Gyrovector.hpp Fuchsian.hpp Fundamentals.hpp Enumerable.hpp
 UNAME := $(shell uname)
 
 ifeq ($(UNAME), Linux)
-LIBS := -L/usr/local/lib -lglfw -lSOIL -lGLEW -lGL -lGLU
+LIBS := -I/usr/local/include -L/usr/local/lib -lglfw -lSOIL -lGLEW -framework Cocoa -framework OpenGL -framework IOKit
 endif
 
 ifeq ($(UNAME), Darwin)

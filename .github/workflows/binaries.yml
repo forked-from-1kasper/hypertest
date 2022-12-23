@@ -11,7 +11,10 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install GCC and other packages
-        run: brew install mesa-glu glew glfw coreutils gcc@11
+        run: |
+          brew install mesa-glu coreutils gcc@11
+          brew install --universal glew
+          brew install --universal glfw
 
       - name: Install SOIL
         run: |
