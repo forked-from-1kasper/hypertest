@@ -5,14 +5,15 @@ CFLAGS = -std=c++2a
 CPP    = Hyper.cpp
 HPP    = Matrix.hpp Gyrovector.hpp Fuchsian.hpp Fundamentals.hpp Enumerable.hpp
 
-UNAME := $(shell uname)
-
-ifeq ($(UNAME), Linux)
-LIBS := -I/usr/local/include -L/usr/local/lib -lglfw -lSOIL -lGLEW -framework Cocoa -framework OpenGL -framework IOKit
+ifeq ($(OS),Windows_NT)
+	BINARY = Hyper.exe
+	LIBS = -lSOIL -lglfw3 -lglew32 -lopengl32 -lglu32
+else
+	BINARY = Hyper
+	LIBS = -lSOIL -lglfw -lGLEW -lGL -lGLU
 endif
 
 ifeq ($(UNAME), Darwin)
-LIBS := -lglfw -lSOIL -lGLEW -lGL -lGLU
 endif
 
 all: Hyper

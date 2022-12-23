@@ -3,28 +3,33 @@ name: Build Binaries
 on: push
 
 jobs:
-  MacOS:
-    runs-on: macos-10.15
+  windows-build:
+    runs-on: windows-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Install GCC and other packages
-        run: brew install glew glfw mesa-glu coreutils gcc@11
-      - name: Install SOIL
-        run: |
-          git clone https://github.com/littlstar/soil
-          cd soil
-          ./configure
-          make
-          make install
+      - name: 'Setup MSYS2'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >
+            git
+            base-devel
+            tree
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-soil
+            mingw-w64-x86_64-glew
+            mingw-w64-x86_64-glfw
 
-      - name: Build code
+      - shell: msys2 {0}
+        name: Build code
         run: make all
 
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
-          name: macOS binary release
-          path: Hyper
+          name: Windows Binary Release
+          path: Hyper.exe
