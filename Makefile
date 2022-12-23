@@ -13,9 +13,6 @@ else
 	LIBS = -lSOIL -lglfw -lGLEW -lGL -lGLU
 endif
 
-ifeq ($(UNAME), Darwin)
-endif
-
 all: Hyper
 
 Hyper: $(HPP) $(CPP)
