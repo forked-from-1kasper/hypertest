@@ -11,11 +11,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install GCC and other packages
-        run: |
-          brew install mesa-glu coreutils gcc@11
-          brew install --universal glew
-          brew install --universal glfw
-
+        run: brew install glew glfw mesa-glu coreutils gcc@11
       - name: Install SOIL
         run: |
           git clone https://github.com/littlstar/soil
