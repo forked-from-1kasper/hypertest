@@ -33,12 +33,10 @@ namespace Keyboard {
     bool backward = false;
     bool left     = false;
     bool right    = false;
-    bool up       = false;
-    bool down     = false;
 };
 
 constexpr auto fov  = 80;
-constexpr auto near = 0.01;
+constexpr auto near = 10e-4;
 constexpr auto far  = 150.0;
 
 const GLfloat lightDiffuse[] = {1.0, 1.0, 1.0, 1.0};
@@ -48,10 +46,17 @@ const GLfloat lightPosition[] = {0.0f, 32.0f, 0.0f, 0.0f};
 
 int width = 900, height = 900;
 
-Real speed = 4.317 * Fundamentals::meter, normalSpeed = 1.0, mouseSpeed = 0.7;
+Real speed = 2 * Fundamentals::meter, mouseSpeed = 0.7;
+
+constexpr Real jumpHeight = 1.25;
+
+Real freeFallAccel = 9.8;
+Real normalJumpSpeed = sqrt(2 * freeFallAccel * jumpHeight);
 
 Möbius<Real> position {1, 0, 0, 1};
-Real level = 2.8 * Fundamentals::meter;
+
+bool isFlying = true;
+Real playerHeight = 1.8, normalVelocity = 0, normalLevel = 3;
 
 Real horizontal = 0, vertical = 0, xpos, ypos;
 
@@ -92,7 +97,7 @@ void drawRightParallelogrammicPrism(Real h, Real Δh, const Parallelogram<Real> 
 }
 
 void drawNode(Möbius<Real> M, Rank x, Level y, Rank z) {
-    drawRightParallelogrammicPrism(Real(y) * Fundamentals::meter, Fundamentals::meter,
+    drawRightParallelogrammicPrism(Real(y), 1,
         { Projection::apply(M.apply(grid[x + 0][z + 0])),
           Projection::apply(M.apply(grid[x + 1][z + 0])),
           Projection::apply(M.apply(grid[x + 1][z + 1])),
@@ -173,6 +178,7 @@ inline void setNode(Chunk * chunk, size_t i, size_t j, size_t k, const Node & no
 
 Fuchsian<Integer> localIsometry(Tesselation::I);
 auto chunkPos = localIsometry.origin();
+Chunk * currentChunk;
 
 NodeRegistry nodeRegistry;
 Atlas localAtlas;
@@ -201,6 +207,78 @@ std::pair<Rank, Rank> roundOff(const Gyrovector<Real> & w) {
     return std::pair(exterior, exterior);
 }
 
+inline bool isOutside(Real L) { return L < 0 || L >= Fundamentals::worldHeight; }
+
+bool isWalkable(Chunk * C, Rank x, Real L, Rank z) {
+    if (!C || x >= Fundamentals::chunkSize || z >= Fundamentals::chunkSize) return true;
+    return isOutside(L) || (C->data[x][Level(L)][z].id == 0);
+}
+
+bool isFree(Chunk * C, Rank x, Real L, Rank z)
+{ return isWalkable(C, x, std::floor(L), z) && isWalkable(C, x, std::floor(L + playerHeight), z); }
+
+void jump() {
+    auto [i, j] = roundOff(position.origin());
+    if (!isFlying) normalVelocity += normalJumpSpeed;
+}
+
+void setBlock(Rank i, Real L, Rank k, NodeId id) {
+    if (!currentChunk) return;
+
+    if (isOutside(normalLevel)) return;
+
+    if (i >= Fundamentals::chunkSize
+     || k >= Fundamentals::chunkSize)
+        return;
+
+    auto j = Level(std::floor(normalLevel));
+    currentChunk->data[i][j][k].id = id;
+}
+
+void placeBlockNextToPlayer() {
+    auto [i, j] = roundOff(position.origin());
+    setBlock(i + 1, normalLevel, j, 1);
+}
+
+void deleteBlockNextToPlayer() {
+    auto [i, j] = roundOff(position.origin());
+    setBlock(i + 1, normalLevel, j, 0);
+}
+
+void moveHorizontally(Gyrovector<Real> v, Real dt) {
+    auto G(localIsometry); auto g(chunkPos); auto C(currentChunk);
+
+    auto P₁ = position * Möbius<Real>::translate(v.scale(dt));
+    P₁ = P₁.normalize(); auto [i, j] = roundOff(P₁.origin());
+
+    if (i == Fundamentals::exterior && j == Fundamentals::exterior)
+    for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++) {
+        const auto Δ   = Tesselation::neighbours[k];
+        const auto Δ⁻¹ = Tesselation::neighbours⁻¹[k];
+        const auto P₂  = (Δ⁻¹ * P₁).normalize();
+
+        std::tie(i, j) = roundOff(P₂.origin());
+
+        if (i != Fundamentals::exterior && j != Fundamentals::exterior)
+        { G *= Δ; g = G.origin(); C = lookup(localAtlas, g); P₁ = P₂; break; }
+    }
+
+    if (isFree(C, i, normalLevel, j))
+    { localIsometry = G; chunkPos = g; currentChunk = C; position = P₁; }
+}
+void moveVertically(Real dt) {
+    auto [i, j] = roundOff(position.origin());
+
+    normalVelocity -= dt * freeFallAccel;
+
+    auto L = normalLevel + dt * normalVelocity;
+
+    if (isFree(currentChunk, i, L, j)) { normalLevel = L; isFlying = true; }
+    else normalVelocity = 0;
+
+    if (!isWalkable(currentChunk, i, std::floor(L), j)) isFlying = false;
+}
+
 double globaltime = 0;
 void display(GLFWwindow * window) {
     constexpr auto ε = 10e-5;
@@ -215,34 +293,11 @@ void display(GLFWwindow * window) {
 
     if (dir != 0.0) dir /= std::abs(dir);
 
-    auto normalDir = 0;
-    if (Keyboard::up)   normalDir += 1;
-    if (Keyboard::down) normalDir -= 1;
-
-    Gyrovector<Real> velocity(speed * dir * std::polar(1.0, -horizontal));
-
-    position = position * Möbius<Real>::translate(dt * velocity);
-    position = position.normalize();
+    auto n = std::polar(1.0, -horizontal);
+    Gyrovector<Real> velocity(speed * dir * n);
+    moveVertically(dt); moveHorizontally(velocity, dt);
 
     auto [i, j] = roundOff(position.origin());
-
-    if (i == Fundamentals::exterior && j == Fundamentals::exterior)
-    for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++) {
-        const auto Δ   = Tesselation::neighbours[k];
-        const auto Δ⁻¹ = Tesselation::neighbours⁻¹[k];
-        const auto P   = (Δ⁻¹ * position).normalize();
-
-        std::tie(i, j) = roundOff(P.origin());
-
-        if (i != Fundamentals::exterior && j != Fundamentals::exterior)
-        { localIsometry *= Δ; chunkPos = localIsometry.origin(); position = P; break; }
-    }
-
-    std::cout << +i << ", " << +j << "; "
-              << chunkPos.first << ", " << chunkPos.second << "; "
-              << position << std::endl;
-
-    level += dt * normalDir * normalSpeed;
 
     auto origin = position.inverse();
 
@@ -270,7 +325,8 @@ void display(GLFWwindow * window) {
     gluLookAt(0, 0, 0, dx, dy, dz, up.x, up.y, up.z);
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
-    glTranslatef(0, -level, 0);
+    glScalef(1.0f, Fundamentals::meter, 1.0f);
+    glTranslatef(0, -normalLevel - playerHeight, 0);
 
     glColor3f(0.0f, 0.0f, 0.0f);
 
@@ -331,8 +387,9 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
             case GLFW_KEY_S:          Keyboard::backward = true; break;
             case GLFW_KEY_A:          Keyboard::left     = true; break;
             case GLFW_KEY_D:          Keyboard::right    = true; break;
-            case GLFW_KEY_SPACE:      Keyboard::up       = true; break;
-            case GLFW_KEY_LEFT_SHIFT: Keyboard::down     = true; break;
+            case GLFW_KEY_Z:          placeBlockNextToPlayer(); break;
+            case GLFW_KEY_X:          deleteBlockNextToPlayer(); break;
+            case GLFW_KEY_SPACE:      jump(); break;
         }
     }
 
@@ -342,8 +399,6 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
             case GLFW_KEY_S:          Keyboard::backward = false; break;
             case GLFW_KEY_A:          Keyboard::left     = false; break;
             case GLFW_KEY_D:          Keyboard::right    = false; break;
-            case GLFW_KEY_SPACE:      Keyboard::up       = false; break;
-            case GLFW_KEY_LEFT_SHIFT: Keyboard::down     = false; break;
         }
     }
 }
@@ -378,6 +433,11 @@ Chunk * buildTestStructure(Chunk * chunk) {
 }
 
 Chunk * markChunk(Chunk * chunk) {
+    setNode(chunk, 1, 1, 9, {2});
+
+    setNode(chunk, 2, 1, 9, {2});
+    setNode(chunk, 2, 2, 9, {2});
+
     setNode(chunk, 3, 1, 9, {2});
     setNode(chunk, 3, 2, 9, {2});
     setNode(chunk, 3, 3, 9, {2});
@@ -424,7 +484,7 @@ int main() {
 
     using namespace Tesselation;
 
-    buildTestStructure(pollChunk(localAtlas, I));
+    currentChunk = buildTestStructure(pollChunk(localAtlas, I));
     buildTestStructure(pollChunk(localAtlas, U));
     markChunk(buildTestStructure(pollChunk(localAtlas, L)));
     buildTestStructure(pollChunk(localAtlas, D));
