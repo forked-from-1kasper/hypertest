@@ -17,6 +17,7 @@ jobs:
         run: |
           git clone https://github.com/littlstar/soil
           cd soil
+          ./configure
           make
           make install
 
