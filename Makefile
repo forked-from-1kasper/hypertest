@@ -1,4 +1,4 @@
-CXX = g++-11
+CXX = g++
 
 BINARY = Hyper
 CFLAGS = -std=c++2a
