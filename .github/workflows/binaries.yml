@@ -11,4 +11,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install GCC and other packages
-        run: brew install gcc-11 glfw3 glew libsoil
+        run: brew install gcc@11 glfw3 glew libsoil
+
+      - name: Build code
+        run: make all
