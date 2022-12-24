@@ -277,6 +277,7 @@ void moveHorizontally(Gyrovector<Real> v, Real dt) {
     if (isFree(C, i, normalLevel, j))
     { localIsometry = G; chunkPos = g; currentChunk = C; position = P₁; }
 }
+
 void moveVertically(Real dt) {
     auto [i, j] = roundOff(position.origin());
 
@@ -289,6 +290,10 @@ void moveVertically(Real dt) {
 
     if (!isWalkable(currentChunk, i, std::floor(L), j)) isFlying = false;
 }
+
+void update(Gyrovector<Real> & v, Real dt) { moveVertically(dt); moveHorizontally(v, dt); }
+
+constexpr Real Δtₘₐₓ = 1.0/5.0;
 
 double globaltime = 0;
 void display(GLFWwindow * window) {
@@ -304,9 +309,8 @@ void display(GLFWwindow * window) {
 
     if (dir != 0.0) dir /= std::abs(dir);
 
-    auto n = std::polar(1.0, -horizontal);
-    Gyrovector<Real> velocity(speed * dir * n);
-    moveVertically(dt); moveHorizontally(velocity, dt);
+    auto n = std::polar(1.0, -horizontal); Gyrovector<Real> velocity(speed * dir * n);
+    auto Δt(dt); while (Δt >= Δtₘₐₓ) { update(velocity, Δtₘₐₓ); Δt -= Δtₘₐₓ; } update(velocity, Δt);
 
     auto [i, j] = roundOff(position.origin());
 
@@ -452,8 +456,7 @@ void setupWindowSize(GLFWwindow * window, int newWidth, int newHeight) {
     width = newWidth; height = newHeight;
     glViewport(0, 0, width, height);
 
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
+    glMatrixMode(GL_PROJECTION); glLoadIdentity();
     gluPerspective(fov, Real(width) / Real(height), near, far);
 }
 
