@@ -5,8 +5,9 @@
 #include <functional>
 
 #include <GL/glew.h>
-#include <SOIL/SOIL.h>
 #include <GLFW/glfw3.h>
+
+#include "PicoPNG.hpp"
 
 #include "Matrix.hpp"
 #include "Gyrovector.hpp"
@@ -56,7 +57,7 @@ Real normalJumpSpeed = sqrt(2 * freeFallAccel * jumpHeight);
 Möbius<Real> position {1, 0, 0, 1};
 
 bool isFlying = true;
-Real playerHeight = 1.8, normalVelocity = 0, normalLevel = 3;
+Real playerHeight = 1.8, normalVelocity = 0, normalLevel = 10;
 
 Real horizontal = 0, vertical = 0, xpos, ypos;
 
@@ -350,14 +351,14 @@ void setupLighting() {
 }
 
 void loadTexture(GLuint & ptr, const char * filepath) {
-    int texWidth, texHeight;
+    unsigned long texWidth, texHeight;
 
     glGenTextures(1, &ptr);
     glBindTexture(GL_TEXTURE_2D, ptr);
 
-    auto image = SOIL_load_image(filepath, &texWidth, &texHeight, 0, SOIL_LOAD_RGB);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-    SOIL_free_image_data(image);
+    auto image = PNG::load(filepath, texWidth, texHeight);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data());
+    image.clear();
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -366,8 +367,8 @@ void loadTexture(GLuint & ptr, const char * filepath) {
 }
 
 void setupTexture() {
-    loadTexture(texture1, "texture1.jpg");
-    loadTexture(texture2, "texture2.jpg");
+    loadTexture(texture1, "texture1.png");
+    loadTexture(texture2, "texture2.png");
 
     glBindTexture(GL_TEXTURE_2D, 0);
 

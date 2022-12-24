@@ -2,15 +2,15 @@ CXX = g++
 
 BINARY = Hyper
 CFLAGS = -std=c++2a
-CPP    = Hyper.cpp
+CPP    = Hyper.cpp PicoPNG.cpp
 HPP    = Matrix.hpp Gyrovector.hpp Fuchsian.hpp Fundamentals.hpp Enumerable.hpp
 
 ifeq ($(OS),Windows_NT)
 	BINARY = Hyper.exe
-	LIBS = -lSOIL -lglfw3 -lglew32 -lopengl32 -lglu32
+	LIBS = -lglfw3 -lglew32 -lopengl32 -lglu32
 else
 	BINARY = Hyper
-	LIBS = -lSOIL -lglfw -lGLEW -lGL -lGLU
+	LIBS = -lglfw -lGLEW -lGL -lGLU
 endif
 
 all: Hyper
