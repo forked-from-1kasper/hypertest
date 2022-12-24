@@ -471,7 +471,7 @@ int decodePNG(std::vector<unsigned char> & out_image, unsigned long & image_widt
             else if (infoIn.bitDepth < 8 && infoIn.colorType == 0) // greyscale
             for (size_t i = 0; i < numpixels; i++) {
                 unsigned long value = (readBitsFromReversedStream(bp, in, infoIn.bitDepth) * 255) / ((1 << infoIn.bitDepth) - 1); // scale value from 0 to 255
-                out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = (unsigned char)(value);
+                out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = (unsigned char) value;
                 out_[4 * i + 3] = (infoIn.key_defined && value && ((1U << infoIn.bitDepth) - 1U) == infoIn.key_r && ((1U << infoIn.bitDepth) - 1U)) ? 0 : 255;
             }
             else if (infoIn.bitDepth < 8 && infoIn.colorType == 3) // palette
@@ -485,7 +485,7 @@ int decodePNG(std::vector<unsigned char> & out_image, unsigned long & image_widt
 
         unsigned char paethPredictor(short a, short b, short c) { // Paeth predicter, used by PNG filter type 4
             short p = a + b - c, pa = p > a ? (p - a) : (a - p), pb = p > b ? (p - b) : (b - p), pc = p > c ? (p - c) : (c - p);
-            return (unsigned char)((pa <= pb && pa <= pc) ? a : pb <= pc ? b : c);
+            return (unsigned char) ((pa <= pb && pa <= pc) ? a : pb <= pc ? b : c);
         }
     };
     PNG decoder; decoder.decode(out_image, in_png, in_size, convert_to_rgba32);
@@ -511,7 +511,7 @@ void loadFile(std::vector<unsigned char> & buffer, const std::string & filename)
 
 std::vector<unsigned char> & load(const std::string & filename, unsigned long & w, unsigned long & h) {
     static std::vector<unsigned char> buffer, image; loadFile(buffer, filename);
-    auto error = decodePNG(image, w, h, buffer.empty() ? 0 : buffer.data(), (unsigned long)buffer.size());
+    auto error = decodePNG(image, w, h, buffer.empty() ? 0 : buffer.data(), (unsigned long) buffer.size());
     if (error != 0) std::cout << "error: " << error << std::endl;
     buffer.clear(); return image;
 }

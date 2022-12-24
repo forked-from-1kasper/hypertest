@@ -24,7 +24,7 @@ template<typename T> struct Parallelogram {
     constexpr auto rev() const { return Parallelogram<T>(D, C, B, A); }
 };
 
-void error_callback(int error, const char* description)
+void errorCallback(int error, const char* description)
 {
     fprintf(stderr, "Error: %s\n", description);
 }
@@ -35,6 +35,8 @@ namespace Keyboard {
     bool left     = false;
     bool right    = false;
 };
+
+bool windowFocused = true, windowHovered = true;
 
 constexpr auto fov  = 80;
 constexpr auto near = 10e-4;
@@ -246,6 +248,14 @@ void deleteBlockNextToPlayer() {
     setBlock(i + 1, normalLevel, j, 0);
 }
 
+void returnToSpawn() {
+    localIsometry = Tesselation::I;
+    chunkPos      = localIsometry.origin();
+    currentChunk  = lookup(localAtlas, chunkPos);
+    position      = {1, 0, 0, 1};
+    normalLevel   = 5;
+}
+
 void moveHorizontally(Gyrovector<Real> v, Real dt) {
     auto G(localIsometry); auto g(chunkPos); auto C(currentChunk);
 
@@ -302,14 +312,16 @@ void display(GLFWwindow * window) {
 
     auto origin = position.inverse();
 
-    glfwGetCursorPos(window, &xpos, &ypos);
-    glfwSetCursorPos(window, width/2, height/2);
+    if (windowFocused && windowHovered) {
+        glfwGetCursorPos(window, &xpos, &ypos);
+        glfwSetCursorPos(window, width/2, height/2);
 
-    horizontal += mouseSpeed * dt * (width/2 - xpos);
-    vertical   += mouseSpeed * dt * (height/2 - ypos);
+        horizontal += mouseSpeed * dt * (width/2 - xpos);
+        vertical   += mouseSpeed * dt * (height/2 - ypos);
 
-    horizontal = std::fmod(horizontal, τ);
-    vertical = std::max(std::min(vertical, τ/4 - ε), -τ/4 + ε);
+        horizontal = std::fmod(horizontal, τ);
+        vertical = std::max(std::min(vertical, τ/4 - ε), -τ/4 + ε);
+    }
 
     auto dx = cos(vertical) * sin(horizontal);
     auto dy = sin(vertical);
@@ -380,6 +392,14 @@ void setupMaterial() {
     glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, matDiffuse);
 }
 
+void cursorEnterCallback(GLFWwindow * window, int entered) {
+    windowHovered = entered;
+}
+
+void windowFocusCallback(GLFWwindow * window, int focused) {
+    windowFocused = focused;
+}
+
 void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
         switch (key) {
@@ -390,6 +410,7 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
             case GLFW_KEY_D:          Keyboard::right    = true; break;
             case GLFW_KEY_Z:          placeBlockNextToPlayer(); break;
             case GLFW_KEY_X:          deleteBlockNextToPlayer(); break;
+            case GLFW_KEY_O:          returnToSpawn(); break;
             case GLFW_KEY_SPACE:      jump(); break;
         }
     }
@@ -446,7 +467,7 @@ Chunk * markChunk(Chunk * chunk) {
 }
 
 int main() {
-    glfwSetErrorCallback(error_callback);
+    glfwSetErrorCallback(errorCallback);
 
     if (!glfwInit()) return -1;
 
@@ -462,6 +483,8 @@ int main() {
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 
     glfwSetKeyCallback(window, keyboardCallback);
+    glfwSetWindowFocusCallback(window, windowFocusCallback);
+    glfwSetCursorEnterCallback(window, cursorEnterCallback);
     glfwSetWindowSizeCallback(window, setupWindowSize);
 
     glfwSetCursorPos(window, width/2, height/2);
