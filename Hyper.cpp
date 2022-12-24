@@ -36,7 +36,7 @@ namespace Keyboard {
     bool right    = false;
 };
 
-bool windowFocused = true, windowHovered = true;
+bool windowHovered = true, windowFocused = true, mouseGrabbed = false;
 
 constexpr auto fov  = 80;
 constexpr auto near = 10e-4;
@@ -312,7 +312,7 @@ void display(GLFWwindow * window) {
 
     auto origin = position.inverse();
 
-    if (windowFocused && windowHovered) {
+    if (mouseGrabbed) {
         glfwGetCursorPos(window, &xpos, &ypos);
         glfwSetCursorPos(window, width/2, height/2);
 
@@ -392,12 +392,35 @@ void setupMaterial() {
     glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, matDiffuse);
 }
 
+void grabMouse(GLFWwindow * window) {
+    glfwSetCursorPos(window, width/2, height/2);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    if (glfwRawMouseMotionSupported())
+        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+
+    mouseGrabbed = true;
+}
+
+void freeMouse(GLFWwindow * window) {
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
+
+    mouseGrabbed = false;
+}
+
+void mouseButtonCallback(GLFWwindow * window, int button, int action, int mods)
+{
+    if (windowHovered && windowFocused && !mouseGrabbed) grabMouse(window);
+}
+
 void cursorEnterCallback(GLFWwindow * window, int entered) {
     windowHovered = entered;
+    if (!windowHovered) freeMouse(window);
 }
 
 void windowFocusCallback(GLFWwindow * window, int focused) {
     windowFocused = focused;
+    if (!windowFocused) freeMouse(window);
 }
 
 void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, int mods) {
@@ -478,16 +501,13 @@ int main() {
     auto window = glfwCreateWindow(width, height, "Hypertest", nullptr, nullptr);
     if (!window) return -1;
 
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    if (glfwRawMouseMotionSupported())
-        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    grabMouse(window);
 
     glfwSetKeyCallback(window, keyboardCallback);
+    glfwSetMouseButtonCallback(window, mouseButtonCallback);
     glfwSetWindowFocusCallback(window, windowFocusCallback);
     glfwSetCursorEnterCallback(window, cursorEnterCallback);
     glfwSetWindowSizeCallback(window, setupWindowSize);
-
-    glfwSetCursorPos(window, width/2, height/2);
 
     glfwMakeContextCurrent(window);
 
