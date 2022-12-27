@@ -63,12 +63,13 @@ struct Gaussian {
     constexpr auto isUnit() const { return (abs(real) == 1 && imag == 0)
                                         || (real == 0 && abs(imag) == 1); }
 
-    constexpr void negate() { real = -real; imag = -imag; }
-    constexpr void twice()  { real <<= 1; imag <<= 1; }
-    constexpr void half()   { real >>= 1; imag >>= 1; }
-    constexpr void mulω()   { real -= imag; imag <<= 1; imag += real; }
-    constexpr void muli()   { std::swap(real, imag); real = -real; }
-    constexpr void divω()   { real += imag; imag <<= 1; imag -= real; half(); }
+    constexpr void negate()  { real = -real; imag = -imag; }
+    constexpr void twice()   { real <<= 1; imag <<= 1; }
+    constexpr void half()    { real >>= 1; imag >>= 1; }
+    constexpr void mulω()    { real -= imag; imag <<= 1; imag += real; }
+    constexpr void mulnegi() { std::swap(real, imag); imag = -imag; }
+    constexpr void muli()    { std::swap(real, imag); real = -real; }
+    constexpr void divω()    { real += imag; imag <<= 1; imag -= real; half(); }
 
     constexpr auto kind() const { return std::pair(bool(real % 2), bool(imag % 2)); }
 
@@ -107,7 +108,7 @@ struct Gaussian {
         switch (Ord(std::pair(real >= 0, imag >= 0))) {
             /* −1 */ case Ord²(false, false): negate(); δ.negate(); break;
             /* +i */ case Ord²(true,  false): muli(); δ.muli(); break;
-            /* −i */ case Ord²(false, true):  muli(); negate(); δ.muli(); δ.negate(); break;
+            /* −i */ case Ord²(false, true):  mulnegi(); δ.mulnegi(); break;
             /* +1 */ case Ord²(true,  true):  break;
         }
     }

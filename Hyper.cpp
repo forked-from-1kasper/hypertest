@@ -135,21 +135,21 @@ void drawChunk(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsian<In
     auto N = M * (G.inverse() * chunk->isometry).field<Real>();
 
     NodeDef nodeDef;
-    for (Rank i = 0; i < chunkSize; i++) {
+    for (Level j = 0; true; j++) {
         for (Rank k = 0; k < chunkSize; k++) {
-            for (Level j = 0; true; j++) {
+            for (Rank i = 0; i < chunkSize; i++) {
                 auto id = chunk->data[i][j][k].id;
 
-                if (id == 0) goto finish; // don’t draw air
+                if (id == 0) continue; // don’t draw air
 
                 nodeDef = nodeRegistry[id];
 
                 glBindTexture(GL_TEXTURE_2D, nodeDef.texture);
                 drawNode(N, i, j, k);
-
-                finish: if (j == worldTop) break;
             }
         }
+
+        if (j == worldTop) break;
     }
 }
 
@@ -161,6 +161,15 @@ Chunk * pollChunk(Atlas & atlas, const Fuchsian<Integer> & isometry) {
             return chunk;
 
     auto chunk = new Chunk(isometry, pos, {});
+
+    auto P = isometry.field<Real>();
+    auto ω = P.det() / (P.d * P.d);
+
+    if (ω.real() > 0 && ω.imag() >= 0) {}
+    else if (ω.real() <= 0 && ω.imag() > 0) { chunk->isometry.a.mulnegi(); chunk->isometry.c.mulnegi(); }
+    else if (ω.real() < 0 && ω.imag() <= 0) { chunk->isometry.a.negate(); chunk->isometry.c.negate(); }
+    else if (ω.real() >= 0 && ω.imag() < 0) { chunk->isometry.a.muli(); chunk->isometry.c.muli(); }
+
     atlas.push_back(chunk);
     return chunk;
 }
@@ -187,15 +196,15 @@ NodeRegistry nodeRegistry;
 Atlas localAtlas;
 
 bool inCell(const Gyrovector<Real> & w, Rank i, Rank j) {
-    auto A = grid[i + 0][j + 0];
-    auto B = grid[i + 1][j + 0];
-    auto C = grid[i + 1][j + 1];
-    auto D = grid[i + 0][j + 1];
+    const auto A = grid[i + 0][j + 0];
+    const auto B = grid[i + 1][j + 0];
+    const auto C = grid[i + 1][j + 1];
+    const auto D = grid[i + 0][j + 1];
 
-    auto α = (w.x() - A.x()) * (B.y() - A.y()) - (B.x() - A.x()) * (w.y() - A.y());
-    auto β = (w.x() - B.x()) * (C.y() - B.y()) - (C.x() - B.x()) * (w.y() - B.y());
-    auto γ = (w.x() - C.x()) * (D.y() - C.y()) - (D.x() - C.x()) * (w.y() - C.y());
-    auto δ = (w.x() - D.x()) * (A.y() - D.y()) - (A.x() - D.x()) * (w.y() - D.y());
+    const auto α = (w.x() - A.x()) * (B.y() - A.y()) - (B.x() - A.x()) * (w.y() - A.y());
+    const auto β = (w.x() - B.x()) * (C.y() - B.y()) - (C.x() - B.x()) * (w.y() - B.y());
+    const auto γ = (w.x() - C.x()) * (D.y() - C.y()) - (D.x() - C.x()) * (w.y() - C.y());
+    const auto δ = (w.x() - D.x()) * (A.y() - D.y()) - (A.x() - D.x()) * (w.y() - D.y());
 
     return (α < 0) == (β < 0) && (β < 0) == (γ < 0) && (γ < 0) == (δ < 0);
 }
@@ -210,6 +219,8 @@ std::pair<Rank, Rank> roundOff(const Gyrovector<Real> & w) {
     return std::pair(exterior, exterior);
 }
 
+std::pair<Rank, Rank> roundOff(Möbius<Real> M) { return roundOff(M.origin()); }
+
 inline bool isOutside(Real L) { return L < 0 || L >= Fundamentals::worldHeight; }
 
 bool isWalkable(Chunk * C, Rank x, Real L, Rank z) {
@@ -220,10 +231,7 @@ bool isWalkable(Chunk * C, Rank x, Real L, Rank z) {
 bool isFree(Chunk * C, Rank x, Real L, Rank z)
 { return isWalkable(C, x, std::floor(L), z) && isWalkable(C, x, std::floor(L + playerHeight), z); }
 
-void jump() {
-    auto [i, j] = roundOff(position.origin());
-    if (!isFlying) normalVelocity += normalJumpSpeed;
-}
+void jump() { if (!isFlying) normalVelocity += normalJumpSpeed; }
 
 void setBlock(Rank i, Real L, Rank k, NodeId id) {
     if (!currentChunk) return;
@@ -239,12 +247,12 @@ void setBlock(Rank i, Real L, Rank k, NodeId id) {
 }
 
 void placeBlockNextToPlayer() {
-    auto [i, j] = roundOff(position.origin());
+    auto [i, j] = roundOff(position);
     setBlock(i + 1, normalLevel, j, 1);
 }
 
 void deleteBlockNextToPlayer() {
-    auto [i, j] = roundOff(position.origin());
+    auto [i, j] = roundOff(position);
     setBlock(i + 1, normalLevel, j, 0);
 }
 
@@ -256,11 +264,24 @@ void returnToSpawn() {
     normalLevel   = 5;
 }
 
-void moveHorizontally(Gyrovector<Real> v, Real dt) {
+
+Chunk * buildFloor(Chunk * chunk) {
+    using namespace Fundamentals;
+
+    for (size_t i = 0; i < chunkSize; i++)
+        for (size_t j = 0; j < chunkSize; j++)
+            setNode(chunk, i, 0, j, {1});
+
+    setNode(chunk, 0, 1, 0, {2});
+
+    return chunk;
+}
+
+void moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
     auto G(localIsometry); auto g(chunkPos); auto C(currentChunk);
 
     auto P₁ = position * Möbius<Real>::translate(v.scale(dt));
-    P₁ = P₁.normalize(); auto [i, j] = roundOff(P₁.origin());
+    P₁ = P₁.normalize(); auto [i, j] = roundOff(P₁);
 
     if (i == Fundamentals::exterior && j == Fundamentals::exterior)
     for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++) {
@@ -268,18 +289,19 @@ void moveHorizontally(Gyrovector<Real> v, Real dt) {
         const auto Δ⁻¹ = Tesselation::neighbours⁻¹[k];
         const auto P₂  = (Δ⁻¹ * P₁).normalize();
 
-        std::tie(i, j) = roundOff(P₂.origin());
+        std::tie(i, j) = roundOff(P₂);
 
         if (i != Fundamentals::exterior && j != Fundamentals::exterior)
-        { G *= Δ; g = G.origin(); C = lookup(localAtlas, g); P₁ = P₂; break; }
+        { G *= Δ; g = G.origin(); C = lookup(localAtlas, g); P₁ = P₂;
+          if (!C) C = buildFloor(pollChunk(localAtlas, G)); break; }
     }
 
     if (isFree(C, i, normalLevel, j))
     { localIsometry = G; chunkPos = g; currentChunk = C; position = P₁; }
 }
 
-void moveVertically(Real dt) {
-    auto [i, j] = roundOff(position.origin());
+void moveVertically(const Real dt) {
+    auto [i, j] = roundOff(position);
 
     normalVelocity -= dt * freeFallAccel;
 
@@ -312,8 +334,7 @@ void display(GLFWwindow * window) {
     auto n = std::polar(1.0, -horizontal); Gyrovector<Real> velocity(speed * dir * n);
     auto Δt(dt); while (Δt >= Δtₘₐₓ) { update(velocity, Δtₘₐₓ); Δt -= Δtₘₐₓ; } update(velocity, Δt);
 
-    auto [i, j] = roundOff(position.origin());
-
+    auto [i, j] = roundOff(position);
     auto origin = position.inverse();
 
     if (mouseGrabbed) {
@@ -532,10 +553,11 @@ int main() {
     using namespace Tesselation;
 
     currentChunk = buildTestStructure(pollChunk(localAtlas, I));
-    buildTestStructure(pollChunk(localAtlas, U));
-    markChunk(buildTestStructure(pollChunk(localAtlas, L)));
-    buildTestStructure(pollChunk(localAtlas, D));
-    buildTestStructure(pollChunk(localAtlas, R));
+
+    for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++) {
+        auto C = buildTestStructure(pollChunk(localAtlas, Tesselation::neighbours[k]));
+        if (k == 0) markChunk(C);
+    }
 
     while (!glfwWindowShouldClose(window))
     {
