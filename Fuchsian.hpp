@@ -1,6 +1,5 @@
 #include "Gyrovector.hpp"
 #include "Enumerable.hpp"
-#include <gmpxx.h>
 
 #pragma once
 

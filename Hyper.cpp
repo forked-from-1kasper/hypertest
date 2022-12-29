@@ -219,7 +219,10 @@ std::pair<Rank, Rank> roundOff(const Gyrovector<Real> & w) {
     return std::pair(exterior, exterior);
 }
 
-std::pair<Rank, Rank> roundOff(Möbius<Real> M) { return roundOff(M.origin()); }
+std::pair<Rank, Rank> roundOff(Möbius<Real> M) {
+    auto N = (currentChunk->isometry.inverse() * localIsometry).field<Real>() * M;
+    return roundOff(N.origin());
+}
 
 inline bool isOutside(Real L) { return L < 0 || L >= Fundamentals::worldHeight; }
 
@@ -334,7 +337,6 @@ void display(GLFWwindow * window) {
     auto n = std::polar(1.0, -horizontal); Gyrovector<Real> velocity(speed * dir * n);
     auto Δt(dt); while (Δt >= Δtₘₐₓ) { update(velocity, Δtₘₐₓ); Δt -= Δtₘₐₓ; } update(velocity, Δt);
 
-    auto [i, j] = roundOff(position);
     auto origin = position.inverse();
 
     if (mouseGrabbed) {
