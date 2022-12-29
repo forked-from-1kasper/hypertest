@@ -13,6 +13,7 @@
 #include "Gyrovector.hpp"
 #include "Fuchsian.hpp"
 #include "Fundamentals.hpp"
+#include "Tesselation.hpp"
 
 using namespace std::complex_literals;
 

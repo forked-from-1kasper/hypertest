@@ -1,9 +1,9 @@
-#include "Matrix.hpp"
+#pragma once
 
 #include <type_traits>
 #include <numeric>
 
-#pragma once
+#include "Matrix.hpp"
 
 template<typename T>
 struct Gyrovector {

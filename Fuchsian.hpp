@@ -1,7 +1,7 @@
+#pragma once
+
 #include "Gyrovector.hpp"
 #include "Enumerable.hpp"
-
-#pragma once
 
 template<typename T> concept EuclideanDomain =
 requires(T a, T b) {
