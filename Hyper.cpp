@@ -102,10 +102,10 @@ void drawRightParallelogrammicPrism(Real h, Real Δh, const Parallelogram<Real> 
 
 void drawNode(Möbius<Real> M, Rank x, Level y, Rank z) {
     drawRightParallelogrammicPrism(Real(y), 1,
-        { Projection::apply(M.apply(grid[x + 0][z + 0])),
-          Projection::apply(M.apply(grid[x + 1][z + 0])),
-          Projection::apply(M.apply(grid[x + 1][z + 1])),
-          Projection::apply(M.apply(grid[x + 0][z + 1])) }
+        { Projection::apply(M.apply(Grid::corners[x + 0][z + 0])),
+          Projection::apply(M.apply(Grid::corners[x + 1][z + 0])),
+          Projection::apply(M.apply(Grid::corners[x + 1][z + 1])),
+          Projection::apply(M.apply(Grid::corners[x + 0][z + 1])) }
     );
 }
 
@@ -198,10 +198,10 @@ NodeRegistry nodeRegistry;
 Atlas localAtlas;
 
 bool inCell(const Gyrovector<Real> & w, Rank i, Rank j) {
-    const auto A = grid[i + 0][j + 0];
-    const auto B = grid[i + 1][j + 0];
-    const auto C = grid[i + 1][j + 1];
-    const auto D = grid[i + 0][j + 1];
+    const auto A = Grid::corners[i + 0][j + 0];
+    const auto B = Grid::corners[i + 1][j + 0];
+    const auto C = Grid::corners[i + 1][j + 1];
+    const auto D = Grid::corners[i + 0][j + 1];
 
     const auto α = (w.x() - A.x()) * (B.y() - A.y()) - (B.x() - A.x()) * (w.y() - A.y());
     const auto β = (w.x() - B.x()) * (C.y() - B.y()) - (C.x() - B.x()) * (w.y() - B.y());
@@ -506,14 +506,10 @@ Chunk * buildTestStructure(Chunk * chunk) {
 }
 
 Chunk * markChunk(Chunk * chunk) {
-    setNode(chunk, 1, 1, 9, {2});
+    for (size_t i = 1; i <= 8; i++)
+        for (size_t j = 1; j <= i; j++)
+            setNode(chunk, i, j, 9, {2});
 
-    setNode(chunk, 2, 1, 9, {2});
-    setNode(chunk, 2, 2, 9, {2});
-
-    setNode(chunk, 3, 1, 9, {2});
-    setNode(chunk, 3, 2, 9, {2});
-    setNode(chunk, 3, 3, 9, {2});
     return chunk;
 }
 
