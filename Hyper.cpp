@@ -162,6 +162,7 @@ Chunk * pollChunk(Atlas & atlas, const Fuchsian<Integer> & isometry) {
 
     auto chunk = new Chunk(isometry, pos, {});
 
+    // there should be better way to do this
     auto P = isometry.field<Real>();
     auto ω = P.det() / (P.d * P.d);
 
@@ -175,9 +176,9 @@ Chunk * pollChunk(Atlas & atlas, const Fuchsian<Integer> & isometry) {
 }
 
 void unloadChunk(Atlas & atlas, const Gaussian²<Integer> & pos) {
-    std::remove_if(atlas.begin(), atlas.end(), [&pos](Chunk * chunk) {
-        return chunk->pos == pos;
-    });
+    for (auto it = atlas.begin(); it != atlas.end();)
+        if ((*it)->pos == pos) { delete *it; it = atlas.erase(it); }
+        else it++;
 }
 
 void freeAtlas(Atlas & atlas) {
@@ -322,7 +323,7 @@ constexpr Real Δtₘₐₓ = 1.0/5.0;
 
 double globaltime = 0;
 void display(GLFWwindow * window) {
-    constexpr auto ε = 10e-5;
+    constexpr auto ε = 1e-6;
 
     auto dt = glfwGetTime() - globaltime; globaltime += dt;
 
@@ -347,7 +348,7 @@ void display(GLFWwindow * window) {
         vertical   += mouseSpeed * dt * (height/2 - ypos);
 
         horizontal = std::fmod(horizontal, τ);
-        vertical = std::max(std::min(vertical, τ/4 - ε), -τ/4 + ε);
+        vertical = std::clamp(vertical, -τ/4 + ε, τ/4 - ε);
     }
 
     auto dx = cos(vertical) * sin(horizontal);
