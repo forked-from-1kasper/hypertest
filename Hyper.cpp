@@ -7,6 +7,8 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include "Sheet.hpp"
+#include "Prelude.hpp"
 #include "PicoPNG.hpp"
 
 #include "Matrix.hpp"
@@ -64,44 +66,45 @@ Real playerHeight = 1.8, normalVelocity = 0, normalLevel = 10;
 
 Real horizontal = 0, vertical = 0, xpos, ypos;
 
-void drawParallelogram(const Parallelogram<Real> & P, const Vector3<Real> n, Real h) {
+void drawParallelogram(Texture & T, const Parallelogram<Real> & P, const Vector3<Real> n, Real h) {
     glNormal3d(n.x, n.y, n.z);
-    glTexCoord2d(0, 0); glVertex3d(P.A.x, h, P.A.y);
-    glTexCoord2d(1, 0); glVertex3d(P.B.x, h, P.B.y);
-    glTexCoord2d(1, 1); glVertex3d(P.C.x, h, P.C.y);
-    glTexCoord2d(0, 1); glVertex3d(P.D.x, h, P.D.y);
+
+    glTexCoord2d(T.left(),  T.down()); glVertex3d(P.A.x, h, P.A.y);
+    glTexCoord2d(T.right(), T.down()); glVertex3d(P.B.x, h, P.B.y);
+    glTexCoord2d(T.right(), T.up());   glVertex3d(P.C.x, h, P.C.y);
+    glTexCoord2d(T.left(),  T.up());   glVertex3d(P.D.x, h, P.D.y);
 }
 
-void drawSide(const Vector2<Real> & A, const Vector2<Real> & B, Real h₁, Real h₂) {
+void drawSide(Texture & T, const Vector2<Real> & A, const Vector2<Real> & B, Real h₁, Real h₂) {
     Vector3<Real> v₁(0.0, h₂ - h₁, 0.0), v₂(B.x - A.x, 0.0, B.y - A.y);
 
     auto n = cross(v₁, v₂);
     glNormal3d(n.x, n.y, n.z);
 
-    glTexCoord2d(1, 1); glVertex3d(A.x, h₁, A.y);
-    glTexCoord2d(1, 0); glVertex3d(A.x, h₂, A.y);
-    glTexCoord2d(0, 0); glVertex3d(B.x, h₂, B.y);
-    glTexCoord2d(0, 1); glVertex3d(B.x, h₁, B.y);
+    glTexCoord2d(T.right(), T.up());   glVertex3d(A.x, h₁, A.y);
+    glTexCoord2d(T.right(), T.down()); glVertex3d(A.x, h₂, A.y);
+    glTexCoord2d(T.left(),  T.down()); glVertex3d(B.x, h₂, B.y);
+    glTexCoord2d(T.left(),  T.up());   glVertex3d(B.x, h₁, B.y);
 }
 
-void drawRightParallelogrammicPrism(Real h, Real Δh, const Parallelogram<Real> & P) {
+void drawRightParallelogrammicPrism(Texture & T, Real h, Real Δh, const Parallelogram<Real> & P) {
     const auto h₁ = h, h₂ = h + Δh;
 
     glBegin(GL_QUADS);
 
-    drawParallelogram(P, Vector3<Real>(0, +1, 0), h₂); // Top
-    drawParallelogram(P.rev(), Vector3<Real>(0, -1, 0), h₁); // Bottom
+    drawParallelogram(T, P, Vector3<Real>(0, +1, 0), h₂); // Top
+    drawParallelogram(T, P.rev(), Vector3<Real>(0, -1, 0), h₁); // Bottom
 
-    drawSide(P.B, P.A, h₁, h₂);
-    drawSide(P.C, P.B, h₁, h₂);
-    drawSide(P.D, P.C, h₁, h₂);
-    drawSide(P.A, P.D, h₁, h₂);
+    drawSide(T, P.B, P.A, h₁, h₂);
+    drawSide(T, P.C, P.B, h₁, h₂);
+    drawSide(T, P.D, P.C, h₁, h₂);
+    drawSide(T, P.A, P.D, h₁, h₂);
 
     glEnd();
 }
 
-void drawNode(Möbius<Real> M, Rank x, Level y, Rank z) {
-    drawRightParallelogrammicPrism(Real(y), 1,
+void drawNode(Texture & T, Möbius<Real> M, Rank x, Level y, Rank z) {
+    drawRightParallelogrammicPrism(T, Real(y), 1,
         { Projection::apply(M.apply(Grid::corners[x + 0][z + 0])),
           Projection::apply(M.apply(Grid::corners[x + 1][z + 0])),
           Projection::apply(M.apply(Grid::corners[x + 1][z + 1])),
@@ -109,7 +112,7 @@ void drawNode(Möbius<Real> M, Rank x, Level y, Rank z) {
     );
 }
 
-struct NodeDef { std::string name; GLuint texture; };
+struct NodeDef { std::string name; Texture texture; };
 
 struct Node { NodeId id; };
 
@@ -144,9 +147,7 @@ void drawChunk(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsian<In
                 if (id == 0) continue; // don’t draw air
 
                 nodeDef = nodeRegistry[id];
-
-                glBindTexture(GL_TEXTURE_2D, nodeDef.texture);
-                drawNode(N, i, j, k);
+                drawNode(nodeDef.texture, N, i, j, k);
             }
         }
 
@@ -378,7 +379,7 @@ void display(GLFWwindow * window) {
     glPopMatrix();
 }
 
-GLuint texture1, texture2;
+Texture texture1, texture2;
 
 void setupLighting() {
     glEnable(GL_LIGHTING);
@@ -391,30 +392,15 @@ void setupLighting() {
     glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
 }
 
-void loadTexture(GLuint & ptr, const char * filepath) {
-    unsigned long texWidth, texHeight;
-
-    glGenTextures(1, &ptr);
-    glBindTexture(GL_TEXTURE_2D, ptr);
-
-    auto image = PNG::load(filepath, texWidth, texHeight);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data());
-    image.clear();
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-}
-
 void setupTexture() {
-    loadTexture(texture1, "texture1.png");
-    loadTexture(texture2, "texture2.png");
+    glEnable(GL_TEXTURE_RECTANGLE); glEnable(GL_CULL_FACE);
 
-    glBindTexture(GL_TEXTURE_2D, 0);
+    auto sheet = Sheet(Fundamentals::textureSize, Fundamentals::sheetSize);
 
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_CULL_FACE);
+    texture1 = sheet.attach("texture1.png");
+    texture2 = sheet.attach("texture2.png");
+
+    sheet.pack(); glBindTexture(GL_TEXTURE_RECTANGLE, sheet.texture());
 }
 
 void setupMaterial() {
@@ -546,7 +532,7 @@ int main() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    nodeRegistry.insert({0UL, NodeDef("Air", 0)});
+    nodeRegistry.insert({0UL, NodeDef("Air", Texture())});
     nodeRegistry.insert({1UL, NodeDef("Stuff", texture1)});
     nodeRegistry.insert({2UL, NodeDef("Weird Stuff", texture2)});
 

@@ -2,8 +2,8 @@ CXX = g++
 
 BINARY = Hyper
 CFLAGS = -std=c++2a
-CPP    = Hyper.cpp PicoPNG.cpp
-HPP    = Matrix.hpp Gyrovector.hpp Fuchsian.hpp Fundamentals.hpp Enumerable.hpp
+CPP    = Hyper.cpp Sheet.cpp PicoPNG.cpp
+HPP    = Sheet.hpp PicoPNG.hpp Matrix.hpp Gyrovector.hpp Fuchsian.hpp Fundamentals.hpp Enumerable.hpp
 
 ifeq ($(OS),Windows_NT)
 	BINARY = Hyper.exe

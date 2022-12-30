@@ -14,8 +14,6 @@ using Level = uint8_t;
 // Some helpful definitions
 template<typename T, int N> using Array² = std::array<std::array<T, N>, N>;
 
-template<typename T> constexpr T sign(T x) { return (x > 0) - (x < 0); }
-
 template<class F, class G> auto compose(F f, G g) {
     return [f, g](auto &&... args) {
         return f(g(std::forward<decltype(args)>(args)...));
@@ -52,6 +50,9 @@ namespace Projection {
 }
 
 namespace Fundamentals {
+    constexpr unsigned long textureSize = 16;
+    constexpr unsigned long sheetSize = 1024;
+
     constexpr Level worldTop = 255;
 
     constexpr Rank exterior = 255;
