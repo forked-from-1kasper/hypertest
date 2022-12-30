@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "Prelude.hpp"
+#include "Fundamentals.hpp"
 
 class Texture; class Sheet;
 
@@ -29,6 +29,7 @@ private:
     GLuint _texture;
     unsigned long _size, _total;
     std::vector<std::string> _files;
+
 public:
     Sheet(unsigned long, unsigned long);
     Texture attach(const std::string &);

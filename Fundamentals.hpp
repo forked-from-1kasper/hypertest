@@ -1,6 +1,10 @@
 #pragma once
 
+#include <array>
 #include "Gyrovector.hpp"
+
+template<typename T> constexpr T sqr(T x) { return x * x; }
+template<typename T> constexpr T sign(T x) { return (x > 0) - (x < 0); }
 
 constexpr double τ = 2 * 3.141592653589793238462643383279502884197169399375105820974944;
 

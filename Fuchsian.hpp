@@ -1,5 +1,8 @@
 #pragma once
 
+#include <ostream>
+#include <complex>
+
 #include "Gyrovector.hpp"
 #include "Enumerable.hpp"
 

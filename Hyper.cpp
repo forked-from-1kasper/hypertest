@@ -1,31 +1,23 @@
 #include <map>
 #include <cmath>
-#include <complex>
 #include <iostream>
-#include <functional>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
 #include "Sheet.hpp"
-#include "Prelude.hpp"
+#include "Geometry.hpp"
 #include "PicoPNG.hpp"
 
 #include "Matrix.hpp"
-#include "Gyrovector.hpp"
 #include "Fuchsian.hpp"
-#include "Fundamentals.hpp"
+#include "Gyrovector.hpp"
 #include "Tesselation.hpp"
+#include "Fundamentals.hpp"
 
 using namespace std::complex_literals;
 
 enum class Side { Top, Down, Left, Right };
-
-template<typename T> struct Parallelogram {
-    Vector2<T> A, B, C, D;
-
-    constexpr auto rev() const { return Parallelogram<T>(D, C, B, A); }
-};
 
 void errorCallback(int error, const char* description)
 {
@@ -66,131 +58,6 @@ Real playerHeight = 1.8, normalVelocity = 0, normalLevel = 10;
 
 Real horizontal = 0, vertical = 0, xpos, ypos;
 
-void drawParallelogram(Texture & T, const Parallelogram<Real> & P, const Vector3<Real> n, Real h) {
-    glNormal3d(n.x, n.y, n.z);
-
-    glTexCoord2d(T.left(),  T.down()); glVertex3d(P.A.x, h, P.A.y);
-    glTexCoord2d(T.right(), T.down()); glVertex3d(P.B.x, h, P.B.y);
-    glTexCoord2d(T.right(), T.up());   glVertex3d(P.C.x, h, P.C.y);
-    glTexCoord2d(T.left(),  T.up());   glVertex3d(P.D.x, h, P.D.y);
-}
-
-void drawSide(Texture & T, const Vector2<Real> & A, const Vector2<Real> & B, Real h₁, Real h₂) {
-    Vector3<Real> v₁(0.0, h₂ - h₁, 0.0), v₂(B.x - A.x, 0.0, B.y - A.y);
-
-    auto n = cross(v₁, v₂);
-    glNormal3d(n.x, n.y, n.z);
-
-    glTexCoord2d(T.right(), T.up());   glVertex3d(A.x, h₁, A.y);
-    glTexCoord2d(T.right(), T.down()); glVertex3d(A.x, h₂, A.y);
-    glTexCoord2d(T.left(),  T.down()); glVertex3d(B.x, h₂, B.y);
-    glTexCoord2d(T.left(),  T.up());   glVertex3d(B.x, h₁, B.y);
-}
-
-void drawRightParallelogrammicPrism(Texture & T, Real h, Real Δh, const Parallelogram<Real> & P) {
-    const auto h₁ = h, h₂ = h + Δh;
-
-    glBegin(GL_QUADS);
-
-    drawParallelogram(T, P, Vector3<Real>(0, +1, 0), h₂); // Top
-    drawParallelogram(T, P.rev(), Vector3<Real>(0, -1, 0), h₁); // Bottom
-
-    drawSide(T, P.B, P.A, h₁, h₂);
-    drawSide(T, P.C, P.B, h₁, h₂);
-    drawSide(T, P.D, P.C, h₁, h₂);
-    drawSide(T, P.A, P.D, h₁, h₂);
-
-    glEnd();
-}
-
-void drawNode(Texture & T, Möbius<Real> M, Rank x, Level y, Rank z) {
-    drawRightParallelogrammicPrism(T, Real(y), 1,
-        { Projection::apply(M.apply(Grid::corners[x + 0][z + 0])),
-          Projection::apply(M.apply(Grid::corners[x + 1][z + 0])),
-          Projection::apply(M.apply(Grid::corners[x + 1][z + 1])),
-          Projection::apply(M.apply(Grid::corners[x + 0][z + 1])) }
-    );
-}
-
-struct NodeDef { std::string name; Texture texture; };
-
-struct Node { NodeId id; };
-
-struct Chunk {
-    Fuchsian<Integer> isometry; // used only for drawing
-    Gaussian²<Integer> pos; // used for indexing, should be equal to `isometry.origin()`
-    Node data[Fundamentals::chunkSize][Fundamentals::worldHeight][Fundamentals::chunkSize];
-};
-
-using NodeRegistry = std::map<NodeId, NodeDef>;
-using Atlas = std::vector<Chunk*>;
-
-Chunk * lookup(Atlas & atlas, Gaussian²<Integer> & key) {
-    for (auto chunk : atlas)
-        if (chunk->pos == key)
-            return chunk;
-
-    return nullptr;
-}
-
-void drawChunk(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsian<Integer> & G, const Chunk * chunk) {
-    using namespace Fundamentals;
-
-    auto N = M * (G.inverse() * chunk->isometry).field<Real>();
-
-    NodeDef nodeDef;
-    for (Level j = 0; true; j++) {
-        for (Rank k = 0; k < chunkSize; k++) {
-            for (Rank i = 0; i < chunkSize; i++) {
-                auto id = chunk->data[i][j][k].id;
-
-                if (id == 0) continue; // don’t draw air
-
-                nodeDef = nodeRegistry[id];
-                drawNode(nodeDef.texture, N, i, j, k);
-            }
-        }
-
-        if (j == worldTop) break;
-    }
-}
-
-Chunk * pollChunk(Atlas & atlas, const Fuchsian<Integer> & isometry) {
-    auto pos = isometry.origin();
-
-    for (auto chunk : atlas)
-        if (chunk->pos == pos)
-            return chunk;
-
-    auto chunk = new Chunk(isometry, pos, {});
-
-    // there should be better way to do this
-    auto P = isometry.field<Real>();
-    auto ω = P.det() / (P.d * P.d);
-
-    if (ω.real() > 0 && ω.imag() >= 0) {}
-    else if (ω.real() <= 0 && ω.imag() > 0) { chunk->isometry.a.mulnegi(); chunk->isometry.c.mulnegi(); }
-    else if (ω.real() < 0 && ω.imag() <= 0) { chunk->isometry.a.negate(); chunk->isometry.c.negate(); }
-    else if (ω.real() >= 0 && ω.imag() < 0) { chunk->isometry.a.muli(); chunk->isometry.c.muli(); }
-
-    atlas.push_back(chunk);
-    return chunk;
-}
-
-void unloadChunk(Atlas & atlas, const Gaussian²<Integer> & pos) {
-    for (auto it = atlas.begin(); it != atlas.end();)
-        if ((*it)->pos == pos) { delete *it; it = atlas.erase(it); }
-        else it++;
-}
-
-void freeAtlas(Atlas & atlas) {
-    for (auto chunk : atlas)
-        delete chunk;
-}
-
-inline void setNode(Chunk * chunk, size_t i, size_t j, size_t k, const Node & node)
-{ chunk->data[i][j][k] = node; }
-
 Fuchsian<Integer> localIsometry(Tesselation::I);
 auto chunkPos = localIsometry.origin();
 Chunk * currentChunk;
@@ -198,58 +65,28 @@ Chunk * currentChunk;
 NodeRegistry nodeRegistry;
 Atlas localAtlas;
 
-bool inCell(const Gyrovector<Real> & w, Rank i, Rank j) {
-    const auto A = Grid::corners[i + 0][j + 0];
-    const auto B = Grid::corners[i + 1][j + 0];
-    const auto C = Grid::corners[i + 1][j + 1];
-    const auto D = Grid::corners[i + 0][j + 1];
-
-    const auto α = (w.x() - A.x()) * (B.y() - A.y()) - (B.x() - A.x()) * (w.y() - A.y());
-    const auto β = (w.x() - B.x()) * (C.y() - B.y()) - (C.x() - B.x()) * (w.y() - B.y());
-    const auto γ = (w.x() - C.x()) * (D.y() - C.y()) - (D.x() - C.x()) * (w.y() - C.y());
-    const auto δ = (w.x() - D.x()) * (A.y() - D.y()) - (A.x() - D.x()) * (w.y() - D.y());
-
-    return (α < 0) == (β < 0) && (β < 0) == (γ < 0) && (γ < 0) == (δ < 0);
-}
-
-std::pair<Rank, Rank> roundOff(const Gyrovector<Real> & w) {
-    using namespace Fundamentals;
-
-    for (Rank i = 0; i < chunkSize; i++)
-        for (Rank j = 0; j < chunkSize; j++)
-            if (inCell(w, i, j)) return std::pair(i, j);
-
-    return std::pair(exterior, exterior);
-}
-
-std::pair<Rank, Rank> roundOff(Möbius<Real> M) {
-    auto N = (currentChunk->isometry.inverse() * localIsometry).field<Real>() * M;
-    return roundOff(N.origin());
-}
-
-inline bool isOutside(Real L) { return L < 0 || L >= Fundamentals::worldHeight; }
-
-bool isWalkable(Chunk * C, Rank x, Real L, Rank z) {
-    if (!C || x >= Fundamentals::chunkSize || z >= Fundamentals::chunkSize) return true;
-    return isOutside(L) || (C->data[x][Level(L)][z].id == 0);
+auto roundOff(const Möbius<Real> & M) {
+    auto N = (currentChunk->isometry().inverse() * localIsometry).field<Real>() * M;
+    return Chunk::cell(N.origin());
 }
 
 bool isFree(Chunk * C, Rank x, Real L, Rank z)
-{ return isWalkable(C, x, std::floor(L), z) && isWalkable(C, x, std::floor(L + playerHeight), z); }
+{ return !C || (C->walkable(x, std::floor(L), z) && C->walkable(x, std::floor(L + playerHeight), z)); }
 
 void jump() { if (!isFlying) normalVelocity += normalJumpSpeed; }
 
 void setBlock(Rank i, Real L, Rank k, NodeId id) {
     if (!currentChunk) return;
 
-    if (isOutside(normalLevel)) return;
+    if (Chunk::outside(normalLevel)) return;
 
     if (i >= Fundamentals::chunkSize
      || k >= Fundamentals::chunkSize)
         return;
 
     auto j = Level(std::floor(normalLevel));
-    currentChunk->data[i][j][k].id = id;
+
+    currentChunk->set(i, j, k, {id});
 }
 
 void placeBlockNextToPlayer() {
@@ -265,20 +102,19 @@ void deleteBlockNextToPlayer() {
 void returnToSpawn() {
     localIsometry = Tesselation::I;
     chunkPos      = localIsometry.origin();
-    currentChunk  = lookup(localAtlas, chunkPos);
+    currentChunk  = localAtlas.lookup(chunkPos);
     position      = {1, 0, 0, 1};
     normalLevel   = 5;
 }
-
 
 Chunk * buildFloor(Chunk * chunk) {
     using namespace Fundamentals;
 
     for (size_t i = 0; i < chunkSize; i++)
         for (size_t j = 0; j < chunkSize; j++)
-            setNode(chunk, i, 0, j, {1});
+            chunk->set(i, 0, j, {1});
 
-    setNode(chunk, 0, 1, 0, {2});
+    chunk->set(0, 1, 0, {2});
 
     return chunk;
 }
@@ -298,8 +134,8 @@ void moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
         std::tie(i, j) = roundOff(P₂);
 
         if (i != Fundamentals::exterior && j != Fundamentals::exterior)
-        { G *= Δ; g = G.origin(); C = lookup(localAtlas, g); P₁ = P₂;
-          if (!C) C = buildFloor(pollChunk(localAtlas, G)); break; }
+        { G *= Δ; g = G.origin(); C = localAtlas.lookup(g); P₁ = P₂;
+          if (!C) C = buildFloor(localAtlas.poll(G)); break; }
     }
 
     if (isFree(C, i, normalLevel, j))
@@ -316,7 +152,7 @@ void moveVertically(const Real dt) {
     if (isFree(currentChunk, i, L, j)) { normalLevel = L; isFlying = true; }
     else normalVelocity = 0;
 
-    if (!isWalkable(currentChunk, i, std::floor(L), j)) isFlying = false;
+    if (!currentChunk->walkable(i, std::floor(L), j)) isFlying = false;
 }
 
 void update(Gyrovector<Real> & v, Real dt) { moveVertically(dt); moveHorizontally(v, dt); }
@@ -373,8 +209,8 @@ void display(GLFWwindow * window) {
 
     glColor3f(0.0f, 0.0f, 0.0f);
 
-    for (auto & chunk : localAtlas)
-        drawChunk(nodeRegistry, origin, localIsometry, chunk);
+    for (auto & chunk : localAtlas.get())
+        chunk->render(nodeRegistry, origin, localIsometry);
 
     glPopMatrix();
 }
@@ -478,15 +314,15 @@ Chunk * buildTestStructure(Chunk * chunk) {
         for (size_t j = 0; j < chunkSize; j++) {
             NodeId id = (i + j) % 2 == 0 ? 1 : 2;
 
-            setNode(chunk, i, 0, j, {id});
-            setNode(chunk, i, 16, j, {3 - id});
+            chunk->set(i, 0, j, {id});
+            chunk->set(i, 16, j, {3 - id});
         }
     }
 
     for (size_t i = 0; i < chunkSize; i += chunkSize - 1)
         for (size_t k = 0; k < chunkSize; k += chunkSize - 1)
             for (size_t j = 1; j < 16; j++)
-                setNode(chunk, i, j, k, {2});
+                chunk->set(i, j, k, {2});
 
     return chunk;
 }
@@ -494,7 +330,7 @@ Chunk * buildTestStructure(Chunk * chunk) {
 Chunk * markChunk(Chunk * chunk) {
     for (size_t i = 1; i <= 8; i++)
         for (size_t j = 1; j <= i; j++)
-            setNode(chunk, i, j, 9, {2});
+            chunk->set(i, j, 9, {2});
 
     return chunk;
 }
@@ -532,16 +368,15 @@ int main() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    nodeRegistry.insert({0UL, NodeDef("Air", Texture())});
-    nodeRegistry.insert({1UL, NodeDef("Stuff", texture1)});
-    nodeRegistry.insert({2UL, NodeDef("Weird Stuff", texture2)});
+    nodeRegistry.attach(1UL, NodeDef("Stuff", texture1));
+    nodeRegistry.attach(2UL, NodeDef("Weird Stuff", texture2));
 
     using namespace Tesselation;
 
-    currentChunk = buildTestStructure(pollChunk(localAtlas, I));
+    currentChunk = buildTestStructure(localAtlas.poll(I));
 
     for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++) {
-        auto C = buildTestStructure(pollChunk(localAtlas, Tesselation::neighbours[k]));
+        auto C = buildTestStructure(localAtlas.poll(Tesselation::neighbours[k]));
         if (k == 0) markChunk(C);
     }
 
@@ -554,8 +389,6 @@ int main() {
 
     glfwDestroyWindow(window);
     glfwTerminate();
-
-    freeAtlas(localAtlas);
 
     return 0;
 }

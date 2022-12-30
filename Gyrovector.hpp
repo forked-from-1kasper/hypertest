@@ -1,7 +1,9 @@
 #pragma once
 
-#include <type_traits>
 #include <numeric>
+#include <complex>
+#include <functional>
+#include <type_traits>
 
 #include "Matrix.hpp"
 
