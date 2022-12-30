@@ -23,9 +23,9 @@ Sheet::Sheet(unsigned long size, unsigned long total) : _size(size), _total(tota
 
 Texture Sheet::attach(const std::string & file) {
     if (full()) throw std::length_error("no space left in texture sheet");
-    files.push_back(file);
+    _files.push_back(file);
 
-    return Texture(this, files.size() - 1);
+    return Texture(this, files().size() - 1);
 }
 
 void Sheet::pack() {
@@ -36,13 +36,13 @@ void Sheet::pack() {
     glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-    for (size_t k = 0; k < files.size(); k++) {
+    for (size_t k = 0; k < files().size(); k++) {
         unsigned long width, height;
         auto [i, j] = index(k);
 
-        auto image = PNG::load(files[k], width, height);
+        auto image = PNG::load(_files[k], width, height);
         if (width != size() || height != size())
-        { std::cerr << "Unexpected texture size: " << files[k] << std::endl; goto fin; }
+        { std::cerr << "Unexpected texture size: " << _files[k] << std::endl; goto fin; }
 
         glTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, i * size(), j * size(), size(), size(), GL_RGBA, GL_UNSIGNED_BYTE, image.data());
 
