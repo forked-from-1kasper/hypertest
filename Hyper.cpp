@@ -34,7 +34,7 @@ namespace Keyboard {
 bool windowHovered = true, windowFocused = true, mouseGrabbed = false;
 
 constexpr auto fov  = 80;
-constexpr auto near = 10e-4;
+constexpr auto near = 1e-3;
 constexpr auto far  = 150.0;
 
 const GLfloat lightDiffuse[] = {1.0, 1.0, 1.0, 1.0};
@@ -51,14 +51,14 @@ constexpr Real jumpHeight = 1.25;
 Real freeFallAccel = 9.8;
 Real normalJumpSpeed = sqrt(2 * freeFallAccel * jumpHeight);
 
-Möbius<Real> position {1, 0, 0, 1};
+auto position = Möbius<Real>::identity();
 
 bool isFlying = true;
 Real playerHeight = 1.8, normalVelocity = 0, normalLevel = 10;
 
 Real horizontal = 0, vertical = 0, xpos, ypos;
 
-Fuchsian<Integer> localIsometry(Tesselation::I);
+auto localIsometry = Tesselation::I;
 auto chunkPos = localIsometry.origin();
 Chunk * currentChunk;
 

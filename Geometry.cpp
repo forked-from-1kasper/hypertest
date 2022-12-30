@@ -47,8 +47,6 @@ void drawSide(Texture & T, const Vector2<Real> & A, const Vector2<Real> & B, Rea
 void drawRightParallelogrammicPrism(Texture & T, Real h, Real Δh, const Parallelogram<Real> & P) {
     const auto h₁ = h, h₂ = h + Δh;
 
-    glBegin(GL_QUADS);
-
     drawParallelogram(T, P, Vector3<Real>(0, +1, 0), h₂); // Top
     drawParallelogram(T, P.rev(), Vector3<Real>(0, -1, 0), h₁); // Bottom
 
@@ -56,8 +54,6 @@ void drawRightParallelogrammicPrism(Texture & T, Real h, Real Δh, const Paralle
     drawSide(T, P.C, P.B, h₁, h₂);
     drawSide(T, P.D, P.C, h₁, h₂);
     drawSide(T, P.A, P.D, h₁, h₂);
-
-    glEnd();
 }
 
 void drawNode(Texture & T, Möbius<Real> M, Rank x, Level y, Rank z) {
@@ -74,6 +70,8 @@ void Chunk::render(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsia
 
     auto N = M * (G.inverse() * isometry()).field<Real>();
 
+    glBegin(GL_QUADS);
+
     NodeDef nodeDef;
     for (Level j = 0; true; j++) {
         for (Rank k = 0; k < chunkSize; k++) {
@@ -89,6 +87,8 @@ void Chunk::render(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsia
 
         if (j == worldTop) break;
     }
+
+    glEnd();
 }
 
 bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {
