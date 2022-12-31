@@ -36,7 +36,7 @@ private:
     Gaussian²<Integer> _pos; // used for indexing, should be equal to `isometry.origin()`
     Node data[Fundamentals::chunkSize][Fundamentals::worldHeight][Fundamentals::chunkSize];
 
-    std::vector<Vector3<Real>> vbo;
+    std::vector<Vector3<GLfloat>> vbo;
 
 public:
     Chunk(const Fuchsian<Integer> & isometry);

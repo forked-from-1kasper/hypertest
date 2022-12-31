@@ -342,7 +342,6 @@ int main() {
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    glfwWindowHint(GLFW_SAMPLES, 16);
 
     auto window = glfwCreateWindow(width, height, "Hypertest", nullptr, nullptr);
     if (!window) return -1;
