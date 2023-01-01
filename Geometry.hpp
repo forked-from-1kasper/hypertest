@@ -49,7 +49,7 @@ public:
     ~Chunk();
 
     void refresh(NodeRegistry &, const Fuchsian<Integer> &);
-    void updateRender(const Fuchsian<Integer> &);
+    void updateMatrix(const Fuchsian<Integer> &);
     void render(Shader *);
 
     bool walkable(Rank, Real, Rank);
@@ -78,6 +78,8 @@ public:
 
     Chunk * poll(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry);
     Chunk * lookup(const Gaussian²<Integer> &);
+
+    void updateMatrix(const Fuchsian<Integer> &);
     void unload(const Gaussian²<Integer> &);
 
     inline const auto get() const { return container; }

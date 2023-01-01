@@ -14,7 +14,7 @@ Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometr
     else if (ω.real() >= 0 && ω.imag() < 0) { _isometry.a.muli();    _isometry.c.muli();    }
 
     _pos = isometry.origin();
-    updateRender(origin);
+    updateMatrix(origin);
 
     glGenVertexArrays(1, &vao); glGenBuffers(1, &vbo);
     glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -104,7 +104,7 @@ void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
     glBufferData(GL_ARRAY_BUFFER, size * sizeof(ShaderData), vertices.data(), GL_DYNAMIC_DRAW);
 }
 
-void Chunk::updateRender(const Fuchsian<Integer> & origin) {
+void Chunk::updateMatrix(const Fuchsian<Integer> & origin) {
     relative = (origin.inverse() * _isometry).field<Real>();
     relative = relative.normalize();
 }
@@ -174,4 +174,9 @@ void Atlas::unload(const Gaussian²<Integer> & pos) {
     for (auto it = container.begin(); it != container.end();)
         if ((*it)->pos() == pos) { delete *it; it = container.erase(it); }
         else it++;
+}
+
+void Atlas::updateMatrix(const Fuchsian<Integer> & origin) {
+    for (auto & chunk : container)
+        chunk->updateMatrix(origin);
 }

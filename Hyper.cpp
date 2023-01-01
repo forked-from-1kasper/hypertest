@@ -121,16 +121,42 @@ Chunk * buildFloor(Chunk * chunk) {
 
     chunk->set(0, 1, 0, {2});
 
+    chunk->refresh(nodeRegistry, localIsometry);
     return chunk;
 }
 
-void refreshAtlas() {
-    for (auto & chunk : localAtlas.get())
-        chunk->refresh(nodeRegistry, localIsometry);
+Chunk * buildTestStructure(Chunk * chunk) {
+    using namespace Fundamentals;
+
+    for (size_t i = 0; i < chunkSize; i++) {
+        for (size_t j = 0; j < chunkSize; j++) {
+            NodeId id = (i + j) % 2 == 0 ? 1 : 2;
+
+            chunk->set(i, 0, j, {id});
+            chunk->set(i, 16, j, {3 - id});
+        }
+    }
+
+    for (size_t i = 0; i < chunkSize; i += chunkSize - 1)
+        for (size_t k = 0; k < chunkSize; k += chunkSize - 1)
+            for (size_t j = 1; j < 16; j++)
+                chunk->set(i, j, k, {2});
+
+    chunk->refresh(nodeRegistry, localIsometry);
+    return chunk;
+}
+
+Chunk * markChunk(Chunk * chunk) {
+    for (size_t i = 1; i <= 8; i++)
+        for (size_t j = 1; j <= i; j++)
+            chunk->set(i, j, 9, {2});
+
+    chunk->refresh(nodeRegistry, localIsometry);
+    return chunk;
 }
 
 void moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
-    bool chunkChanged = false, needRefresh = false; auto G(localIsometry); auto g(chunkPos); auto C(currentChunk);
+    bool chunkChanged = false; auto G(localIsometry); auto g(chunkPos); auto C(currentChunk);
 
     auto P₁ = position * Möbius<Real>::translate(v.scale(dt));
     P₁ = P₁.normalize(); auto [i, j] = roundOff(P₁);
@@ -147,19 +173,12 @@ void moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
 
         if (i != Fundamentals::exterior && j != Fundamentals::exterior)
         { G *= Δ; g = G.origin(); C = localAtlas.lookup(g); P₁ = P₂; chunkChanged = true;
-          if (!C) { C = buildFloor(localAtlas.poll(localIsometry, G)); needRefresh = true; } break; }
+          if (!C) C = buildFloor(localAtlas.poll(localIsometry, G)); break; }
     }
 
     if (isFree(C, i, normalLevel, j)) {
         localIsometry = G; chunkPos = g; position = P₁;
-
-        if (chunkChanged) {
-            currentChunk = C;
-            for (auto & chunk : localAtlas.get())
-                chunk->updateRender(localIsometry);
-        }
-
-        if (needRefresh) currentChunk->refresh(nodeRegistry, localIsometry);
+        if (chunkChanged) { currentChunk = C; localAtlas.updateMatrix(localIsometry); }
     }
 }
 
@@ -316,34 +335,6 @@ void setupWindowSize(GLFWwindow * window, int newWidth, int newHeight) {
     projection = glm::perspective(Real(fov), Real(width) / Real(height), near, far);
 }
 
-Chunk * buildTestStructure(Chunk * chunk) {
-    using namespace Fundamentals;
-
-    for (size_t i = 0; i < chunkSize; i++) {
-        for (size_t j = 0; j < chunkSize; j++) {
-            NodeId id = (i + j) % 2 == 0 ? 1 : 2;
-
-            chunk->set(i, 0, j, {id});
-            chunk->set(i, 16, j, {3 - id});
-        }
-    }
-
-    for (size_t i = 0; i < chunkSize; i += chunkSize - 1)
-        for (size_t k = 0; k < chunkSize; k += chunkSize - 1)
-            for (size_t j = 1; j < 16; j++)
-                chunk->set(i, j, k, {2});
-
-    return chunk;
-}
-
-Chunk * markChunk(Chunk * chunk) {
-    for (size_t i = 1; i <= 8; i++)
-        for (size_t j = 1; j <= i; j++)
-            chunk->set(i, j, 9, {2});
-
-    return chunk;
-}
-
 int main() {
     glfwSetErrorCallback(errorCallback);
 
@@ -389,8 +380,6 @@ int main() {
         auto C = buildTestStructure(localAtlas.poll(localIsometry, Tesselation::neighbours[k]));
         if (k == 0) markChunk(C);
     }
-
-    refreshAtlas();
 
     while (!glfwWindowShouldClose(window))
     {
