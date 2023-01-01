@@ -13,6 +13,8 @@ Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometr
     else if (ω.real() < 0 && ω.imag() <= 0) { _isometry.a.negate();  _isometry.c.negate();  }
     else if (ω.real() >= 0 && ω.imag() < 0) { _isometry.a.muli();    _isometry.c.muli();    }
 
+    if (ω.real() == 0) { _isometry.a.mulnegi(); _isometry.c.mulnegi(); }
+
     _pos = isometry.origin();
     updateMatrix(origin);
 

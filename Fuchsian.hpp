@@ -113,6 +113,8 @@ struct Gaussian {
             /* −i */ case Ord²(false, true):  mulnegi(); δ.mulnegi(); break;
             /* +1 */ case Ord²(true,  true):  break;
         }
+
+        if (real == 0) { mulnegi(); δ.mulnegi(); }
     }
 
     constexpr auto operator==(const Gaussian<T> & w) const
