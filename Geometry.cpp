@@ -23,8 +23,11 @@ Chunk::Chunk(const Fuchsian<Integer> & isometry) : _isometry(isometry), data{} {
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, (void *) 0); // _texCoord
     glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void *) (2 * sizeof(float))); // _pos
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void *) (2 * sizeof(float))); // _gyrovector
     glEnableVertexAttribArray(1);
+
+    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, stride, (void *) (4 * sizeof(float))); // _height
+    glEnableVertexAttribArray(2);
 }
 
 Chunk::~Chunk() {
@@ -37,27 +40,23 @@ bool Chunk::walkable(Rank x, Real L, Rank z) {
     return Chunk::outside(L) || (get(x, Level(L), z).id == 0);
 }
 
-inline void float2(VBO & vbo, GLfloat x, GLfloat y)
-{ vbo.push_back(x); vbo.push_back(y); }
+template<typename... Ts> inline void emit(VBO & vbo, Ts... ts) { vbo.push_back(ShaderData(ts...)); }
 
-inline void float3(VBO & vbo, GLfloat x, GLfloat y, GLfloat z)
-{ vbo.push_back(x); vbo.push_back(y); vbo.push_back(z); }
-
-void drawParallelogram(VBO & vbo, Texture & T, const Parallelogram & P, Real h) {
-    float2(vbo, T.left(),  T.down()); float3(vbo, P.A.x, h, P.A.y);
-    float2(vbo, T.right(), T.down()); float3(vbo, P.B.x, h, P.B.y);
-    float2(vbo, T.right(), T.up());   float3(vbo, P.C.x, h, P.C.y);
-    float2(vbo, T.left(),  T.up());   float3(vbo, P.D.x, h, P.D.y);
+void drawParallelogram(VBO & vbo, Texture & T, const Parallelogram<Real> & P, Real h) {
+    emit(vbo, T.left(),  T.down(), P.A, h);
+    emit(vbo, T.right(), T.down(), P.B, h);
+    emit(vbo, T.right(), T.up(),   P.C, h);
+    emit(vbo, T.left(),  T.up(),   P.D, h);
 }
 
-void drawSide(VBO & vbo, Texture & T, const glm::vec2 & A, const glm::vec2 & B, Real h₁, Real h₂) {
-    float2(vbo, T.right(), T.up());   float3(vbo, A.x, h₁, A.y);
-    float2(vbo, T.right(), T.down()); float3(vbo, A.x, h₂, A.y);
-    float2(vbo, T.left(),  T.down()); float3(vbo, B.x, h₂, B.y);
-    float2(vbo, T.left(),  T.up());   float3(vbo, B.x, h₁, B.y);
+void drawSide(VBO & vbo, Texture & T, const Gyrovector<Real> & A, const Gyrovector<Real> & B, Real h₁, Real h₂) {
+    emit(vbo, T.right(), T.up(),   A, h₁);
+    emit(vbo, T.right(), T.down(), A, h₂);
+    emit(vbo, T.left(),  T.down(), B, h₂);
+    emit(vbo, T.left(),  T.up(),   B, h₁);
 }
 
-void drawRightParallelogrammicPrism(VBO & vbo, Texture & T, Real h, Real Δh, const Parallelogram & P) {
+void drawRightParallelogrammicPrism(VBO & vbo, Texture & T, Real h, Real Δh, const Parallelogram<Real> & P) {
     const auto h₁ = h, h₂ = h + Δh;
 
     drawParallelogram(vbo, T, P, h₂);       // Top
@@ -71,17 +70,17 @@ void drawRightParallelogrammicPrism(VBO & vbo, Texture & T, Real h, Real Δh, co
 
 void drawNode(VBO & vbo, Texture & T, Möbius<Real> M, Rank x, Level y, Rank z) {
     drawRightParallelogrammicPrism(vbo, T, Real(y), 1,
-        { Projection::apply(M.apply(Grid::corners[x + 0][z + 0])),
-          Projection::apply(M.apply(Grid::corners[x + 1][z + 0])),
-          Projection::apply(M.apply(Grid::corners[x + 1][z + 1])),
-          Projection::apply(M.apply(Grid::corners[x + 0][z + 1])) }
+        { M.apply(Grid::corners[x + 0][z + 0]),
+          M.apply(Grid::corners[x + 1][z + 0]),
+          M.apply(Grid::corners[x + 1][z + 1]),
+          M.apply(Grid::corners[x + 0][z + 1]) }
     );
 }
 
-void Chunk::render(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsian<Integer> & G) {
+void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
     using namespace Fundamentals;
 
-    auto N = M * (G.inverse() * isometry()).field<Real>();
+    auto M = (G.inverse() * isometry()).field<Real>();
 
     vertices.clear();
 
@@ -94,7 +93,7 @@ void Chunk::render(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsia
                 if (id == 0) continue; // don’t draw air
 
                 nodeDef = nodeRegistry.get(id);
-                drawNode(vertices, nodeDef.texture, N, i, j, k);
+                drawNode(vertices, nodeDef.texture, M, i, j, k);
             }
         }
 
@@ -102,10 +101,20 @@ void Chunk::render(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsia
     }
 
     auto size = vertices.size();
-
     glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, size * sizeof(float), vertices.data(), GL_DYNAMIC_DRAW);
-    glDrawArrays(GL_QUADS, 0, size);
+    glBufferData(GL_ARRAY_BUFFER, size * sizeof(ShaderData), vertices.data(), GL_DYNAMIC_DRAW);
+}
+
+void Chunk::apply(const Möbius<Real> & M) {
+    for (auto data : vertices) data.v = M.apply(data.v);
+    glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(ShaderData), vertices.data());
+}
+
+void Chunk::render() {
+    glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glDrawArrays(GL_QUADS, 0, vertices.size());
 }
 
 bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {

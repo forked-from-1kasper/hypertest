@@ -26,6 +26,9 @@ struct Gyrovector {
     constexpr Gyrovector(const T x, const T y) : val(std::complex(x, y)) {}
     constexpr Gyrovector(const std::complex<T> z) : val(z) {}
 
+    template<typename U> constexpr operator Gyrovector<U>() const
+    { return Gyrovector<U>(x(), y()); }
+
     constexpr T operator,(const Gyrovector<T> & N) const { return val.real() * N.val.real() + val.imag() * N.val.imag(); }
 
     constexpr inline auto add(const Gyrovector<T> & N) const { return Gyrovector<T>(val + N.val); }

@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <complex>
 #include <string>
 
 constexpr size_t infoBufferSize = 2048;
@@ -75,6 +76,18 @@ template<> void Shader::uniform<int>(const char * name, const int & value) const
 
 template<> void Shader::uniform<float>(const char * name, const float & value) const
 { glUniform1f(glGetUniformLocation(_index, name), value); }
+
+template<> void Shader::uniform<std::complex<float>>(const char * name, const std::complex<float> & value) const
+{ glUniform2fv(glGetUniformLocation(_index, name), 1, (GLfloat*) &value); }
+
+template<> void Shader::uniform<std::complex<double>>(const char * name, const std::complex<double> & value) const
+{ std::complex<float> z(value.real(), value.imag()); glUniform2fv(glGetUniformLocation(_index, name), 1, (GLfloat*) &z); }
+
+template<> void Shader::uniform<glm::vec2>(const char * name, const glm::vec2 & value) const
+{ glUniform2fv(glGetUniformLocation(_index, name), 1, glm::value_ptr(value)); }
+
+template<> void Shader::uniform<glm::vec3>(const char * name, const glm::vec3 & value) const
+{ glUniform2fv(glGetUniformLocation(_index, name), 1, glm::value_ptr(value)); }
 
 template<> void Shader::uniform<glm::mat4>(const char * name, const glm::mat4 & value) const
 { glUniformMatrix4fv(glGetUniformLocation(_index, name), 1, GL_FALSE, glm::value_ptr(value)); }

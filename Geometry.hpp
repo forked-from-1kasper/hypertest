@@ -10,9 +10,9 @@
 #include "Gyrovector.hpp"
 #include "Fundamentals.hpp"
 
+template<typename T>
 struct Parallelogram {
-    glm::vec2 A, B, C, D;
-
+    Gyrovector<T> A, B, C, D;
     const auto rev() const { return Parallelogram(D, C, B, A); }
 };
 
@@ -32,7 +32,8 @@ public:
     inline auto get(NodeId id) { return table[id]; }
 };
 
-using VBO = std::vector<GLfloat>;
+struct ShaderData { GLfloat tx, ty; Gyrovector<GLfloat> v; GLfloat h; };
+using VBO = std::vector<ShaderData>;
 
 class Chunk {
 private:
@@ -46,7 +47,10 @@ public:
     Chunk(const Fuchsian<Integer> & isometry);
     ~Chunk();
 
-    void render(NodeRegistry &, Möbius<Real> &, const Fuchsian<Integer> &);
+    void refresh(NodeRegistry &, const Fuchsian<Integer> &);
+    void apply(const Möbius<Real> &);
+    void render();
+
     bool walkable(Rank, Real, Rank);
 
     inline constexpr auto get(Rank i, Level j, Rank k) const { return data[i][j][k]; }

@@ -91,6 +91,7 @@ void setBlock(Rank i, Real L, Rank k, NodeId id) {
     auto j = Level(std::floor(normalLevel));
 
     currentChunk->set(i, j, k, {id});
+    currentChunk->refresh(nodeRegistry, localIsometry);
 }
 
 void placeBlockNextToPlayer() {
@@ -123,14 +124,21 @@ Chunk * buildFloor(Chunk * chunk) {
     return chunk;
 }
 
+void refreshAtlas() {
+    for (auto & chunk : localAtlas.get())
+        chunk->refresh(nodeRegistry, localIsometry);
+}
+
 void moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
-    auto G(localIsometry); auto g(chunkPos); auto C(currentChunk);
+    bool chunkChanged = false; auto G(localIsometry); auto g(chunkPos); auto C(currentChunk);
 
     auto P₁ = position * Möbius<Real>::translate(v.scale(dt));
     P₁ = P₁.normalize(); auto [i, j] = roundOff(P₁);
 
+    size_t k;
+
     if (i == Fundamentals::exterior && j == Fundamentals::exterior)
-    for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++) {
+    for (k = 0; k < Tesselation::neighbours.size(); k++) {
         const auto Δ   = Tesselation::neighbours[k];
         const auto Δ⁻¹ = Tesselation::neighbours⁻¹[k];
         const auto P₂  = (Δ⁻¹ * P₁).normalize();
@@ -139,11 +147,13 @@ void moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
 
         if (i != Fundamentals::exterior && j != Fundamentals::exterior)
         { G *= Δ; g = G.origin(); C = localAtlas.lookup(g); P₁ = P₂;
-          if (!C) C = buildFloor(localAtlas.poll(G)); break; }
+          if (!C) C = buildFloor(localAtlas.poll(G)); chunkChanged = true; break; }
     }
 
-    if (isFree(C, i, normalLevel, j))
-    { localIsometry = G; chunkPos = g; currentChunk = C; position = P₁; }
+    if (isFree(C, i, normalLevel, j)) {
+        localIsometry = G; chunkPos = g; position = P₁;
+        if (chunkChanged) { currentChunk = C; refreshAtlas(); }
+    }
 }
 
 void moveVertically(const Real dt) {
@@ -213,8 +223,13 @@ void display(GLFWwindow * window) {
     shader->uniform("view",       view);
     shader->uniform("projection", projection);
 
+    shader->uniform("origin.a", origin.a);
+    shader->uniform("origin.b", origin.b);
+    shader->uniform("origin.c", origin.c);
+    shader->uniform("origin.d", origin.d);
+
     for (auto & chunk : localAtlas.get())
-        chunk->render(nodeRegistry, origin, localIsometry);
+        chunk->render();
 }
 
 Texture texture1, texture2;
@@ -367,6 +382,8 @@ int main() {
         auto C = buildTestStructure(localAtlas.poll(Tesselation::neighbours[k]));
         if (k == 0) markChunk(C);
     }
+
+    refreshAtlas();
 
     while (!glfwWindowShouldClose(window))
     {
