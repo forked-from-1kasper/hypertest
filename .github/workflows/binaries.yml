@@ -32,4 +32,9 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: Windows Binary Release
-          path: Hyper.exe
+          path: |
+            texture1.png
+            texture2.png
+            Hyper.fs
+            Hyper.vs
+            Hyper.exe

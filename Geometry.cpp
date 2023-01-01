@@ -3,7 +3,7 @@
 
 NodeRegistry::NodeRegistry() { attach(0UL, NodeDef("Air", Texture())); }
 
-Chunk::Chunk(const Fuchsian<Integer> & isometry) : _isometry(isometry), data{} {
+Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry) : _isometry(isometry), data{} {
     // there should be better way to do this
     auto P = isometry.field<Real>();
     auto ω = P.det() / (P.d * P.d);
@@ -14,6 +14,7 @@ Chunk::Chunk(const Fuchsian<Integer> & isometry) : _isometry(isometry), data{} {
     else if (ω.real() >= 0 && ω.imag() < 0) { _isometry.a.muli();    _isometry.c.muli();    }
 
     _pos = isometry.origin();
+    updateRender(origin);
 
     glGenVertexArrays(1, &vao); glGenBuffers(1, &vbo);
     glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -68,19 +69,17 @@ void drawRightParallelogrammicPrism(VBO & vbo, Texture & T, Real h, Real Δh, co
     drawSide(vbo, T, P.A, P.D, h₁, h₂);
 }
 
-void drawNode(VBO & vbo, Texture & T, Möbius<Real> M, Rank x, Level y, Rank z) {
+void drawNode(VBO & vbo, Texture & T, Rank x, Level y, Rank z) {
     drawRightParallelogrammicPrism(vbo, T, Real(y), 1,
-        { M.apply(Grid::corners[x + 0][z + 0]),
-          M.apply(Grid::corners[x + 1][z + 0]),
-          M.apply(Grid::corners[x + 1][z + 1]),
-          M.apply(Grid::corners[x + 0][z + 1]) }
+        { Grid::corners[x + 0][z + 0],
+          Grid::corners[x + 1][z + 0],
+          Grid::corners[x + 1][z + 1],
+          Grid::corners[x + 0][z + 1] }
     );
 }
 
 void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
     using namespace Fundamentals;
-
-    auto M = (G.inverse() * isometry()).field<Real>();
 
     vertices.clear();
 
@@ -93,7 +92,7 @@ void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
                 if (id == 0) continue; // don’t draw air
 
                 nodeDef = nodeRegistry.get(id);
-                drawNode(vertices, nodeDef.texture, M, i, j, k);
+                drawNode(vertices, nodeDef.texture, i, j, k);
             }
         }
 
@@ -105,14 +104,17 @@ void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
     glBufferData(GL_ARRAY_BUFFER, size * sizeof(ShaderData), vertices.data(), GL_DYNAMIC_DRAW);
 }
 
-void Chunk::apply(const Möbius<Real> & M) {
-    for (auto data : vertices) data.v = M.apply(data.v);
-    glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-    glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(ShaderData), vertices.data());
+void Chunk::updateRender(const Fuchsian<Integer> & origin) {
+    relative = (origin.inverse() * _isometry).field<Real>();
+    relative = relative.normalize();
 }
 
-void Chunk::render() {
+void Chunk::render(Shader * shader) {
+    shader->uniform("relative.a", relative.a);
+    shader->uniform("relative.b", relative.b);
+    shader->uniform("relative.c", relative.c);
+    shader->uniform("relative.d", relative.d);
+
     glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glDrawArrays(GL_QUADS, 0, vertices.size());
 }
@@ -156,14 +158,14 @@ Chunk * Atlas::lookup(const Gaussian²<Integer> & pos) {
     return nullptr;
 }
 
-Chunk * Atlas::poll(const Fuchsian<Integer> & isometry) {
+Chunk * Atlas::poll(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry) {
     auto pos = isometry.origin();
 
     for (auto chunk : container)
         if (chunk->pos() == pos)
             return chunk;
 
-    auto chunk = new Chunk(isometry);
+    auto chunk = new Chunk(origin, isometry);
     container.push_back(chunk);
     return chunk;
 }

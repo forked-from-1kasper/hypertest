@@ -130,7 +130,7 @@ void refreshAtlas() {
 }
 
 void moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
-    bool chunkChanged = false; auto G(localIsometry); auto g(chunkPos); auto C(currentChunk);
+    bool chunkChanged = false, needRefresh = false; auto G(localIsometry); auto g(chunkPos); auto C(currentChunk);
 
     auto P₁ = position * Möbius<Real>::translate(v.scale(dt));
     P₁ = P₁.normalize(); auto [i, j] = roundOff(P₁);
@@ -146,13 +146,20 @@ void moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
         std::tie(i, j) = roundOff(P₂);
 
         if (i != Fundamentals::exterior && j != Fundamentals::exterior)
-        { G *= Δ; g = G.origin(); C = localAtlas.lookup(g); P₁ = P₂;
-          if (!C) C = buildFloor(localAtlas.poll(G)); chunkChanged = true; break; }
+        { G *= Δ; g = G.origin(); C = localAtlas.lookup(g); P₁ = P₂; chunkChanged = true;
+          if (!C) { C = buildFloor(localAtlas.poll(localIsometry, G)); needRefresh = true; } break; }
     }
 
     if (isFree(C, i, normalLevel, j)) {
         localIsometry = G; chunkPos = g; position = P₁;
-        if (chunkChanged) { currentChunk = C; refreshAtlas(); }
+
+        if (chunkChanged) {
+            currentChunk = C;
+            for (auto & chunk : localAtlas.get())
+                chunk->updateRender(localIsometry);
+        }
+
+        if (needRefresh) currentChunk->refresh(nodeRegistry, localIsometry);
     }
 }
 
@@ -229,7 +236,7 @@ void display(GLFWwindow * window) {
     shader->uniform("origin.d", origin.d);
 
     for (auto & chunk : localAtlas.get())
-        chunk->render();
+        chunk->render(shader);
 }
 
 Texture texture1, texture2;
@@ -342,7 +349,7 @@ int main() {
 
     if (!glfwInit()) return -1;
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
     auto window = glfwCreateWindow(width, height, "Hypertest", nullptr, nullptr);
@@ -376,10 +383,10 @@ int main() {
 
     using namespace Tesselation;
 
-    currentChunk = buildTestStructure(localAtlas.poll(I));
+    currentChunk = buildTestStructure(localAtlas.poll(localIsometry, I));
 
     for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++) {
-        auto C = buildTestStructure(localAtlas.poll(Tesselation::neighbours[k]));
+        auto C = buildTestStructure(localAtlas.poll(localIsometry, Tesselation::neighbours[k]));
         if (k == 0) markChunk(C);
     }
 

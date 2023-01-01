@@ -42,7 +42,7 @@ void Sheet::pack() {
 
         auto image = PNG::load(_files[k], width, height);
         if (width != size() || height != size())
-        { std::cerr << "Unexpected texture size: " << _files[k] << std::endl; goto fin; }
+        { std::cerr << "Unexpected (" << width << " × " << height << ") texture size: " << _files[k] << std::endl; goto fin; }
 
         glTexSubImage2D(GL_TEXTURE_2D, 0, i * size(), j * size(), size(), size(), GL_RGBA, GL_UNSIGNED_BYTE, image.data());
 

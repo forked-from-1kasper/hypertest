@@ -13,6 +13,8 @@ struct Moebius {
 };
 
 uniform Moebius origin;
+uniform Moebius relative;
+
 uniform mat4 projection;
 uniform mat4 view;
 
@@ -28,7 +30,7 @@ uniform mat4 view;
 
 void main()
 {
-    vec2 gyrovector = Gans(apply(origin, _gyrovector));
+    vec2 gyrovector = Gans(apply(origin, apply(relative, _gyrovector)));
     gl_Position = projection * view * vec4(gyrovector.x, _height, gyrovector.y, 1.0);
     texCoord = _texCoord;
 }

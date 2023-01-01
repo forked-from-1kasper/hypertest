@@ -6,6 +6,7 @@
 #include <GL/glew.h>
 
 #include "Sheet.hpp"
+#include "Shader.hpp"
 #include "Fuchsian.hpp"
 #include "Gyrovector.hpp"
 #include "Fundamentals.hpp"
@@ -37,19 +38,19 @@ using VBO = std::vector<ShaderData>;
 
 class Chunk {
 private:
-    Fuchsian<Integer> _isometry; // used only for drawing
+    Fuchsian<Integer> _isometry; Möbius<Real> relative; // used for drawing
     Gaussian²<Integer> _pos; // used for indexing, should be equal to `isometry.origin()`
     Node data[Fundamentals::chunkSize][Fundamentals::worldHeight][Fundamentals::chunkSize];
 
     GLuint vao, vbo; VBO vertices;
 
 public:
-    Chunk(const Fuchsian<Integer> & isometry);
+    Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry);
     ~Chunk();
 
     void refresh(NodeRegistry &, const Fuchsian<Integer> &);
-    void apply(const Möbius<Real> &);
-    void render();
+    void updateRender(const Fuchsian<Integer> &);
+    void render(Shader *);
 
     bool walkable(Rank, Real, Rank);
 
@@ -75,7 +76,7 @@ public:
     Atlas();
     ~Atlas();
 
-    Chunk * poll(const Fuchsian<Integer> &);
+    Chunk * poll(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry);
     Chunk * lookup(const Gaussian²<Integer> &);
     void unload(const Gaussian²<Integer> &);
 
