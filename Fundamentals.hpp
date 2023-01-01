@@ -1,6 +1,10 @@
 #pragma once
 
 #include <array>
+
+#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
+
 #include "Gyrovector.hpp"
 
 template<typename T> constexpr T sqr(T x) { return x * x; }
@@ -26,9 +30,10 @@ template<class F, class G> auto compose(F f, G g) {
 
 // Various machinery for projections
 enum class Model { Poincaré, Klein, Gans };
-constexpr auto model = Model::Gans;
 
 namespace Projection {
+    constexpr auto model = Model::Gans;
+
     constexpr auto apply(Real y₁, Real y₂) {
         Real x₁, x₂;
 
@@ -46,7 +51,7 @@ namespace Projection {
             }
         }
 
-        return Vector2<Real>(x₁, x₂);
+        return glm::vec2(x₁, x₂);
     }
 
     constexpr auto apply(const Gyrovector<Real> & v)
@@ -68,6 +73,6 @@ namespace Fundamentals {
     constexpr auto D = sqrt(2/(tan(k/2) + 1) - 1); // √(2 − √3)
     constexpr auto L = sqrt(cos(k));               // 1/√2
 
-    constexpr auto gauge = Gyrovector<Real>(D, 0);
-    constexpr auto meter = Projection::apply(gauge).abs() / Real(chunkSize);
+    const auto gauge = Gyrovector<Real>(D, 0);
+    const auto meter = glm::length(Projection::apply(gauge)) / Real(chunkSize);
 }

@@ -5,8 +5,6 @@
 #include <functional>
 #include <type_traits>
 
-#include "Matrix.hpp"
-
 template<typename T>
 struct Gyrovector {
     std::complex<T> val;
@@ -39,8 +37,6 @@ struct Gyrovector {
 
     constexpr inline auto operator-() const { return Gyrovector<T>(-val); }
     constexpr inline auto operator+() const { return *this; }
-
-    constexpr Vector3<T> elevate(const T & z) const { return vector(x(), z, y()); }
 };
 
 template<typename T> constexpr auto operator+(const Gyrovector<T> & A, const Gyrovector<T> & B)

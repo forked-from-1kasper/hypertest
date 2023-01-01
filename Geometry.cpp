@@ -1,5 +1,3 @@
-#include <GL/glew.h>
-
 #include "Grid.hpp"
 #include "Geometry.hpp"
 
@@ -16,6 +14,22 @@ Chunk::Chunk(const Fuchsian<Integer> & isometry) : _isometry(isometry), data{} {
     else if (ω.real() >= 0 && ω.imag() < 0) { _isometry.a.muli();    _isometry.c.muli();    }
 
     _pos = isometry.origin();
+
+    glGenVertexArrays(1, &vao); glGenBuffers(1, &vbo);
+    glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    constexpr GLsizei stride = 5 * sizeof(float);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, (void *) 0); // _texCoord
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void *) (2 * sizeof(float))); // _pos
+    glEnableVertexAttribArray(1);
+}
+
+Chunk::~Chunk() {
+    glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &vbo);
 }
 
 bool Chunk::walkable(Rank x, Real L, Rank z) {
@@ -23,41 +37,40 @@ bool Chunk::walkable(Rank x, Real L, Rank z) {
     return Chunk::outside(L) || (get(x, Level(L), z).id == 0);
 }
 
-void drawParallelogram(Texture & T, const Parallelogram<Real> & P, const Vector3<Real> n, Real h) {
-    glNormal3d(n.x, n.y, n.z);
+inline void float2(VBO & vbo, GLfloat x, GLfloat y)
+{ vbo.push_back(x); vbo.push_back(y); }
 
-    glTexCoord2d(T.left(),  T.down()); glVertex3d(P.A.x, h, P.A.y);
-    glTexCoord2d(T.right(), T.down()); glVertex3d(P.B.x, h, P.B.y);
-    glTexCoord2d(T.right(), T.up());   glVertex3d(P.C.x, h, P.C.y);
-    glTexCoord2d(T.left(),  T.up());   glVertex3d(P.D.x, h, P.D.y);
+inline void float3(VBO & vbo, GLfloat x, GLfloat y, GLfloat z)
+{ vbo.push_back(x); vbo.push_back(y); vbo.push_back(z); }
+
+void drawParallelogram(VBO & vbo, Texture & T, const Parallelogram & P, Real h) {
+    float2(vbo, T.left(),  T.down()); float3(vbo, P.A.x, h, P.A.y);
+    float2(vbo, T.right(), T.down()); float3(vbo, P.B.x, h, P.B.y);
+    float2(vbo, T.right(), T.up());   float3(vbo, P.C.x, h, P.C.y);
+    float2(vbo, T.left(),  T.up());   float3(vbo, P.D.x, h, P.D.y);
 }
 
-void drawSide(Texture & T, const Vector2<Real> & A, const Vector2<Real> & B, Real h₁, Real h₂) {
-    Vector3<Real> v₁(0.0, h₂ - h₁, 0.0), v₂(B.x - A.x, 0.0, B.y - A.y);
-
-    auto n = cross(v₁, v₂);
-    glNormal3d(n.x, n.y, n.z);
-
-    glTexCoord2d(T.right(), T.up());   glVertex3d(A.x, h₁, A.y);
-    glTexCoord2d(T.right(), T.down()); glVertex3d(A.x, h₂, A.y);
-    glTexCoord2d(T.left(),  T.down()); glVertex3d(B.x, h₂, B.y);
-    glTexCoord2d(T.left(),  T.up());   glVertex3d(B.x, h₁, B.y);
+void drawSide(VBO & vbo, Texture & T, const glm::vec2 & A, const glm::vec2 & B, Real h₁, Real h₂) {
+    float2(vbo, T.right(), T.up());   float3(vbo, A.x, h₁, A.y);
+    float2(vbo, T.right(), T.down()); float3(vbo, A.x, h₂, A.y);
+    float2(vbo, T.left(),  T.down()); float3(vbo, B.x, h₂, B.y);
+    float2(vbo, T.left(),  T.up());   float3(vbo, B.x, h₁, B.y);
 }
 
-void drawRightParallelogrammicPrism(Texture & T, Real h, Real Δh, const Parallelogram<Real> & P) {
+void drawRightParallelogrammicPrism(VBO & vbo, Texture & T, Real h, Real Δh, const Parallelogram & P) {
     const auto h₁ = h, h₂ = h + Δh;
 
-    drawParallelogram(T, P, Vector3<Real>(0, +1, 0), h₂); // Top
-    drawParallelogram(T, P.rev(), Vector3<Real>(0, -1, 0), h₁); // Bottom
+    drawParallelogram(vbo, T, P, h₂);       // Top
+    drawParallelogram(vbo, T, P.rev(), h₁); // Bottom
 
-    drawSide(T, P.B, P.A, h₁, h₂);
-    drawSide(T, P.C, P.B, h₁, h₂);
-    drawSide(T, P.D, P.C, h₁, h₂);
-    drawSide(T, P.A, P.D, h₁, h₂);
+    drawSide(vbo, T, P.B, P.A, h₁, h₂);
+    drawSide(vbo, T, P.C, P.B, h₁, h₂);
+    drawSide(vbo, T, P.D, P.C, h₁, h₂);
+    drawSide(vbo, T, P.A, P.D, h₁, h₂);
 }
 
-void drawNode(Texture & T, Möbius<Real> M, Rank x, Level y, Rank z) {
-    drawRightParallelogrammicPrism(T, Real(y), 1,
+void drawNode(VBO & vbo, Texture & T, Möbius<Real> M, Rank x, Level y, Rank z) {
+    drawRightParallelogrammicPrism(vbo, T, Real(y), 1,
         { Projection::apply(M.apply(Grid::corners[x + 0][z + 0])),
           Projection::apply(M.apply(Grid::corners[x + 1][z + 0])),
           Projection::apply(M.apply(Grid::corners[x + 1][z + 1])),
@@ -70,7 +83,7 @@ void Chunk::render(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsia
 
     auto N = M * (G.inverse() * isometry()).field<Real>();
 
-    glBegin(GL_QUADS);
+    vertices.clear();
 
     NodeDef nodeDef;
     for (Level j = 0; true; j++) {
@@ -81,14 +94,18 @@ void Chunk::render(NodeRegistry & nodeRegistry, Möbius<Real> & M, const Fuchsia
                 if (id == 0) continue; // don’t draw air
 
                 nodeDef = nodeRegistry.get(id);
-                drawNode(nodeDef.texture, N, i, j, k);
+                drawNode(vertices, nodeDef.texture, N, i, j, k);
             }
         }
 
         if (j == worldTop) break;
     }
 
-    glEnd();
+    auto size = vertices.size();
+
+    glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, size * sizeof(float), vertices.data(), GL_DYNAMIC_DRAW);
+    glDrawArrays(GL_QUADS, 0, size);
 }
 
 bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {

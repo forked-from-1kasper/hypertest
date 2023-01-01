@@ -8,10 +8,10 @@ Texture::Texture() : sheet(nullptr) {}
 
 Texture::Texture(Sheet * sheet, size_t index) : sheet(sheet), index(index) {
     auto [i, j] = sheet->index(index);
-    _left  = (i + 0) * sheet->size();
-    _right = (i + 1) * sheet->size();
-    _down  = (j + 0) * sheet->size();
-    _up    = (j + 1) * sheet->size();
+    _left  = GLdouble((i + 0) * sheet->size()) / GLdouble(sheet->total());
+    _right = GLdouble((i + 1) * sheet->size()) / GLdouble(sheet->total());
+    _down  = GLdouble((j + 0) * sheet->size()) / GLdouble(sheet->total());
+    _up    = GLdouble((j + 1) * sheet->size()) / GLdouble(sheet->total());
 }
 
 Sheet::Sheet(unsigned long size, unsigned long total) : _size(size), _total(total) {
@@ -30,11 +30,11 @@ Texture Sheet::attach(const std::string & file) {
 
 void Sheet::pack() {
     glGenTextures(1, &_texture);
-    glBindTexture(GL_TEXTURE_RECTANGLE, _texture);
+    glBindTexture(GL_TEXTURE_2D, _texture);
 
-    glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA, total(), total(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, total(), total(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     for (size_t k = 0; k < files().size(); k++) {
         unsigned long width, height;
@@ -44,7 +44,7 @@ void Sheet::pack() {
         if (width != size() || height != size())
         { std::cerr << "Unexpected texture size: " << _files[k] << std::endl; goto fin; }
 
-        glTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, i * size(), j * size(), size(), size(), GL_RGBA, GL_UNSIGNED_BYTE, image.data());
+        glTexSubImage2D(GL_TEXTURE_2D, 0, i * size(), j * size(), size(), size(), GL_RGBA, GL_UNSIGNED_BYTE, image.data());
 
         fin: image.clear();
     }

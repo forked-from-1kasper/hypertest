@@ -3,15 +3,17 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <GL/glew.h>
 
 #include "Sheet.hpp"
 #include "Fuchsian.hpp"
 #include "Gyrovector.hpp"
 #include "Fundamentals.hpp"
 
-template<typename T> struct Parallelogram {
-    Vector2<T> A, B, C, D;
-    constexpr auto rev() const { return Parallelogram<T>(D, C, B, A); }
+struct Parallelogram {
+    glm::vec2 A, B, C, D;
+
+    const auto rev() const { return Parallelogram(D, C, B, A); }
 };
 
 struct NodeDef { std::string name; Texture texture; };
@@ -30,16 +32,19 @@ public:
     inline auto get(NodeId id) { return table[id]; }
 };
 
+using VBO = std::vector<GLfloat>;
+
 class Chunk {
 private:
     Fuchsian<Integer> _isometry; // used only for drawing
     Gaussian²<Integer> _pos; // used for indexing, should be equal to `isometry.origin()`
     Node data[Fundamentals::chunkSize][Fundamentals::worldHeight][Fundamentals::chunkSize];
 
-    std::vector<Vector3<GLfloat>> vbo;
+    GLuint vao, vbo; VBO vertices;
 
 public:
     Chunk(const Fuchsian<Integer> & isometry);
+    ~Chunk();
 
     void render(NodeRegistry &, Möbius<Real> &, const Fuchsian<Integer> &);
     bool walkable(Rank, Real, Rank);

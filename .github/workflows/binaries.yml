@@ -22,6 +22,7 @@ jobs:
             mingw-w64-x86_64-toolchain
             mingw-w64-x86_64-glew
             mingw-w64-x86_64-glfw
+            mingw-w64-x86_64-glm
 
       - shell: msys2 {0}
         name: Build code

@@ -2,14 +2,18 @@
 #include <cmath>
 #include <iostream>
 
+#include <glm/mat4x4.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/matrix_clip_space.hpp>
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
 #include "Sheet.hpp"
-#include "Geometry.hpp"
+#include "Shader.hpp"
 #include "PicoPNG.hpp"
+#include "Geometry.hpp"
 
-#include "Matrix.hpp"
 #include "Fuchsian.hpp"
 #include "Gyrovector.hpp"
 #include "Tesselation.hpp"
@@ -157,6 +161,9 @@ void moveVertically(const Real dt) {
 
 void update(Gyrovector<Real> & v, Real dt) { moveVertically(dt); moveHorizontally(v, dt); }
 
+glm::mat4 view, projection;
+Shader * shader;
+
 constexpr Real Δtₘₐₓ = 1.0/5.0;
 
 double globaltime = 0;
@@ -193,54 +200,37 @@ void display(GLFWwindow * window) {
     auto dy = sin(vertical);
     auto dz = cos(vertical) * cos(horizontal);
 
-    Vector3<Real> direction(dx, dy, dz), right(sin(horizontal - τ/4), 0.0, cos(horizontal - τ/4));
-    auto up = cross(right, direction);
+    glm::vec3 direction(dx, dy, dz), right(sin(horizontal - τ/4), 0.0, cos(horizontal - τ/4));
+    auto up = -glm::cross(right, direction);
 
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glPushMatrix();
+    view = glm::lookAt(glm::vec3(0.0f), direction, up);
+    view = glm::scale(view, glm::vec3(1.0f, Fundamentals::meter, 1.0f));
+    view = glm::translate(view, glm::vec3(0.0f, -normalLevel - playerHeight, 0.0f));
 
-    gluLookAt(0, 0, 0, dx, dy, dz, up.x, up.y, up.z);
-    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-
-    glScalef(1.0f, Fundamentals::meter, 1.0f);
-    glTranslatef(0, -normalLevel - playerHeight, 0);
-
-    glColor3f(0.0f, 0.0f, 0.0f);
+    shader->uniform("view",       view);
+    shader->uniform("projection", projection);
 
     for (auto & chunk : localAtlas.get())
         chunk->render(nodeRegistry, origin, localIsometry);
-
-    glPopMatrix();
 }
 
 Texture texture1, texture2;
 
-void setupLighting() {
-    glEnable(GL_LIGHTING);
-    glEnable(GL_NORMALIZE);
-    glEnable(GL_LIGHT0);
-
-    glShadeModel(GL_SMOOTH);
-
-    glEnable(GL_DEPTH_TEST);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
-}
-
 void setupTexture() {
-    glEnable(GL_TEXTURE_RECTANGLE); glEnable(GL_CULL_FACE);
+    glEnable(GL_TEXTURE_2D); glEnable(GL_CULL_FACE);
 
     auto sheet = Sheet(Fundamentals::textureSize, Fundamentals::sheetSize);
 
     texture1 = sheet.attach("texture1.png");
     texture2 = sheet.attach("texture2.png");
 
-    sheet.pack(); glBindTexture(GL_TEXTURE_RECTANGLE, sheet.texture());
-}
+    sheet.pack();
 
-void setupMaterial() {
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, matDiffuse);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, sheet.texture());
 }
 
 void grabMouse(GLFWwindow * window) {
@@ -300,11 +290,8 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
 }
 
 void setupWindowSize(GLFWwindow * window, int newWidth, int newHeight) {
-    width = newWidth; height = newHeight;
-    glViewport(0, 0, width, height);
-
-    glMatrixMode(GL_PROJECTION); glLoadIdentity();
-    gluPerspective(fov, Real(width) / Real(height), near, far);
+    width = newWidth; height = newHeight; glViewport(0, 0, width, height);
+    projection = glm::perspective(Real(fov), Real(width) / Real(height), near, far);
 }
 
 Chunk * buildTestStructure(Chunk * chunk) {
@@ -360,12 +347,14 @@ int main() {
     glewInit();
 
     setupTexture();
-    setupLighting();
-    setupMaterial();
+
+    glEnable(GL_DEPTH_TEST);
+    shader = new Shader("Hyper.vs", "Hyper.fs");
+
+    shader->activate();
+    shader->uniform("textureSheet", 0);
 
     setupWindowSize(window, width, height);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
 
     nodeRegistry.attach(1UL, NodeDef("Stuff", texture1));
     nodeRegistry.attach(2UL, NodeDef("Weird Stuff", texture2));
@@ -385,6 +374,8 @@ int main() {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    delete shader;
 
     glfwDestroyWindow(window);
     glfwTerminate();
