@@ -1,10 +1,10 @@
-#version 150 core
+#version 120
 
 attribute vec2  _texCoord;
 attribute vec2  _gyrovector;
 attribute float _height;
 
-out vec2 texCoord;
+varying vec2 texCoord;
 
 struct Moebius {
     vec2 a;
