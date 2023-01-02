@@ -19,19 +19,28 @@ uniform Moebius relative;
 uniform mat4 projection;
 uniform mat4 view;
 
-#define norm(z) (z.x * z.x + z.y * z.y)
-
+#define norm(z) dot(z, z)
+#define add(a, b) (a + b)
 #define mul(a, b) vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x)
-#define div(a, b) vec2((a.x * b.x + a.y * b.y) / norm(b), (a.y * b.x - a.x * b.y) / norm(b))
-#define apply(M, z) div((mul(M.a, z) + M.b), (mul(M.c, z) + M.d))
+#define div(a, b) vec2(dot(a, b) / norm(b), (a.y * b.x - a.x * b.y) / norm(b))
 
-#define Gans(z) vec2(2.0f * z.x / (1.0f - norm(z)), 2.0f * z.y / (1.0f - norm(z)))
-#define Klein(z) vec2(2.0f * z.x / (1.0f + norm(z)), 2.0f * z.y / (1.0f + norm(z)))
-#define Poincare(z) (z)
+void apply(in Moebius M, in vec2 z1, out vec2 z2)
+{ z2 = div(add(mul(M.a, z1), M.b), add(mul(M.c, z1), M.d)); }
+
+void Gans(inout vec2 z)
+{ z *= 2.0f / (1.0f - norm(z)); }
+
+void Klein(inout vec2 z)
+{ z *= 2.0f / (1.0f + norm(z)); }
 
 void main()
 {
-    vec2 gyrovector = Gans(apply(origin, apply(relative, _gyrovector)));
+    vec2 gyrovector;
+
+    apply(relative, _gyrovector, gyrovector);
+    apply(origin, gyrovector, gyrovector);
+    Gans(gyrovector);
+
     gl_Position = projection * view * vec4(gyrovector.x, _height, gyrovector.y, 1.0);
     texCoord = _texCoord;
 }
