@@ -1,7 +1,8 @@
-#version 330 core
-layout (location = 0) in vec2  _texCoord;
-layout (location = 1) in vec2  _gyrovector;
-layout (location = 2) in float _height;
+#version 150 core
+
+attribute vec2  _texCoord;
+attribute vec2  _gyrovector;
+attribute float _height;
 
 out vec2 texCoord;
 

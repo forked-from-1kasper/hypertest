@@ -52,6 +52,11 @@ Shader::Shader(const char * vsfile, const char * fsfile) {
     _index = glCreateProgram();
     glAttachShader(_index, vertex);
     glAttachShader(_index, fragment);
+
+    glBindAttribLocation(_index, 0, "_texCoord");
+    glBindAttribLocation(_index, 1, "_gyrovector");
+    glBindAttribLocation(_index, 2, "_height");
+
     glLinkProgram(_index);
 
     glGetProgramiv(_index, GL_LINK_STATUS, &success);
