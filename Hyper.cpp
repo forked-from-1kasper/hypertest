@@ -110,6 +110,8 @@ void returnToSpawn() {
     currentChunk  = localAtlas.lookup(chunkPos);
     position      = {1, 0, 0, 1};
     normalLevel   = 5;
+
+    localAtlas.updateMatrix(localIsometry);
 }
 
 Chunk * buildFloor(Chunk * chunk) {
