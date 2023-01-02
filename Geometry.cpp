@@ -49,12 +49,18 @@ void drawParallelogram(VBO & vbo, Texture & T, const Parallelogram<Real> & P, Re
     emit(vbo, T.left(),  T.down(), P.A, h);
     emit(vbo, T.right(), T.down(), P.B, h);
     emit(vbo, T.right(), T.up(),   P.C, h);
+
+    emit(vbo, T.left(),  T.down(), P.A, h);
+    emit(vbo, T.right(), T.up(),   P.C, h);
     emit(vbo, T.left(),  T.up(),   P.D, h);
 }
 
 void drawSide(VBO & vbo, Texture & T, const Gyrovector<Real> & A, const Gyrovector<Real> & B, Real h₁, Real h₂) {
     emit(vbo, T.right(), T.up(),   A, h₁);
     emit(vbo, T.right(), T.down(), A, h₂);
+    emit(vbo, T.left(),  T.down(), B, h₂);
+
+    emit(vbo, T.right(), T.up(),   A, h₁);
     emit(vbo, T.left(),  T.down(), B, h₂);
     emit(vbo, T.left(),  T.up(),   B, h₁);
 }
@@ -118,7 +124,7 @@ void Chunk::render(Shader * shader) {
     shader->uniform("relative.d", relative.d);
 
     glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glDrawArrays(GL_QUADS, 0, vertices.size());
+    glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 }
 
 bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {
