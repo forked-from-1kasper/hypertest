@@ -147,9 +147,13 @@ Chunk * buildTestStructure(Chunk * chunk) {
 }
 
 Chunk * markChunk(Chunk * chunk) {
-    for (size_t i = 1; i <= 8; i++)
+    for (size_t i = 1; i <= 15; i++)
         for (size_t j = 1; j <= i; j++)
             chunk->set(i, j, 9, {2});
+
+    chunk->set(13, 16, 9, {0});
+    chunk->set(14, 16, 9, {0});
+    chunk->set(15, 16, 9, {0});
 
     chunk->refresh(nodeRegistry, localIsometry);
     return chunk;
