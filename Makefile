@@ -18,7 +18,7 @@ else
 	endif
 
 	ifeq ($(UNAME),Darwin)
-		LDFLAGS = -lglfw -lGLEW -framework CoreVideo -framework OpenGL -framework IOKit -framework Cocoa -framework Carbon
+		LIBS = -lglfw -lGLEW -framework CoreVideo -framework OpenGL -framework IOKit -framework Cocoa -framework Carbon
 	endif
 endif
 
