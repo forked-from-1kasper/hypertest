@@ -10,7 +10,16 @@ ifeq ($(OS),Windows_NT)
 	LIBS = -lglfw3 -lglew32 -lopengl32 -lglu32
 else
 	BINARY = Hyper
-	LIBS = -lglfw -lGLEW -lGL -lGLU
+
+	UNAME := $(shell uname -s)
+
+	ifeq ($(UNAME),Linux)
+		LIBS = -lglfw -lGLEW -lGL -lGLU
+	endif
+
+	ifeq ($(UNAME),Darwin)
+		LDFLAGS = -lglfw -lGLEW -framework CoreVideo -framework OpenGL -framework IOKit -framework Cocoa -framework Carbon
+	endif
 endif
 
 all: Hyper
