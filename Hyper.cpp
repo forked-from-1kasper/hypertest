@@ -21,10 +21,7 @@
 
 using namespace std::complex_literals;
 
-enum class Side { Top, Down, Left, Right };
-
-void errorCallback(int error, const char* description)
-{
+void errorCallback(int error, const char* description) {
     fprintf(stderr, "Error: %s\n", description);
 }
 
@@ -35,32 +32,30 @@ namespace Keyboard {
     bool right    = false;
 };
 
-bool windowHovered = true, windowFocused = true, mouseGrabbed = false;
+namespace Window {
+    bool hovered = true;
+    bool focused = true;
 
-constexpr auto fov  = 80;
-constexpr auto near = 1e-3;
-constexpr auto far  = 150.0;
+    int width = 900, height = 900;
+}
 
-const GLfloat lightDiffuse[] = {1.0, 1.0, 1.0, 1.0};
-const GLfloat matDiffuse[] = {1.0, 1.0, 1.0, 1.0};
+namespace Mouse {
+    bool grabbed = false;
+    Real xpos, ypos, speed = 0.7;
+}
 
-const GLfloat lightPosition[] = {0.0f, 32.0f, 0.0f, 0.0f};
+Real fov = 80, near = 1e-3, far = 150.0;
 
-int width = 900, height = 900;
+Real speed = 2 * Fundamentals::meter;
 
-Real speed = 2 * Fundamentals::meter, mouseSpeed = 0.7;
-
-constexpr Real jumpHeight = 1.25;
-
-Real freeFallAccel = 9.8;
-Real normalJumpSpeed = sqrt(2 * freeFallAccel * jumpHeight);
+Real jumpHeight = 1.25, freeFallAccel = 9.8, normalJumpSpeed = sqrt(2 * freeFallAccel * jumpHeight);
 
 auto position = Möbius<Real>::identity();
 
 bool isFlying = true;
 Real playerHeight = 1.8, normalVelocity = 0, normalLevel = 10;
 
-Real horizontal = 0, vertical = 0, xpos, ypos;
+Real horizontal = 0, vertical = 0;
 
 auto localIsometry = Tesselation::I;
 auto chunkPos = localIsometry.origin();
@@ -168,10 +163,8 @@ void moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
     auto P₁ = position * Möbius<Real>::translate(v.scale(dt));
     P₁ = P₁.normalize(); auto [i, j] = roundOff(P₁);
 
-    size_t k;
-
     if (i == Fundamentals::exterior && j == Fundamentals::exterior)
-    for (k = 0; k < Tesselation::neighbours.size(); k++) {
+    for (size_t k = 0; k < Tesselation::neighbours.size(); k++) {
         const auto Δ   = Tesselation::neighbours[k];
         const auto Δ⁻¹ = Tesselation::neighbours⁻¹[k];
         const auto P₂  = (Δ⁻¹ * P₁).normalize();
@@ -228,12 +221,12 @@ void display(GLFWwindow * window) {
 
     auto origin = position.inverse();
 
-    if (mouseGrabbed) {
-        glfwGetCursorPos(window, &xpos, &ypos);
-        glfwSetCursorPos(window, width/2, height/2);
+    if (Mouse::grabbed) {
+        glfwGetCursorPos(window, &Mouse::xpos, &Mouse::ypos);
+        glfwSetCursorPos(window, Window::width/2, Window::height/2);
 
-        horizontal += mouseSpeed * dt * (width/2 - xpos);
-        vertical   += mouseSpeed * dt * (height/2 - ypos);
+        horizontal += Mouse::speed * dt * (Window::width/2 - Mouse::xpos);
+        vertical   += Mouse::speed * dt * (Window::height/2 - Mouse::ypos);
 
         horizontal = std::fmod(horizontal, τ);
         vertical = std::clamp(vertical, -τ/4 + ε, τ/4 - ε);
@@ -282,34 +275,34 @@ void setupTexture() {
 }
 
 void grabMouse(GLFWwindow * window) {
-    glfwSetCursorPos(window, width/2, height/2);
+    glfwSetCursorPos(window, Window::width/2, Window::height/2);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     if (glfwRawMouseMotionSupported())
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 
-    mouseGrabbed = true;
+    Mouse::grabbed = true;
 }
 
 void freeMouse(GLFWwindow * window) {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
 
-    mouseGrabbed = false;
+    Mouse::grabbed = false;
 }
 
 void mouseButtonCallback(GLFWwindow * window, int button, int action, int mods)
 {
-    if (windowHovered && windowFocused && !mouseGrabbed) grabMouse(window);
+    if (Window::hovered && Window::focused && !Mouse::grabbed) grabMouse(window);
 }
 
 void cursorEnterCallback(GLFWwindow * window, int entered) {
-    windowHovered = entered;
-    if (!windowHovered) freeMouse(window);
+    Window::hovered = entered;
+    if (!Window::hovered) freeMouse(window);
 }
 
 void windowFocusCallback(GLFWwindow * window, int focused) {
-    windowFocused = focused;
-    if (!windowFocused) freeMouse(window);
+    Window::focused = focused;
+    if (!Window::focused) freeMouse(window);
 }
 
 void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, int mods) {
@@ -337,8 +330,8 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
     }
 }
 
-void setupWindowSize(GLFWwindow * window, int newWidth, int newHeight) {
-    width = newWidth; height = newHeight; glViewport(0, 0, width, height);
+void setupWindowSize(GLFWwindow * window, int width, int height) {
+    Window::width = width; Window::height = height; glViewport(0, 0, width, height);
     projection = glm::perspective(Real(fov), Real(width) / Real(height), near, far);
 }
 
@@ -350,7 +343,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 
-    auto window = glfwCreateWindow(width, height, "Hypertest", nullptr, nullptr);
+    auto window = glfwCreateWindow(Window::width, Window::height, "Hypertest", nullptr, nullptr);
     if (!window) return -1;
 
     grabMouse(window);
@@ -374,7 +367,7 @@ int main() {
     shader->activate();
     shader->uniform("textureSheet", 0);
 
-    setupWindowSize(window, width, height);
+    setupWindowSize(window, Window::width, Window::height);
 
     nodeRegistry.attach(1UL, NodeDef("Stuff", texture1));
     nodeRegistry.attach(2UL, NodeDef("Weird Stuff", texture2));
