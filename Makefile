@@ -32,3 +32,6 @@ run: Hyper
 
 clean:
 	rm -f $(BINARY)
+
+barbarize:
+	python3 barbarize.py $(CPP) $(HPP)
