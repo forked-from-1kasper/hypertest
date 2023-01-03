@@ -135,7 +135,7 @@ using Gaussian² = std::pair<Gaussian<T>, Gaussian<T>>;
 
 template<EuclideanDomain T>
 struct Fuchsian {
-    static constexpr auto s = sqrt(6);
+    static constexpr auto s = sqrt(6.0);
     Gaussian<T> a, b, c, d;
 
     constexpr Gaussian<T> det() const { return a * d - b * c; }
