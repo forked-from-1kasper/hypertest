@@ -65,14 +65,7 @@ void drawSide(VBO & vbo, Texture & T, const Gyrovector<Real> & A, const Gyrovect
     emit(vbo, T.left(),  T.up(),   B, h₁);
 }
 
-struct Mask {
-    bool top     : 1;
-    bool bottom  : 1;
-    bool back    : 1;
-    bool forward : 1;
-    bool left    : 1;
-    bool right   : 1;
-};
+struct Mask { bool top : 1, bottom : 1, back : 1, forward : 1, left : 1, right : 1; };
 
 void drawRightParallelogrammicPrism(VBO & vbo, Texture & T, Mask m, Real h, Real Δh, const Parallelogram<Real> & P) {
     const auto h₁ = h, h₂ = h + Δh;
