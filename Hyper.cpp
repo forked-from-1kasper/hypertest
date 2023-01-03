@@ -105,11 +105,12 @@ void deleteBlockNextToPlayer() {
 }
 
 void returnToSpawn() {
-    localIsometry = Tesselation::I;
-    chunkPos      = localIsometry.origin();
-    currentChunk  = localAtlas.lookup(chunkPos);
-    position      = {1, 0, 0, 1};
-    normalLevel   = 5;
+    localIsometry  = Tesselation::I;
+    chunkPos       = localIsometry.origin();
+    currentChunk   = localAtlas.lookup(chunkPos);
+    position       = {1, 0, 0, 1};
+    normalLevel    = 5;
+    normalVelocity = 0;
 
     localAtlas.updateMatrix(localIsometry);
 }
