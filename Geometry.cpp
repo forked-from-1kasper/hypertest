@@ -65,20 +65,29 @@ void drawSide(VBO & vbo, Texture & T, const Gyrovector<Real> & A, const Gyrovect
     emit(vbo, T.left(),  T.up(),   B, h₁);
 }
 
-void drawRightParallelogrammicPrism(VBO & vbo, Texture & T, Real h, Real Δh, const Parallelogram<Real> & P) {
+struct Mask {
+    bool top     : 1;
+    bool bottom  : 1;
+    bool back    : 1;
+    bool forward : 1;
+    bool left    : 1;
+    bool right   : 1;
+};
+
+void drawRightParallelogrammicPrism(VBO & vbo, Texture & T, Mask m, Real h, Real Δh, const Parallelogram<Real> & P) {
     const auto h₁ = h, h₂ = h + Δh;
 
-    drawParallelogram(vbo, T, P, h₂);       // Top
-    drawParallelogram(vbo, T, P.rev(), h₁); // Bottom
+    if (m.top)     drawParallelogram(vbo, T, P, h₂);
+    if (m.bottom)  drawParallelogram(vbo, T, P.rev(), h₁);
 
-    drawSide(vbo, T, P.B, P.A, h₁, h₂);
-    drawSide(vbo, T, P.C, P.B, h₁, h₂);
-    drawSide(vbo, T, P.D, P.C, h₁, h₂);
-    drawSide(vbo, T, P.A, P.D, h₁, h₂);
+    if (m.back)    drawSide(vbo, T, P.B, P.A, h₁, h₂);
+    if (m.right)   drawSide(vbo, T, P.C, P.B, h₁, h₂);
+    if (m.forward) drawSide(vbo, T, P.D, P.C, h₁, h₂);
+    if (m.left)    drawSide(vbo, T, P.A, P.D, h₁, h₂);
 }
 
-void drawNode(VBO & vbo, Texture & T, Rank x, Level y, Rank z) {
-    drawRightParallelogrammicPrism(vbo, T, Real(y), 1,
+void drawNode(VBO & vbo, Texture & T, Mask m, Rank x, Level y, Rank z) {
+    drawRightParallelogrammicPrism(vbo, T, m, Real(y), 1,
         { Grid::corners[x + 0][z + 0],
           Grid::corners[x + 1][z + 0],
           Grid::corners[x + 1][z + 1],
@@ -91,7 +100,7 @@ void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
 
     vertices.clear();
 
-    NodeDef nodeDef;
+    NodeDef nodeDef; Mask m;
     for (Level j = 0; true; j++) {
         for (Rank k = 0; k < chunkSize; k++) {
             for (Rank i = 0; i < chunkSize; i++) {
@@ -99,8 +108,15 @@ void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
 
                 if (id == 0) continue; // don’t draw air
 
+                m.top     = (j == worldTop)      || (get(i + 0, j + 1, k + 0).id == 0);
+                m.bottom  = (j == 0)             || (get(i + 0, j - 1, k + 0).id == 0);
+                m.back    = (k == 0)             || (get(i + 0, j + 0, k - 1).id == 0);
+                m.forward = (k == chunkSize - 1) || (get(i + 0, j + 0, k + 1).id == 0);
+                m.left    = (i == 0)             || (get(i - 1, j + 0, k + 0).id == 0);
+                m.right   = (i == chunkSize - 1) || (get(i + 1, j + 0, k + 0).id == 0);
+
                 nodeDef = nodeRegistry.get(id);
-                drawNode(vertices, nodeDef.texture, i, j, k);
+                drawNode(vertices, nodeDef.texture, m, i, j, k);
             }
         }
 
