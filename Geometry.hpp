@@ -33,8 +33,13 @@ public:
     inline auto get(NodeId id) { return table[id]; }
 };
 
+using ShaderIndex = unsigned int;
+constexpr GLenum shaderIndexType = GL_UNSIGNED_INT;
+
 struct ShaderData { GLfloat tx, ty; Gyrovector<GLfloat> v; GLfloat h; };
+
 using VBO = std::vector<ShaderData>;
+using EBO = std::vector<ShaderIndex>;
 
 class Chunk {
 private:
@@ -42,7 +47,7 @@ private:
     Gaussian²<Integer> _pos; // used for indexing, should be equal to `isometry.origin()`
     Node data[Fundamentals::chunkSize][Fundamentals::worldHeight][Fundamentals::chunkSize];
 
-    GLuint vao, vbo; VBO vertices;
+    GLuint vao, vbo, ebo; VBO vertices; EBO indices;
 
 public:
     Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry);

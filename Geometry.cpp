@@ -18,6 +18,8 @@ Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometr
     _pos = isometry.origin();
     updateMatrix(origin);
 
+    glGenBuffers(1, &ebo);
+
     glGenVertexArrays(1, &vao); glGenBuffers(1, &vbo);
     glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
@@ -34,8 +36,9 @@ Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometr
 }
 
 Chunk::~Chunk() {
-    glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &ebo);
+    glDeleteVertexArrays(1, &vao);
 }
 
 bool Chunk::walkable(Rank x, Real L, Rank z) {
@@ -45,42 +48,44 @@ bool Chunk::walkable(Rank x, Real L, Rank z) {
 
 template<typename... Ts> inline void emit(VBO & vbo, Ts... ts) { vbo.push_back(ShaderData(ts...)); }
 
-void drawParallelogram(VBO & vbo, Texture & T, const Parallelogram<Real> & P, Real h) {
-    emit(vbo, T.left(),  T.down(), P.A, h);
-    emit(vbo, T.right(), T.down(), P.B, h);
-    emit(vbo, T.right(), T.up(),   P.C, h);
+void drawParallelogram(VBO & vbo, EBO & ebo, Texture & T, const Parallelogram<Real> & P, Real h) {
+    auto index = vbo.size();
+    emit(vbo, T.left(),  T.down(), P.A, h); // 1
+    emit(vbo, T.right(), T.down(), P.B, h); // 2
+    emit(vbo, T.right(), T.up(),   P.C, h); // 3
+    emit(vbo, T.left(),  T.up(),   P.D, h); // 4
 
-    emit(vbo, T.left(),  T.down(), P.A, h);
-    emit(vbo, T.right(), T.up(),   P.C, h);
-    emit(vbo, T.left(),  T.up(),   P.D, h);
+    ebo.push_back(index); ebo.push_back(index + 1); ebo.push_back(index + 2);
+    ebo.push_back(index); ebo.push_back(index + 2); ebo.push_back(index + 3);
 }
 
-void drawSide(VBO & vbo, Texture & T, const Gyrovector<Real> & A, const Gyrovector<Real> & B, Real h₁, Real h₂) {
-    emit(vbo, T.right(), T.up(),   A, h₁);
-    emit(vbo, T.right(), T.down(), A, h₂);
-    emit(vbo, T.left(),  T.down(), B, h₂);
+void drawSide(VBO & vbo, EBO & ebo, Texture & T, const Gyrovector<Real> & A, const Gyrovector<Real> & B, Real h₁, Real h₂) {
+    auto index = vbo.size();
+    emit(vbo, T.right(), T.up(),   A, h₁); // 1
+    emit(vbo, T.right(), T.down(), A, h₂); // 2
+    emit(vbo, T.left(),  T.down(), B, h₂); // 3
+    emit(vbo, T.left(),  T.up(),   B, h₁); // 4
 
-    emit(vbo, T.right(), T.up(),   A, h₁);
-    emit(vbo, T.left(),  T.down(), B, h₂);
-    emit(vbo, T.left(),  T.up(),   B, h₁);
+    ebo.push_back(index); ebo.push_back(index + 1); ebo.push_back(index + 2);
+    ebo.push_back(index); ebo.push_back(index + 2); ebo.push_back(index + 3);
 }
 
 struct Mask { bool top : 1, bottom : 1, back : 1, forward : 1, left : 1, right : 1; };
 
-void drawRightParallelogrammicPrism(VBO & vbo, Texture & T, Mask m, Real h, Real Δh, const Parallelogram<Real> & P) {
+void drawRightParallelogrammicPrism(VBO & vbo, EBO & ebo, Texture & T, Mask m, Real h, Real Δh, const Parallelogram<Real> & P) {
     const auto h₁ = h, h₂ = h + Δh;
 
-    if (m.top)     drawParallelogram(vbo, T, P, h₂);
-    if (m.bottom)  drawParallelogram(vbo, T, P.rev(), h₁);
+    if (m.top)     drawParallelogram(vbo, ebo, T, P, h₂);
+    if (m.bottom)  drawParallelogram(vbo, ebo, T, P.rev(), h₁);
 
-    if (m.back)    drawSide(vbo, T, P.B, P.A, h₁, h₂);
-    if (m.right)   drawSide(vbo, T, P.C, P.B, h₁, h₂);
-    if (m.forward) drawSide(vbo, T, P.D, P.C, h₁, h₂);
-    if (m.left)    drawSide(vbo, T, P.A, P.D, h₁, h₂);
+    if (m.back)    drawSide(vbo, ebo, T, P.B, P.A, h₁, h₂);
+    if (m.right)   drawSide(vbo, ebo, T, P.C, P.B, h₁, h₂);
+    if (m.forward) drawSide(vbo, ebo, T, P.D, P.C, h₁, h₂);
+    if (m.left)    drawSide(vbo, ebo, T, P.A, P.D, h₁, h₂);
 }
 
-void drawNode(VBO & vbo, Texture & T, Mask m, Rank x, Level y, Rank z) {
-    drawRightParallelogrammicPrism(vbo, T, m, Real(y), 1,
+void drawNode(VBO & vbo, EBO & ebo, Texture & T, Mask m, Rank x, Level y, Rank z) {
+    drawRightParallelogrammicPrism(vbo, ebo, T, m, Real(y), 1,
         { Grid::corners[x + 0][z + 0],
           Grid::corners[x + 1][z + 0],
           Grid::corners[x + 1][z + 1],
@@ -91,7 +96,7 @@ void drawNode(VBO & vbo, Texture & T, Mask m, Rank x, Level y, Rank z) {
 void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
     using namespace Fundamentals;
 
-    vertices.clear();
+    vertices.clear(); indices.clear();
 
     NodeDef nodeDef; Mask m;
     for (Level j = 0; true; j++) {
@@ -109,16 +114,18 @@ void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
                 m.right   = (i == chunkSize - 1) || (get(i + 1, j + 0, k + 0).id == 0);
 
                 nodeDef = nodeRegistry.get(id);
-                drawNode(vertices, nodeDef.texture, m, i, j, k);
+                drawNode(vertices, indices, nodeDef.texture, m, i, j, k);
             }
         }
 
         if (j == worldTop) break;
     }
 
-    auto size = vertices.size();
     glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, size * sizeof(ShaderData), vertices.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(ShaderData), vertices.data(), GL_DYNAMIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(ShaderIndex), indices.data(), GL_DYNAMIC_DRAW);
 }
 
 void Chunk::updateMatrix(const Fuchsian<Integer> & origin) {
@@ -132,8 +139,10 @@ void Chunk::render(Shader * shader) {
     shader->uniform("relative.c", relative.c);
     shader->uniform("relative.d", relative.d);
 
-    glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glDrawElements(GL_TRIANGLES, indices.size(), shaderIndexType, nullptr);
 }
 
 bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {
