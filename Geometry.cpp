@@ -144,7 +144,10 @@ void Chunk::render(Shader * shader) {
     shader->uniform("relative.c", relative.c);
     shader->uniform("relative.d", relative.d);
 
-    glBindVertexArray(vao); glDrawElements(GL_TRIANGLES, indices.size(), shaderIndexType, nullptr);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glDrawElements(GL_TRIANGLES, indices.size(), shaderIndexType, nullptr);
 }
 
 bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {
