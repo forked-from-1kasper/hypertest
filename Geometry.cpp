@@ -18,10 +18,11 @@ Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometr
     _pos = isometry.origin();
     updateMatrix(origin);
 
-    glGenBuffers(1, &ebo);
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo); glGenBuffers(1, &ebo);
 
-    glGenVertexArrays(1, &vao); glGenBuffers(1, &vbo);
-    glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
     constexpr GLsizei stride = 5 * sizeof(float);
 
@@ -121,11 +122,15 @@ void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
         if (j == worldTop) break;
     }
 
-    glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindVertexArray(vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(ShaderData), vertices.data(), GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(ShaderIndex), indices.data(), GL_DYNAMIC_DRAW);
+
+    glBindVertexArray(0);
 }
 
 void Chunk::updateMatrix(const Fuchsian<Integer> & origin) {
@@ -139,10 +144,7 @@ void Chunk::render(Shader * shader) {
     shader->uniform("relative.c", relative.c);
     shader->uniform("relative.d", relative.d);
 
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glDrawElements(GL_TRIANGLES, indices.size(), shaderIndexType, nullptr);
+    glBindVertexArray(vao); glDrawElements(GL_TRIANGLES, indices.size(), shaderIndexType, nullptr);
 }
 
 bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {
