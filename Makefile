@@ -1,14 +1,11 @@
-CXX = g++
+SRCDIR     = source
+INCLUDEDIR = include
+BUILDDIR   = build
+BINARY     = Hyper
 
-BINARY = Hyper
-CFLAGS = -std=c++2a -Iinclude/
-CPP    = source/Hyper.cpp source/Shader.cpp source/Geometry.cpp source/Sheet.cpp source/PicoPNG.cpp
-
-HPP    = include/Hyper/Geometry.hpp include/Hyper/Shader.hpp include/Hyper/Sheet.hpp
-HPP   += include/PicoPNG.hpp include/Hyper/Gyrovector.hpp include/Hyper/Fuchsian.hpp
-HPP   += include/Hyper/Fundamentals.hpp include/Hyper/Moebius.hpp
-HPP   += include/Hyper/Tesselation.hpp include/Hyper/Grid.hpp
-HPP   += include/Enumerable.hpp include/List.hpp include/Literal.hpp include/Tuple.hpp
+CXX     = g++
+CFLAGS  = -Wall -std=c++2a -Iinclude/
+CFLAGS += -Wno-misleading-indentation -Wno-unused-but-set-variable
 
 ifeq ($(OS),Windows_NT)
 	BINARY = Hyper.exe
@@ -27,16 +24,38 @@ else
 	endif
 endif
 
-all: Hyper
+DEPS     = PicoPNG
+MODULES  = Hyper Shader Geometry Sheet
+HEADERS  = Hyper/Fuchsian Hyper/Fundamentals
+HEADERS += Hyper/Grid Hyper/Gyrovector
+HEADERS += Hyper/Moebius Hyper/Tesselation
+HEADERS += Enumerable List Literal Tuple
 
-Hyper: $(HPP) $(CPP)
-	$(CXX) $(CFLAGS) $(CPP) -o $(BINARY) $(LDFLAGS)
+add = $(addprefix $(2)/,$(addsuffix $(1),$(3)))
 
-run: Hyper
+CPPS = $(call add,.cpp,$(SRCDIR),$(MODULES) $(DEPS))
+HPPS = $(call add,.hpp,$(INCLUDEDIR),$(HEADERS))
+OBJS = $(call add,.o,$(BUILDDIR),$(MODULES) $(DEPS))
+
+all: $(BUILDDIR) $(BINARY)
+
+$(BINARY): $(OBJS)
+	$(CXX) $(OBJS) $(LDFLAGS) -o $(BINARY)
+
+$(call add,.o,$(BUILDDIR),$(MODULES)): $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp $(INCLUDEDIR)/Hyper/%.hpp $(HPPS)
+	$(CXX) -c $(CFLAGS) $< -o $@
+
+$(call add,.o,$(BUILDDIR),$(DEPS)): $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp $(INCLUDEDIR)/%.hpp $(HPPS)
+	$(CXX) -c $(CFLAGS) $< -o $@
+
+run: $(BINARY)
 	./$(BINARY)
 
+$(BUILDDIR):
+	mkdir -p $(BUILDDIR)
+
 clean:
-	rm -f $(BINARY)
+	rm -f $(BINARY) $(OBJS)
 
 barbarize:
-	python3 barbarize.py $(CPP) $(HPP)
+	python3 barbarize.py $(CPPS) $(HPPS)
