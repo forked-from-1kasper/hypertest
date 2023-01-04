@@ -1,5 +1,5 @@
-#include "Grid.hpp"
-#include "Geometry.hpp"
+#include <Hyper/Geometry.hpp>
+#include <Hyper/Grid.hpp>
 
 NodeRegistry::NodeRegistry() { attach(0UL, NodeDef("Air", Texture())); }
 

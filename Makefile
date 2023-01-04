@@ -1,31 +1,35 @@
 CXX = g++
 
 BINARY = Hyper
-CFLAGS = -std=c++2a
+CFLAGS = -std=c++2a -Iinclude/
 CPP    = Hyper.cpp Shader.cpp Geometry.cpp Sheet.cpp PicoPNG.cpp
-HPP    = Geometry.hpp Shader.hpp Sheet.hpp PicoPNG.hpp Gyrovector.hpp Fuchsian.hpp Fundamentals.hpp Enumerable.hpp Tesselation.hpp Grid.hpp
+
+HPP    = include/Hyper/Geometry.hpp include/Hyper/Shader.hpp include/Hyper/Sheet.hpp
+HPP   += include/PicoPNG.hpp include/Hyper/Gyrovector.hpp include/Hyper/Fuchsian.hpp
+HPP   += include/Hyper/Fundamentals.hpp include/Hyper/Enumerable.hpp
+HPP   += include/Hyper/Tesselation.hpp include/Hyper/Grid.hpp
 
 ifeq ($(OS),Windows_NT)
 	BINARY = Hyper.exe
-	LIBS = -lglfw3 -lglew32 -lopengl32 -lglu32
+	LDFLAGS = -lglfw3 -lglew32 -lopengl32 -lglu32
 else
 	BINARY = Hyper
 
 	UNAME := $(shell uname -s)
 
 	ifeq ($(UNAME),Linux)
-		LIBS = -lglfw -lGLEW -lGL -lGLU
+		LDFLAGS = -lglfw -lGLEW -lGL -lGLU
 	endif
 
 	ifeq ($(UNAME),Darwin)
-		LIBS = -lglfw -lGLEW -framework CoreVideo -framework OpenGL -framework IOKit -framework Cocoa -framework Carbon
+		LDFLAGS = -lglfw -lGLEW -framework CoreVideo -framework OpenGL -framework IOKit -framework Cocoa -framework Carbon
 	endif
 endif
 
 all: Hyper
 
 Hyper: $(HPP) $(CPP)
-	$(CXX) $(CFLAGS) $(CPP) -o $(BINARY) $(LIBS)
+	$(CXX) $(CFLAGS) $(CPP) -o $(BINARY) $(LDFLAGS)
 
 run: Hyper
 	./$(BINARY)

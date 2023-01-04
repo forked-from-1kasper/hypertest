@@ -1,23 +1,23 @@
-#include <map>
-#include <cmath>
 #include <iostream>
+#include <cmath>
+#include <map>
 
-#include <glm/mat4x4.hpp>
-#include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/mat4x4.hpp>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-#include "Sheet.hpp"
-#include "Shader.hpp"
-#include "PicoPNG.hpp"
-#include "Geometry.hpp"
+#include <PicoPNG.hpp>
 
-#include "Fuchsian.hpp"
-#include "Gyrovector.hpp"
-#include "Tesselation.hpp"
-#include "Fundamentals.hpp"
+#include <Hyper/Fundamentals.hpp>
+#include <Hyper/Tesselation.hpp>
+#include <Hyper/Gyrovector.hpp>
+#include <Hyper/Fuchsian.hpp>
+#include <Hyper/Geometry.hpp>
+#include <Hyper/Shader.hpp>
+#include <Hyper/Sheet.hpp>
 
 using namespace std::complex_literals;
 

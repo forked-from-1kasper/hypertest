@@ -1,8 +1,8 @@
 #include <iostream>
 #include <GL/glew.h>
 
-#include "Sheet.hpp"
-#include "PicoPNG.hpp"
+#include <Hyper/Sheet.hpp>
+#include <PicoPNG.hpp>
 
 Texture::Texture() : sheet(nullptr) {}
 

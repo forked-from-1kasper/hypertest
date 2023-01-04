@@ -2,10 +2,10 @@
 
 #include <array>
 
-#include <glm/glm.hpp>
 #include <glm/vec2.hpp>
+#include <glm/glm.hpp>
 
-#include "Gyrovector.hpp"
+#include <Hyper/Gyrovector.hpp>
 
 template<typename T> constexpr T sqr(T x) { return x * x; }
 template<typename T> constexpr T sign(T x) { return (x > 0) - (x < 0); }

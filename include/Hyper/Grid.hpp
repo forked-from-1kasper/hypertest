@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Fundamentals.hpp"
+#include <Hyper/Fundamentals.hpp>
 
 // Generation of chunk’s grid
 namespace Grid {

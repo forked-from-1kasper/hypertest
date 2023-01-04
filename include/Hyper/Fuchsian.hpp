@@ -3,8 +3,8 @@
 #include <ostream>
 #include <complex>
 
-#include "Gyrovector.hpp"
-#include "Enumerable.hpp"
+#include <Hyper/Enumerable.hpp>
+#include <Hyper/Möbius.hpp>
 
 template<typename T> concept EuclideanDomain =
 requires(T a, T b) {

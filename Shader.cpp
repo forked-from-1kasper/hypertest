@@ -1,5 +1,3 @@
-#include "Shader.hpp"
-
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/mat4x4.hpp>
 
@@ -8,6 +6,8 @@
 #include <sstream>
 #include <complex>
 #include <string>
+
+#include <Hyper/Shader.hpp>
 
 constexpr size_t infoBufferSize = 2048;
 

@@ -1,15 +1,16 @@
 #pragma once
 
-#include <map>
-#include <vector>
 #include <string>
+#include <vector>
+#include <map>
+
 #include <GL/glew.h>
 
-#include "Sheet.hpp"
-#include "Shader.hpp"
-#include "Fuchsian.hpp"
-#include "Gyrovector.hpp"
-#include "Fundamentals.hpp"
+#include <Hyper/Fundamentals.hpp>
+#include <Hyper/Fuchsian.hpp>
+#include <Hyper/Möbius.hpp>
+#include <Hyper/Shader.hpp>
+#include <Hyper/Sheet.hpp>
 
 template<typename T>
 struct Parallelogram {

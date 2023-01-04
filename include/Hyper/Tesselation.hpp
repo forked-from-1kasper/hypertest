@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Fundamentals.hpp"
+#include <Hyper/Fundamentals.hpp>
+#include <Hyper/Fuchsian.hpp>
+#include <Hyper/Möbius.hpp>
 
 // Chunk’s neighbours in tesselation
 namespace Array {
