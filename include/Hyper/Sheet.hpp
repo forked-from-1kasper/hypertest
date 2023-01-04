@@ -10,7 +10,7 @@ class Texture; class Sheet;
 class Texture {
 private:
     Sheet * sheet; size_t index;
-    GLdouble _left, _right, _down, _up;
+    GLfloat _left, _right, _down, _up;
 
 public:
     Texture();

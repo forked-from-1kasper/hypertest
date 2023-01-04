@@ -8,10 +8,10 @@ Texture::Texture() : sheet(nullptr) {}
 
 Texture::Texture(Sheet * sheet, size_t index) : sheet(sheet), index(index) {
     auto [i, j] = sheet->index(index);
-    _left  = GLdouble((i + 0) * sheet->size()) / GLdouble(sheet->total());
-    _right = GLdouble((i + 1) * sheet->size()) / GLdouble(sheet->total());
-    _down  = GLdouble((j + 0) * sheet->size()) / GLdouble(sheet->total());
-    _up    = GLdouble((j + 1) * sheet->size()) / GLdouble(sheet->total());
+    _left  = GLfloat((i + 0) * sheet->size()) / GLfloat(sheet->total());
+    _right = GLfloat((i + 1) * sheet->size()) / GLfloat(sheet->total());
+    _down  = GLfloat((j + 0) * sheet->size()) / GLfloat(sheet->total());
+    _up    = GLfloat((j + 1) * sheet->size()) / GLfloat(sheet->total());
 }
 
 Sheet::Sheet(unsigned long size, unsigned long total) : _size(size), _total(total) {

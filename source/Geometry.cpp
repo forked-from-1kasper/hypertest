@@ -24,16 +24,7 @@ Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometr
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    constexpr GLsizei stride = 5 * sizeof(float);
-
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, (void *) 0); // _texCoord
-    glEnableVertexAttribArray(0);
-
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void *) (2 * sizeof(float))); // _gyrovector
-    glEnableVertexAttribArray(1);
-
-    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, stride, (void *) (4 * sizeof(float))); // _height
-    glEnableVertexAttribArray(2);
+    GVA<shaderStride, ShaderParams>::attrib();
 }
 
 Chunk::~Chunk() {
@@ -47,25 +38,23 @@ bool Chunk::walkable(Rank x, Real L, Rank z) {
     return Chunk::outside(L) || (get(x, Level(L), z).id == 0);
 }
 
-template<typename... Ts> inline void emit(VBO & vbo, Ts... ts) { vbo.push_back(ShaderData(ts...)); }
-
-void drawParallelogram(VBO & vbo, EBO & ebo, Texture & T, const Parallelogram<Real> & P, Real h) {
+void drawParallelogram(VBO & vbo, EBO & ebo, Texture & T, const Parallelogram<GLfloat> & P, GLfloat h) {
     auto index = vbo.size();
-    emit(vbo, T.left(),  T.down(), P.A, h); // 1
-    emit(vbo, T.right(), T.down(), P.B, h); // 2
-    emit(vbo, T.right(), T.up(),   P.C, h); // 3
-    emit(vbo, T.left(),  T.up(),   P.D, h); // 4
+    emit(vbo, Tuple(T.left(),  T.down()), P.A, h); // 1
+    emit(vbo, Tuple(T.right(), T.down()), P.B, h); // 2
+    emit(vbo, Tuple(T.right(), T.up()),   P.C, h); // 3
+    emit(vbo, Tuple(T.left(),  T.up()),   P.D, h); // 4
 
     ebo.push_back(index); ebo.push_back(index + 1); ebo.push_back(index + 2);
     ebo.push_back(index); ebo.push_back(index + 2); ebo.push_back(index + 3);
 }
 
-void drawSide(VBO & vbo, EBO & ebo, Texture & T, const Gyrovector<Real> & A, const Gyrovector<Real> & B, Real h₁, Real h₂) {
+void drawSide(VBO & vbo, EBO & ebo, Texture & T, const Gyrovector<GLfloat> & A, const Gyrovector<GLfloat> & B, GLfloat h₁, GLfloat h₂) {
     auto index = vbo.size();
-    emit(vbo, T.right(), T.up(),   A, h₁); // 1
-    emit(vbo, T.right(), T.down(), A, h₂); // 2
-    emit(vbo, T.left(),  T.down(), B, h₂); // 3
-    emit(vbo, T.left(),  T.up(),   B, h₁); // 4
+    emit(vbo, Tuple(T.right(), T.up()),   A, h₁); // 1
+    emit(vbo, Tuple(T.right(), T.down()), A, h₂); // 2
+    emit(vbo, Tuple(T.left(),  T.down()), B, h₂); // 3
+    emit(vbo, Tuple(T.left(),  T.up()),   B, h₁); // 4
 
     ebo.push_back(index); ebo.push_back(index + 1); ebo.push_back(index + 2);
     ebo.push_back(index); ebo.push_back(index + 2); ebo.push_back(index + 3);
@@ -73,7 +62,7 @@ void drawSide(VBO & vbo, EBO & ebo, Texture & T, const Gyrovector<Real> & A, con
 
 struct Mask { bool top : 1, bottom : 1, back : 1, forward : 1, left : 1, right : 1; };
 
-void drawRightParallelogrammicPrism(VBO & vbo, EBO & ebo, Texture & T, Mask m, Real h, Real Δh, const Parallelogram<Real> & P) {
+void drawRightParallelogrammicPrism(VBO & vbo, EBO & ebo, Texture & T, Mask m, Real h, Real Δh, const Parallelogram<GLfloat> & P) {
     const auto h₁ = h, h₂ = h + Δh;
 
     if (m.top)     drawParallelogram(vbo, ebo, T, P, h₂);

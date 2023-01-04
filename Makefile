@@ -6,8 +6,9 @@ CPP    = source/Hyper.cpp source/Shader.cpp source/Geometry.cpp source/Sheet.cpp
 
 HPP    = include/Hyper/Geometry.hpp include/Hyper/Shader.hpp include/Hyper/Sheet.hpp
 HPP   += include/PicoPNG.hpp include/Hyper/Gyrovector.hpp include/Hyper/Fuchsian.hpp
-HPP   += include/Hyper/Fundamentals.hpp include/Hyper/Enumerable.hpp
-HPP   += include/Hyper/Tesselation.hpp include/Hyper/Grid.hpp include/Hyper/Moebius.hpp
+HPP   += include/Hyper/Fundamentals.hpp include/Hyper/Moebius.hpp
+HPP   += include/Hyper/Tesselation.hpp include/Hyper/Grid.hpp
+HPP   += include/Enumerable.hpp include/List.hpp include/Literal.hpp include/Tuple.hpp
 
 ifeq ($(OS),Windows_NT)
 	BINARY = Hyper.exe

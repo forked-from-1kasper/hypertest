@@ -15,7 +15,7 @@
 template<typename T>
 struct Parallelogram {
     Gyrovector<T> A, B, C, D;
-    const auto rev() const { return Parallelogram(D, C, B, A); }
+    const auto rev() const { return Parallelogram<T>(D, C, B, A); }
 };
 
 struct NodeDef { std::string name; Texture texture; };
@@ -33,14 +33,6 @@ public:
     inline void attach(NodeId id, const NodeDef & def) { table.insert({id, def}); }
     inline auto get(NodeId id) { return table[id]; }
 };
-
-using ShaderIndex = unsigned int;
-constexpr GLenum shaderIndexType = GL_UNSIGNED_INT;
-
-struct ShaderData { GLfloat tx, ty; Gyrovector<GLfloat> v; GLfloat h; };
-
-using VBO = std::vector<ShaderData>;
-using EBO = std::vector<ShaderIndex>;
 
 class Chunk {
 private:
