@@ -2,7 +2,7 @@ CXX = g++
 
 BINARY = Hyper
 CFLAGS = -std=c++2a -Iinclude/
-CPP    = Hyper.cpp Shader.cpp Geometry.cpp Sheet.cpp PicoPNG.cpp
+CPP    = source/Hyper.cpp source/Shader.cpp source/Geometry.cpp source/Sheet.cpp source/PicoPNG.cpp
 
 HPP    = include/Hyper/Geometry.hpp include/Hyper/Shader.hpp include/Hyper/Sheet.hpp
 HPP   += include/PicoPNG.hpp include/Hyper/Gyrovector.hpp include/Hyper/Fuchsian.hpp
