@@ -2,7 +2,7 @@
 
 #include <Hyper/Fundamentals.hpp>
 #include <Hyper/Fuchsian.hpp>
-#include <Hyper/Möbius.hpp>
+#include <Hyper/Moebius.hpp>
 
 // Chunk’s neighbours in tesselation
 namespace Array {

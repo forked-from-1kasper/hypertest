@@ -8,7 +8,7 @@
 
 #include <Hyper/Fundamentals.hpp>
 #include <Hyper/Fuchsian.hpp>
-#include <Hyper/Möbius.hpp>
+#include <Hyper/Moebius.hpp>
 #include <Hyper/Shader.hpp>
 #include <Hyper/Sheet.hpp>
 

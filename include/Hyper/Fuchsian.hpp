@@ -4,7 +4,7 @@
 #include <complex>
 
 #include <Hyper/Enumerable.hpp>
-#include <Hyper/Möbius.hpp>
+#include <Hyper/Moebius.hpp>
 
 template<typename T> concept EuclideanDomain =
 requires(T a, T b) {
