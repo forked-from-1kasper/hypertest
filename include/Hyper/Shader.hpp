@@ -8,6 +8,14 @@
 #include <Tuple.hpp>
 #include <List.hpp>
 
+template<Literal, typename, GLenum, GLint> struct Field {};
+
+template<typename> struct FieldTypeM;
+template<typename T> using FieldType = FieldTypeM<T>::val;
+
+template<Literal param, typename T, GLenum type, GLint dim>
+struct FieldTypeM<Field<param, T, type, dim>> { using val = T; };
+
 template<size_t, typename> struct GVA;
 
 template<size_t stride> struct GVA<stride, List<>> {

@@ -1,7 +1,6 @@
 #pragma once
 
 template<typename...> struct List;
-template<Literal, typename, GLenum, GLint> struct Field {};
 
 template<typename, typename> struct ConsM;
 template<typename T, typename Ts>
@@ -19,12 +18,6 @@ struct MapM<φ, List<>> { using val = List<>; };
 
 template<template<typename> typename φ, typename T, typename... Ts>
 struct MapM<φ, List<T, Ts...>> { using val = Cons<φ<T>, Map<φ, List<Ts...>>>; };
-
-template<typename> struct FieldTypeM;
-template<typename T> using FieldType = FieldTypeM<T>::val;
-
-template<Literal param, typename T, GLenum type, GLint dim>
-struct FieldTypeM<Field<param, T, type, dim>> { using val = T; };
 
 template<template<typename...> typename, typename> struct ApplyM;
 template<template<typename...> typename M, typename T>
