@@ -386,8 +386,7 @@ int main() {
         if (k == 0) markChunk(C);
     }
 
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)) {
         display(window);
         glfwSwapBuffers(window);
         glfwPollEvents();
