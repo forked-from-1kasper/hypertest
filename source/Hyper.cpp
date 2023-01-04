@@ -364,13 +364,17 @@ int main() {
     glewExperimental = GL_TRUE;
     glewInit();
 
-    setupTexture();
+    glEnable(GL_DEPTH_TEST); setupTexture();
 
-    glEnable(GL_DEPTH_TEST);
-    shader = new Shader("Hyper.vs", "Hyper.fs");
-
+    shader = new Shader("Common.glsl", "Hyper.vs", "Hyper.fs");
     shader->activate();
+
     shader->uniform("textureSheet", 0);
+
+    shader->uniform("fog.enabled", false);
+    shader->uniform("fog.min",     1.0f);
+    shader->uniform("fog.max",     5.0f);
+    shader->uniform("fog.color",   glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
     setupWindowSize(window, Window::width, Window::height);
 

@@ -35,6 +35,7 @@ jobs:
           path: |
             texture1.png
             texture2.png
+            Common.glsl
             Hyper.fs
             Hyper.vs
             Hyper.exe

@@ -9,28 +9,34 @@
 
 #include <Hyper/Shader.hpp>
 
+#define lengthof(array) (sizeof(array) / sizeof(array[0]))
+
 constexpr size_t infoBufferSize = 2048;
 
-Shader::Shader(const char * vsfile, const char * fsfile) {
-    std::ifstream ivs, ifs;
+Shader::Shader(const char * comfile, const char * vsfile, const char * fsfile) {
+    std::ifstream cvs, ivs, ifs;
 
+    cvs.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     ivs.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     ifs.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
-    ivs.open(vsfile); ifs.open(fsfile);
+    cvs.open(comfile); ivs.open(vsfile); ifs.open(fsfile);
 
-    std::stringstream vsbuf, fsbuf;
-    vsbuf << ivs.rdbuf(); fsbuf << ifs.rdbuf();
+    std::stringstream csbuf, vsbuf, fsbuf;
+    csbuf << cvs.rdbuf(); vsbuf << ivs.rdbuf(); fsbuf << ifs.rdbuf();
 
-    ivs.close(); ifs.close();
+    cvs.close(); ivs.close(); ifs.close();
 
     GLint success; char info[infoBufferSize];
 
-    auto vs₁ = vsbuf.str(), fs₁ = fsbuf.str();
-    auto vs₂ = vs₁.c_str(), fs₂ = fs₁.c_str();
+    auto cs₁ = csbuf.str(), vs₁ = vsbuf.str(), fs₁ = fsbuf.str();
+    auto cs₂ = cs₁.c_str(), vs₂ = vs₁.c_str(), fs₂ = fs₁.c_str();
+
+    const char * source₁[] = {cs₂, vs₂};
+    const char * source₂[] = {cs₂, fs₂};
 
     auto vertex = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex, 1, &vs₂, 0);
+    glShaderSource(vertex, lengthof(source₁), source₁, 0);
     glCompileShader(vertex);
 
     glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
@@ -40,7 +46,7 @@ Shader::Shader(const char * vsfile, const char * fsfile) {
     }
 
     auto fragment = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment, 1, &fs₂, 0);
+    glShaderSource(fragment, lengthof(source₂), source₂, 0);
     glCompileShader(fragment);
 
     glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
@@ -88,7 +94,10 @@ template<> void Shader::uniform<glm::vec2>(const char * name, const glm::vec2 & 
 { glUniform2fv(glGetUniformLocation(_index, name), 1, glm::value_ptr(value)); }
 
 template<> void Shader::uniform<glm::vec3>(const char * name, const glm::vec3 & value) const
-{ glUniform2fv(glGetUniformLocation(_index, name), 1, glm::value_ptr(value)); }
+{ glUniform3fv(glGetUniformLocation(_index, name), 1, glm::value_ptr(value)); }
+
+template<> void Shader::uniform<glm::vec4>(const char * name, const glm::vec4 & value) const
+{ glUniform4fv(glGetUniformLocation(_index, name), 1, glm::value_ptr(value)); }
 
 template<> void Shader::uniform<glm::mat4>(const char * name, const glm::mat4 & value) const
 { glUniformMatrix4fv(glGetUniformLocation(_index, name), 1, GL_FALSE, glm::value_ptr(value)); }

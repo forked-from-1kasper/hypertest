@@ -50,7 +50,7 @@ private:
     GLuint _index;
 
 public:
-    Shader(const char * vertex, const char * fragment);
+    Shader(const char *, const char * vertex, const char * fragment);
     ~Shader();
 
     template<typename T> void uniform(const char *, const T &) const;

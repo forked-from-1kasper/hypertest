@@ -1,22 +1,16 @@
-#version 330 core
-
 in  vec2  _texCoord;
 in  vec2  _gyrovector;
 in  float _height;
 out vec2  texCoord;
-
-struct Moebius {
-    vec2 a;
-    vec2 b;
-    vec2 c;
-    vec2 d;
-};
+out float fogFactor;
 
 uniform Moebius origin;
 uniform Moebius relative;
 
 uniform mat4 projection;
 uniform mat4 view;
+
+uniform Fog fog;
 
 #define norm(z) dot(z, z)
 #define add(a, b) (a + b)
@@ -32,6 +26,12 @@ void Gans(inout vec2 z)
 void Klein(inout vec2 z)
 { z *= 2.0f / (1.0f + norm(z)); }
 
+float getFogFactor(in float d) {
+    if (fog.enabled)
+        return clamp(1.0 - (fog.max - d) / (fog.max - fog.min), 0.0, 1.0);
+    else return 0.0;
+}
+
 void main() {
     vec2 gyrovector;
 
@@ -39,6 +39,9 @@ void main() {
     apply(origin, gyrovector, gyrovector);
     Gans(gyrovector);
 
-    gl_Position = projection * view * vec4(gyrovector.x, _height, gyrovector.y, 1.0);
-    texCoord = _texCoord;
+    vec4 vertex = view * vec4(gyrovector.x, _height, gyrovector.y, 1.0);
+
+    gl_Position = projection * vertex;
+    fogFactor   = getFogFactor(length(vertex));
+    texCoord    = _texCoord;
 }
