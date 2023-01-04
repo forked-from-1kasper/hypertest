@@ -1,10 +1,9 @@
-#version 120
+#version 330 core
 
-attribute vec2  _texCoord;
-attribute vec2  _gyrovector;
-attribute float _height;
-
-varying vec2 texCoord;
+in  vec2  _texCoord;
+in  vec2  _gyrovector;
+in  float _height;
+out vec2  texCoord;
 
 struct Moebius {
     vec2 a;
@@ -33,8 +32,7 @@ void Gans(inout vec2 z)
 void Klein(inout vec2 z)
 { z *= 2.0f / (1.0f + norm(z)); }
 
-void main()
-{
+void main() {
     vec2 gyrovector;
 
     apply(relative, _gyrovector, gyrovector);
