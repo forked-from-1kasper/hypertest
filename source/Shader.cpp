@@ -10,7 +10,6 @@
 #include <Hyper/Shader.hpp>
 
 #define lengthof(array) (sizeof(array) / sizeof(array[0]))
-
 constexpr size_t infoBufferSize = 2048;
 
 Shader::Shader(const char * comfile, const char * vsfile, const char * fsfile) {
@@ -32,11 +31,10 @@ Shader::Shader(const char * comfile, const char * vsfile, const char * fsfile) {
     auto cs₁ = csbuf.str(), vs₁ = vsbuf.str(), fs₁ = fsbuf.str();
     auto cs₂ = cs₁.c_str(), vs₂ = vs₁.c_str(), fs₂ = fs₁.c_str();
 
-    const char * source₁[] = {cs₂, vs₂};
-    const char * source₂[] = {cs₂, fs₂};
+    const char * vertexText[] = {cs₂, vs₂}, * fragmentText[] = {cs₂, fs₂};
 
     auto vertex = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex, lengthof(source₁), source₁, 0);
+    glShaderSource(vertex, lengthof(vertexText), vertexText, 0);
     glCompileShader(vertex);
 
     glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
@@ -46,7 +44,7 @@ Shader::Shader(const char * comfile, const char * vsfile, const char * fsfile) {
     }
 
     auto fragment = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment, lengthof(source₂), source₂, 0);
+    glShaderSource(fragment, lengthof(fragmentText), fragmentText, 0);
     glCompileShader(fragment);
 
     glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
