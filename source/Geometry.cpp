@@ -145,10 +145,10 @@ bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {
     const auto C = Grid::corners[i + 1][j + 1];
     const auto D = Grid::corners[i + 0][j + 1];
 
-    const auto α = (w.x() - A.x()) * (B.y() - A.y()) - (B.x() - A.x()) * (w.y() - A.y());
-    const auto β = (w.x() - B.x()) * (C.y() - B.y()) - (C.x() - B.x()) * (w.y() - B.y());
-    const auto γ = (w.x() - C.x()) * (D.y() - C.y()) - (D.x() - C.x()) * (w.y() - C.y());
-    const auto δ = (w.x() - D.x()) * (A.y() - D.y()) - (A.x() - D.x()) * (w.y() - D.y());
+    const auto α = w.sub(A).cross(B.sub(A));
+    const auto β = w.sub(B).cross(C.sub(B));
+    const auto γ = w.sub(C).cross(D.sub(C));
+    const auto δ = w.sub(D).cross(A.sub(D));
 
     return (α < 0) == (β < 0) && (β < 0) == (γ < 0) && (γ < 0) == (δ < 0);
 }
@@ -158,12 +158,33 @@ std::pair<Rank, Rank> Chunk::cell(const Gyrovector<Real> & w) {
 
     for (Rank i = 0; i < chunkSize; i++)
         for (Rank j = 0; j < chunkSize; j++)
-            if (Chunk::touch(w, i, j)) return std::pair(i, j);
+            if (Chunk::touch(w, i, j))
+                return std::pair(i, j);
 
     return std::pair(exterior, exterior);
 }
 
-Atlas::Atlas() {}
+bool Chunk::isInsideOfDomain(const Gyrovector<Real> & w₀) {
+    using namespace Fundamentals;
+
+    // We are using symmetry of grid along axes here
+    Gyrovector<Real> w(fabs(w₀.x()), fabs(w₀.y()));
+
+    for (Rank i = 0; i < chunkSize; i++) {
+        const auto A = Grid::corners[chunkSize][i + 0];
+        const auto B = Grid::corners[chunkSize][i + 1];
+
+        const auto α = w.sub(A).cross(B.sub(A));
+        const auto β = w.sub(B).cross(-B);
+        const auto γ = w.cross(A);
+
+        if ((α < 0) == (β < 0) && (β < 0) == (γ < 0)) return true;
+    }
+
+    return false;
+}
+
+Atlas::Atlas() : onLoad(nullptr) {}
 
 Atlas::~Atlas() {
     for (auto chunk : container)
@@ -187,6 +208,8 @@ Chunk * Atlas::poll(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & 
 
     auto chunk = new Chunk(origin, isometry);
     container.push_back(chunk);
+
+    if (onLoad) (*onLoad)(chunk);
     return chunk;
 }
 

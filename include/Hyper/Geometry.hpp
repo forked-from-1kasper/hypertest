@@ -63,14 +63,20 @@ public:
     static bool touch(const Gyrovector<Real> &, Rank, Rank);
     static std::pair<Rank, Rank> cell(const Gyrovector<Real> &);
 
+    static bool isInsideOfDomain(const Gyrovector<Real> &);
+
     inline static bool outside(Real L) { return L < 0 || L >= Fundamentals::worldHeight; }
 };
+
+using ChunkOperator = Chunk*(Chunk*);
 
 class Atlas {
 private:
     std::vector<Chunk*> container;
 
 public:
+    ChunkOperator * onLoad;
+
     Atlas();
     ~Atlas();
 

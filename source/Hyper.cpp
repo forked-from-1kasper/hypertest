@@ -21,9 +21,15 @@
 
 using namespace std::complex_literals;
 
-void errorCallback(int error, const char* description) {
+void errorCallback(int error, const char * description) {
     fprintf(stderr, "Error: %s\n", description);
 }
+
+struct Game {
+    GLFWwindow * window;
+    NodeRegistry nodeRegistry;
+    Atlas        atlas;
+};
 
 namespace Keyboard {
     bool forward  = false;
@@ -44,168 +50,172 @@ namespace Mouse {
     Real xpos, ypos, speed = 0.7;
 }
 
-Real fov = 80, near = 1e-3, far = 150.0;
+class Position {
+private:
+    Möbius<Real>       _domain;
+    Fuchsian<Integer>  _action;
+    Gaussian²<Integer> _center;
 
-Real speed = 2 * Fundamentals::meter;
+public:
+    Position() : _domain(Möbius<Real>::identity()), _action(Tesselation::I) { _center = _action.origin(); }
 
-Real jumpHeight = 1.25, freeFallAccel = 9.8, normalJumpSpeed = sqrt(2 * freeFallAccel * jumpHeight);
+    Position(const auto & P, const auto & G, const auto & g) : _domain(P), _action(G), _center(g) {}
+    Position(const auto & P, const auto & G) : _domain(P) { action(G); }
 
-auto position = Möbius<Real>::identity();
+    inline constexpr auto domain() const { return _domain; }
+    inline constexpr auto action() const { return _action; }
+    inline constexpr auto center() const { return _center; }
 
-bool isFlying = true;
-Real playerHeight = 1.8, normalVelocity = 0, normalLevel = 10;
+    inline constexpr void action(const Fuchsian<Integer> & G)
+    { _action = G; _action.simpl(); _center = G.origin(); }
 
-Real horizontal = 0, vertical = 0;
+    // If speed is too high to jump over ≥2 chunks, does nothing.
+    // (Of course, this can be easily fixed by iterating
+    //  not only over neighbours, but it seems useless.)
+    std::pair<Position, bool> move(const Gyrovector<Real> &, const Real dt) const;
+};
 
-auto localIsometry = Tesselation::I;
-auto chunkPos = localIsometry.origin();
-Chunk * currentChunk;
+std::pair<Position, bool> Position::move(const Gyrovector<Real> & v, const Real dt) const {
+    auto P = _domain * Möbius<Real>::translate(v.scale(dt)); P = P.normalize();
 
-NodeRegistry nodeRegistry;
-Atlas localAtlas;
+    if (Chunk::isInsideOfDomain(P.origin()))
+        return std::pair(Position(P, _action, _center), false);
 
-auto roundOff(const Möbius<Real> & M) {
-    auto N = (currentChunk->isometry().inverse() * localIsometry).field<Real>() * M;
-    return Chunk::cell(N.origin());
-}
-
-bool isFree(Chunk * C, Rank x, Real L, Rank z)
-{ return !C || (C->walkable(x, std::floor(L), z) && C->walkable(x, std::floor(L + playerHeight), z)); }
-
-void jump() { if (!isFlying) normalVelocity += normalJumpSpeed; }
-
-void setBlock(Rank i, Real L, Rank k, NodeId id) {
-    if (!currentChunk) return;
-
-    if (Chunk::outside(normalLevel)) return;
-
-    if (i >= Fundamentals::chunkSize
-     || k >= Fundamentals::chunkSize)
-        return;
-
-    auto j = Level(std::floor(normalLevel));
-
-    currentChunk->set(i, j, k, {id});
-    currentChunk->refresh(nodeRegistry, localIsometry);
-}
-
-void placeBlockNextToPlayer() {
-    auto [i, j] = roundOff(position);
-    setBlock(i + 1, normalLevel, j, 1);
-}
-
-void deleteBlockNextToPlayer() {
-    auto [i, j] = roundOff(position);
-    setBlock(i + 1, normalLevel, j, 0);
-}
-
-void returnToSpawn() {
-    localIsometry  = Tesselation::I;
-    chunkPos       = localIsometry.origin();
-    currentChunk   = localAtlas.lookup(chunkPos);
-    position       = {1, 0, 0, 1};
-    normalLevel    = 5;
-    normalVelocity = 0;
-
-    localAtlas.updateMatrix(localIsometry);
-}
-
-Chunk * buildFloor(Chunk * chunk) {
-    using namespace Fundamentals;
-
-    for (size_t i = 0; i < chunkSize; i++)
-        for (size_t j = 0; j < chunkSize; j++)
-            chunk->set(i, 0, j, {1});
-
-    chunk->set(0, 1, 0, {2});
-
-    chunk->refresh(nodeRegistry, localIsometry);
-    return chunk;
-}
-
-Chunk * buildTestStructure(Chunk * chunk) {
-    using namespace Fundamentals;
-
-    for (size_t i = 0; i < chunkSize; i++) {
-        for (size_t j = 0; j < chunkSize; j++) {
-            NodeId id = (i + j) % 2 == 0 ? 1 : 2;
-
-            chunk->set(i, 0, j, {id});
-            chunk->set(i, 16, j, {3 - id});
-        }
-    }
-
-    for (size_t i = 0; i < chunkSize; i += chunkSize - 1)
-        for (size_t k = 0; k < chunkSize; k += chunkSize - 1)
-            for (size_t j = 1; j < 16; j++)
-                chunk->set(i, j, k, {2});
-
-    chunk->refresh(nodeRegistry, localIsometry);
-    return chunk;
-}
-
-Chunk * markChunk(Chunk * chunk) {
-    for (size_t i = 1; i <= 15; i++)
-        for (size_t j = 1; j <= i; j++)
-            chunk->set(i, j, 9, {2});
-
-    chunk->set(13, 16, 9, {0});
-    chunk->set(14, 16, 9, {0});
-    chunk->set(15, 16, 9, {0});
-
-    chunk->refresh(nodeRegistry, localIsometry);
-    return chunk;
-}
-
-void moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
-    bool chunkChanged = false; auto G(localIsometry); auto g(chunkPos); auto C(currentChunk);
-
-    auto P₁ = position * Möbius<Real>::translate(v.scale(dt));
-    P₁ = P₁.normalize(); auto [i, j] = roundOff(P₁);
-
-    if (i == Fundamentals::exterior && j == Fundamentals::exterior)
     for (size_t k = 0; k < Tesselation::neighbours.size(); k++) {
         const auto Δ   = Tesselation::neighbours[k];
         const auto Δ⁻¹ = Tesselation::neighbours⁻¹[k];
-        const auto P₂  = (Δ⁻¹ * P₁).normalize();
+        const auto Q   = (Δ⁻¹ * P).normalize();
 
-        std::tie(i, j) = roundOff(P₂);
-
-        if (i != Fundamentals::exterior && j != Fundamentals::exterior)
-        { G *= Δ; g = G.origin(); C = localAtlas.lookup(g); P₁ = P₂; chunkChanged = true;
-          if (!C) C = buildFloor(localAtlas.poll(localIsometry, G)); break; }
+        if (Chunk::isInsideOfDomain(Q.origin()))
+            return std::pair(Position(Q, _action * Δ), true);
     }
 
-    if (isFree(C, i, normalLevel, j)) {
-        localIsometry = G; chunkPos = g; position = P₁;
-        if (chunkChanged) { currentChunk = C; localAtlas.updateMatrix(localIsometry); }
-    }
+    return std::pair(*this, false);
 }
 
-void moveVertically(const Real dt) {
-    auto [i, j] = roundOff(position);
+struct Object {
+    Position position;
 
-    normalVelocity -= dt * freeFallAccel;
+    Real climb = 0, roc = 0;
+    bool flying = false;
 
-    auto L = normalLevel + dt * normalVelocity;
+    Real yaw = 0, pitch = 0;
 
-    if (isFree(currentChunk, i, L, j)) { normalLevel = L; isFlying = true; }
-    else normalVelocity = 0;
+    void rotate(const Real, const Real);
 
-    if (!currentChunk->walkable(i, std::floor(L), j)) isFlying = false;
+    glm::vec3 direction() const;
+    glm::vec3 right() const;
+};
+
+void Object::rotate(const Real Δyaw, const Real Δpitch) {
+    constexpr auto ε = 1e-6;
+    yaw += Δyaw; pitch += Δpitch;
+
+    yaw   = std::fmod(yaw, τ);
+    pitch = std::clamp(pitch, -τ/4 + ε, τ/4 - ε);
 }
 
-void update(Gyrovector<Real> & v, Real dt) { moveVertically(dt); moveHorizontally(v, dt); }
+glm::vec3 Object::direction() const {
+    auto dx = cos(pitch) * sin(yaw);
+    auto dy = sin(pitch);
+    auto dz = cos(pitch) * cos(yaw);
+
+    return glm::vec3(dx, dy, dz);
+}
+
+glm::vec3 Object::right() const
+{ return glm::vec3(sin(yaw - τ/4), 0.0, cos(yaw - τ/4)); }
+
+class Entity {
+private:
+    Rank _i, _j; Object _camera; Atlas * _atlas; Chunk * _chunk;
+
+    // Needs to be replaced by more general bounding box
+    bool isFree(Chunk * C, Rank x, Real L, Rank z);
+
+    bool moveHorizontally(const Gyrovector<Real> & v, const Real dt);
+    void moveVertically(const Real dt);
+
+public:
+    Real jumpSpeed = 0;
+    Real height    = 1.8;
+    Real gravity   = 9.8;
+
+    Entity(Atlas * atlas) : _i(0), _j(0), _atlas(atlas), _chunk(nullptr) {}
+
+    // Returns true iff chunk changes
+    bool move(const Gyrovector<Real> & v, Real dt);
+    void teleport(const Position &, const Real);
+
+    const inline auto camera() const { return _camera; }
+    constexpr void roc(const Real roc) { _camera.roc = roc; }
+    constexpr void push(const Real speed) { _camera.roc += speed; }
+
+    constexpr inline auto atlas() const { return _atlas; }
+    constexpr inline auto chunk() const { return _chunk; }
+
+    constexpr inline auto i() const { return _i; }
+    constexpr inline auto j() const { return _j; }
+
+    constexpr inline void jumpHeight(Real height)
+    { jumpSpeed = sqrt(2 * gravity * height); }
+
+    inline void rotate(const Real Δyaw, const Real Δpitch)
+    { _camera.rotate(Δyaw, Δpitch); }
+};
+
+bool Entity::isFree(Chunk * C, Rank x, Real L, Rank z)
+{ return !C || (C->walkable(x, std::floor(L), z) && C->walkable(x, std::floor(L + height), z)); }
+
+bool Entity::moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
+    Chunk * C; auto [P, chunkChanged] = camera().position.move(v, dt);
+    C = chunkChanged ? atlas()->poll(camera().position.action(), P.action()) : chunk();
+
+    auto Q = (C->isometry().inverse() * P.action()).field<Real>() * P.domain();
+    auto [i, j] = Chunk::cell(Q.origin());
+
+    if (!isFree(C, i, camera().climb, j)) return false;
+
+    _chunk = C; _camera.position = P; _i = i; _j = j;
+    return chunkChanged;
+}
+
+void Entity::moveVertically(const Real dt) {
+    _camera.roc -= dt * gravity;
+
+    auto L = camera().climb + dt * camera().roc;
+
+    if (isFree(_chunk, _i, L, _j)) { _camera.climb = L; _camera.flying = true; }
+    else _camera.roc = 0;
+
+    if (!chunk()->walkable(_i, std::floor(L), _j)) _camera.flying = false;
+}
+
+bool Entity::move(const Gyrovector<Real> & v, Real dt)
+{ bool chunkChanged = moveHorizontally(v, dt); moveVertically(dt); return chunkChanged; }
+
+void Entity::teleport(const Position & P, const Real climb) {
+    _camera.position = P; _camera.climb = climb;
+    _chunk = atlas()->lookup(P.center());
+}
+
+Real fov = 80, near = 1e-3, far = 150.0;
+Real speed = 2 * Fundamentals::meter;
+
+Game game; Entity player(&game.atlas);
 
 glm::mat4 view, projection;
 Shader * shader;
 
-constexpr Real Δtₘₐₓ = 1.0/5.0;
+bool move(Entity & E, const Gyrovector<Real> & v, Real Δt) {
+    constexpr Real Δtₘₐₓ = 1.0/5.0; bool P = false;
+
+    while (Δt >= Δtₘₐₓ) { auto Q = E.move(v, Δtₘₐₓ); P = P || Q; Δt -= Δtₘₐₓ; }
+    auto R = E.move(v, Δt); return P || R;
+}
 
 double globaltime = 0;
 void display(GLFWwindow * window) {
-    constexpr auto ε = 1e-6;
-
     auto dt = glfwGetTime() - globaltime; globaltime += dt;
 
     auto dir = 0i;
@@ -216,37 +226,31 @@ void display(GLFWwindow * window) {
 
     if (dir != 0.0) dir /= std::abs(dir);
 
-    auto n = std::polar(1.0, -horizontal); Gyrovector<Real> velocity(speed * dir * n);
-    auto Δt(dt); while (Δt >= Δtₘₐₓ) { update(velocity, Δtₘₐₓ); Δt -= Δtₘₐₓ; } update(velocity, Δt);
+    auto n = std::polar(1.0, -player.camera().yaw);
+    Gyrovector<Real> velocity(speed * dir * n);
 
-    auto origin = position.inverse();
+    bool chunkChanged = move(player, velocity, dt);
+    if (chunkChanged) game.atlas.updateMatrix(player.camera().position.action());
+
+    auto origin = player.camera().position.domain().inverse();
 
     if (Mouse::grabbed) {
         glfwGetCursorPos(window, &Mouse::xpos, &Mouse::ypos);
         glfwSetCursorPos(window, Window::width/2, Window::height/2);
 
-        horizontal += Mouse::speed * dt * (Window::width/2 - Mouse::xpos);
-        vertical   += Mouse::speed * dt * (Window::height/2 - Mouse::ypos);
-
-        horizontal = std::fmod(horizontal, τ);
-        vertical = std::clamp(vertical, -τ/4 + ε, τ/4 - ε);
+        player.rotate(
+            Mouse::speed * dt * (Window::width/2 - Mouse::xpos),
+            Mouse::speed * dt * (Window::height/2 - Mouse::ypos)
+        );
     }
 
-    auto dx = cos(vertical) * sin(horizontal);
-    auto dy = sin(vertical);
-    auto dz = cos(vertical) * cos(horizontal);
-
-    glm::vec3 direction(dx, dy, dz), right(sin(horizontal - τ/4), 0.0, cos(horizontal - τ/4));
-    auto up = -glm::cross(right, direction);
-
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    auto direction = player.camera().direction(), right = player.camera().right(), up = glm::cross(direction, right);
 
     view = glm::lookAt(glm::vec3(0.0f), direction, up);
     view = glm::scale(view, glm::vec3(1.0f, Fundamentals::meter, 1.0f));
-    view = glm::translate(view, glm::vec3(0.0f, -normalLevel - playerHeight, 0.0f));
+    view = glm::translate(view, glm::vec3(0.0f, -player.camera().climb - player.height, 0.0f));
 
-    shader->uniform("view",       view);
+    shader->uniform("view", view);
     shader->uniform("projection", projection);
 
     shader->uniform("origin.a", origin.a);
@@ -254,7 +258,10 @@ void display(GLFWwindow * window) {
     shader->uniform("origin.c", origin.c);
     shader->uniform("origin.d", origin.d);
 
-    for (auto & chunk : localAtlas.get())
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    for (auto & chunk : game.atlas.get())
         chunk->render(shader);
 }
 
@@ -305,6 +312,34 @@ void windowFocusCallback(GLFWwindow * window, int focused) {
     if (!Window::focused) freeMouse(window);
 }
 
+void jump() { if (!player.camera().flying) player.push(player.jumpSpeed); }
+
+void setBlock(Rank i, Real L, Rank k, NodeId id) {
+    if (!player.chunk()) return;
+
+    if (Chunk::outside(player.camera().climb)) return;
+
+    if (i >= Fundamentals::chunkSize
+     || k >= Fundamentals::chunkSize)
+        return;
+
+    auto j = Level(std::floor(player.camera().climb));
+
+    player.chunk()->set(i, j, k, {id});
+    player.chunk()->refresh(game.nodeRegistry, player.camera().position.action());
+}
+
+void placeBlockNextToPlayer()
+{ setBlock(player.i() + 1, player.camera().climb, player.j(), 1); }
+
+void deleteBlockNextToPlayer()
+{ setBlock(player.i() + 1, player.camera().climb, player.j(), 0); }
+
+void returnToSpawn() {
+    player.teleport(Position(), 5); player.roc(0);
+    game.atlas.updateMatrix(player.camera().position.action());
+}
+
 void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
         switch (key) {
@@ -313,10 +348,10 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
             case GLFW_KEY_S:          Keyboard::backward = true; break;
             case GLFW_KEY_A:          Keyboard::left     = true; break;
             case GLFW_KEY_D:          Keyboard::right    = true; break;
-            case GLFW_KEY_Z:          placeBlockNextToPlayer(); break;
+            case GLFW_KEY_Z:          placeBlockNextToPlayer();  break;
             case GLFW_KEY_X:          deleteBlockNextToPlayer(); break;
-            case GLFW_KEY_O:          returnToSpawn(); break;
-            case GLFW_KEY_SPACE:      jump(); break;
+            case GLFW_KEY_O:          returnToSpawn();           break;
+            case GLFW_KEY_SPACE:      jump();                    break;
         }
     }
 
@@ -335,10 +370,10 @@ void setupWindowSize(GLFWwindow * window, int width, int height) {
     projection = glm::perspective(Real(fov), Real(width) / Real(height), near, far);
 }
 
-int main() {
+constexpr auto title = "Hypertest";
+GLFWwindow * setupWindow() {
     glfwSetErrorCallback(errorCallback);
-
-    if (!glfwInit()) return -1;
+    if (!glfwInit()) throw std::runtime_error("glfwInit failure");
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -348,8 +383,8 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    auto window = glfwCreateWindow(Window::width, Window::height, "Hypertest", nullptr, nullptr);
-    if (!window) return -1;
+    auto window = glfwCreateWindow(Window::width, Window::height, title, nullptr, nullptr);
+    if (!window) throw std::runtime_error("glfwCreateWindow failure");
 
     grabMouse(window);
 
@@ -359,36 +394,108 @@ int main() {
     glfwSetCursorEnterCallback(window, cursorEnterCallback);
     glfwSetWindowSizeCallback(window, setupWindowSize);
 
+    return window;
+}
+
+void setupGL(GLFWwindow * window) {
     glfwMakeContextCurrent(window);
 
     glewExperimental = GL_TRUE;
     glewInit();
 
-    glEnable(GL_DEPTH_TEST); setupTexture();
+    glEnable(GL_DEPTH_TEST);
 
     shader = new Shader("Common.glsl", "Hyper.vs", "Hyper.fs");
     shader->activate();
 
+    setupTexture();
     shader->uniform("textureSheet", 0);
 
     shader->uniform("fog.enabled", false);
     shader->uniform("fog.min",     1.0f);
-    shader->uniform("fog.max",     5.0f);
+    shader->uniform("fog.max",     10.0f);
     shader->uniform("fog.color",   glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
     setupWindowSize(window, Window::width, Window::height);
+}
 
-    nodeRegistry.attach(1UL, NodeDef("Stuff", texture1));
-    nodeRegistry.attach(2UL, NodeDef("Weird Stuff", texture2));
+Chunk * buildFloor(Chunk * chunk) {
+    using namespace Fundamentals;
 
+    for (size_t i = 0; i < chunkSize; i++)
+        for (size_t j = 0; j < chunkSize; j++)
+            chunk->set(i, 0, j, {1});
+
+    chunk->set(0, 1, 0, {2});
+
+    chunk->refresh(game.nodeRegistry, player.camera().position.action());
+    return chunk;
+}
+
+Chunk * buildTestStructure(Chunk * chunk) {
+    using namespace Fundamentals;
+
+    for (size_t i = 0; i < chunkSize; i++) {
+        for (size_t j = 0; j < chunkSize; j++) {
+            NodeId id = (i + j) % 2 == 0 ? 1 : 2;
+
+            chunk->set(i, 0, j, {id});
+            chunk->set(i, 16, j, {3 - id});
+        }
+    }
+
+    for (size_t i = 0; i < chunkSize; i += chunkSize - 1)
+        for (size_t k = 0; k < chunkSize; k += chunkSize - 1)
+            for (size_t j = 1; j < 16; j++)
+                chunk->set(i, j, k, {2});
+
+    chunk->refresh(game.nodeRegistry, player.camera().position.action());
+    return chunk;
+}
+
+Chunk * markChunk(Chunk * chunk) {
+    for (size_t i = 1; i <= 15; i++)
+        for (size_t j = 1; j <= i; j++)
+            chunk->set(i, j, 9, {2});
+
+    chunk->set(13, 16, 9, {0});
+    chunk->set(14, 16, 9, {0});
+    chunk->set(15, 16, 9, {0});
+
+    chunk->refresh(game.nodeRegistry, player.camera().position.action());
+    return chunk;
+}
+
+void setupGame() {
     using namespace Tesselation;
 
-    currentChunk = buildTestStructure(localAtlas.poll(localIsometry, I));
+    game.nodeRegistry.attach(1UL, NodeDef("Stuff", texture1));
+    game.nodeRegistry.attach(2UL, NodeDef("Weird Stuff", texture2));
+
+    buildTestStructure(game.atlas.poll(player.camera().position.action(), I));
 
     for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++) {
-        auto C = buildTestStructure(localAtlas.poll(localIsometry, Tesselation::neighbours[k]));
+        auto C = buildTestStructure(game.atlas.poll(player.camera().position.action(), Tesselation::neighbours[k]));
         if (k == 0) markChunk(C);
     }
+
+    game.atlas.onLoad = &buildFloor;
+
+    player.jumpHeight(1.25);
+    player.teleport(Position(), 10);
+}
+
+void cleanUp(GLFWwindow * window) {
+    delete shader;
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
+}
+
+int main() {
+    auto window = setupWindow();
+    setupGL(window);
+    setupGame();
 
     while (!glfwWindowShouldClose(window)) {
         display(window);
@@ -396,10 +503,6 @@ int main() {
         glfwPollEvents();
     }
 
-    delete shader;
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
-
+    cleanUp(window);
     return 0;
 }

@@ -31,7 +31,11 @@ struct Gyrovector {
 
     constexpr T operator,(const Gyrovector<T> & N) const { return val.real() * N.val.real() + val.imag() * N.val.imag(); }
 
+    constexpr inline T cross(const Gyrovector<T> & N) const { return x() * N.y() - y() * N.x(); }
+
     constexpr inline auto add(const Gyrovector<T> & N) const { return Gyrovector<T>(val + N.val); }
+    constexpr inline auto sub(const Gyrovector<T> & N) const { return Gyrovector<T>(val - N.val); }
+
     constexpr inline auto conj() const { return Gyrovector<T>(std::conj(val)); }
     constexpr inline auto scale(const T k) const { return Gyrovector<T>(k * val); }
     constexpr inline auto mult(const Gyrovector<T> & N) const { return Gyrovector<T>(val * N.val); }

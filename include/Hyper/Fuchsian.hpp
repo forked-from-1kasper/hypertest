@@ -140,7 +140,7 @@ struct Fuchsian {
 
     constexpr Gaussian<T> det() const { return a * d - b * c; }
 
-    void simpl() {
+    constexpr void simpl() {
         auto σ(a);
 
         σ = Gaussian<T>::hcf(b, σ);
