@@ -25,7 +25,7 @@ else
 endif
 
 DEPS     = PicoPNG
-MODULES  = Hyper Shader Geometry Sheet
+MODULES  = Hyper Shader Geometry Sheet Physics
 HEADERS  = Hyper/Fuchsian Hyper/Fundamentals
 HEADERS += Hyper/Grid Hyper/Gyrovector
 HEADERS += Hyper/Moebius Hyper/Tesselation
