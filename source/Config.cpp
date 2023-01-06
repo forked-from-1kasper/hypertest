@@ -4,6 +4,9 @@ Config::Config(Lua::VM * vm, const char * filename) {
     vm->loadfile(filename, 1);
 
     vm->withfield("window", [&]() {
+        if (!vm->instanceof<Lua::Type::Table>())
+            throw std::runtime_error("`window` expected to be a table");
+
         window.width = vm->withfield("width", [&]() {
             return vm->get<std::optional<lua_Integer>>();
         }).value_or(900);
@@ -14,6 +17,9 @@ Config::Config(Lua::VM * vm, const char * filename) {
     });
 
     vm->withfield("camera", [&]() {
+        if (!vm->instanceof<Lua::Type::Table>())
+            throw std::runtime_error("`camera` expected to be a table");
+
         camera.fov = vm->withfield("fov", [&]() {
             return vm->get<std::optional<lua_Number>>();
         }).value_or(80.0);
