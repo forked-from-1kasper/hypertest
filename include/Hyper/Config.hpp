@@ -12,7 +12,13 @@ struct Config {
         glm::vec4 color;
     } fog;
 
-    Real fov, near, far;
+    struct {
+        int width, height;
+    } window;
+
+    struct {
+        Real fov, near, far;
+    } camera;
 
     Config(Lua::VM *, const char *);
 };

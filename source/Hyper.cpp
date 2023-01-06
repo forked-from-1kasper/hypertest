@@ -225,7 +225,7 @@ void setupWindowSize(GLFWwindow * window, int width, int height) {
 }
 
 constexpr auto title = "Hypertest";
-GLFWwindow * setupWindow() {
+GLFWwindow * setupWindow(Config & config) {
     glfwSetErrorCallback(errorCallback);
     if (!glfwInit()) throw std::runtime_error("glfwInit failure");
 
@@ -236,6 +236,9 @@ GLFWwindow * setupWindow() {
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
+
+    Window::width  = config.window.width;
+    Window::height = config.window.height;
 
     auto window = glfwCreateWindow(Window::width, Window::height, title, nullptr, nullptr);
     if (!window) throw std::runtime_error("glfwCreateWindow failure");
@@ -251,7 +254,7 @@ GLFWwindow * setupWindow() {
     return window;
 }
 
-void setupGL(GLFWwindow * window) {
+void setupGL(GLFWwindow * window, Config & config) {
     glfwMakeContextCurrent(window);
 
     glewExperimental = GL_TRUE;
@@ -262,10 +265,17 @@ void setupGL(GLFWwindow * window) {
     shader = new Shader("Common.glsl", "Hyper.vs", "Hyper.fs");
     shader->activate();
 
-    setupTexture();
-    shader->uniform("textureSheet", 0);
+    shader->uniform("fog.enabled", config.fog.enabled);
+    shader->uniform("fog.min",     config.fog.min);
+    shader->uniform("fog.max",     config.fog.max);
+    shader->uniform("fog.color",   config.fog.color);
+
+    fov  = config.camera.fov;
+    near = config.camera.near;
+    far  = config.camera.far;
 
     setupWindowSize(window, Window::width, Window::height);
+    setupTexture(); shader->uniform("textureSheet", 0);
 }
 
 Chunk * buildFloor(Chunk * chunk) {
@@ -319,7 +329,7 @@ Chunk * markChunk(Chunk * chunk) {
     return chunk;
 }
 
-void setupGame() {
+void setupGame(Config & config) {
     using namespace Tesselation;
 
     game.nodeRegistry.attach(1UL, NodeDef("Stuff", texture1));
@@ -338,17 +348,6 @@ void setupGame() {
     player.teleport(Position(), 10);
 }
 
-void applyConfig(Config & config) {
-    fov  = config.fov;
-    near = config.near;
-    far  = config.far;
-
-    shader->uniform("fog.enabled", config.fog.enabled);
-    shader->uniform("fog.min",     config.fog.min);
-    shader->uniform("fog.max",     config.fog.max);
-    shader->uniform("fog.color",   config.fog.color);
-}
-
 void cleanUp(GLFWwindow * window) {
     delete shader;
 
@@ -361,9 +360,9 @@ int main() {
 
     Config config(&vm, "config.lua");
 
-    auto window = setupWindow();
-    setupGL(window); setupGame();
-    applyConfig(config);
+    auto window = setupWindow(config);
+    setupGL(window, config);
+    setupGame(config);
 
     while (!glfwWindowShouldClose(window)) {
         display(window);

@@ -3,17 +3,29 @@
 Config::Config(Lua::VM * vm, const char * filename) {
     vm->loadfile(filename, 1);
 
-    fov = vm->withfield("fov", [&]() {
-        return vm->get<std::optional<lua_Number>>();
-    }).value_or(80.0);
+    vm->withfield("window", [&]() {
+        window.width = vm->withfield("width", [&]() {
+            return vm->get<std::optional<lua_Integer>>();
+        }).value_or(900);
 
-    near = vm->withfield("near", [&]() {
-        return vm->get<std::optional<lua_Number>>();
-    }).value_or(1e-3);
+        window.height = vm->withfield("height", [&]() {
+            return vm->get<std::optional<lua_Integer>>();
+        }).value_or(900);
+    });
 
-    far = vm->withfield("far", [&]() {
-        return vm->get<std::optional<lua_Number>>();
-    }).value_or(150.0);
+    vm->withfield("camera", [&]() {
+        camera.fov = vm->withfield("fov", [&]() {
+            return vm->get<std::optional<lua_Number>>();
+        }).value_or(80.0);
+
+        camera.near = vm->withfield("near", [&]() {
+            return vm->get<std::optional<lua_Number>>();
+        }).value_or(1e-3);
+
+        camera.far = vm->withfield("far", [&]() {
+            return vm->get<std::optional<lua_Number>>();
+        }).value_or(150.0);
+    });
 
     vm->withfield("fog", [&]() {
         if (!vm->instanceof<Lua::Type::Table>())
