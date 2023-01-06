@@ -56,7 +56,7 @@ Shader::Shader(const char * comfile, const char * vsfile, const char * fsfile) {
     _index = glCreateProgram();
     glAttachShader(_index, vertex);
     glAttachShader(_index, fragment);
-    GVA<shaderStride, ShaderParams>::bind(_index);
+    GVA::bind<shaderStride, ShaderParams>(_index);
     glLinkProgram(_index);
 
     glGetProgramiv(_index, GL_LINK_STATUS, &success);

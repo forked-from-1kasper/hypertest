@@ -8,42 +8,39 @@
 #include <Tuple.hpp>
 #include <List.hpp>
 
-template<Literal, typename, GLenum, GLint> struct Field {};
-
-template<typename> struct FieldTypeM;
-template<typename T> using FieldType = FieldTypeM<T>::val;
-
-template<Literal param, typename T, GLenum type, GLint dim>
-struct FieldTypeM<Field<param, T, type, dim>> { using val = T; };
-
-template<size_t, typename> struct GVA;
-
-template<size_t stride> struct GVA<stride, List<>> {
-    inline static void attrib() {}
-    inline static void attrib(size_t, size_t) {}
-
-    inline static void bind(GLuint) {}
-    inline static void bind(GLuint, size_t) {}
+template<Literal lit, typename T, GLenum t, GLint n>
+struct Field {
+    constexpr static auto param = lit.unquote;
+    constexpr static auto type  = t;
+    constexpr static auto dim   = n;
+    using value = T;
 };
 
-template<size_t stride, Literal param, typename T, GLenum type, GLint dim, typename... Ts>
-struct GVA<stride, List<Field<param, T, type, dim>, Ts...>> {
-    inline static void attrib(size_t index, size_t pointer) {
-        glVertexAttribPointer(index, dim, type, GL_FALSE, stride, (void *) pointer);
+template<typename T> using Value = T::value;
+
+namespace GVA {
+    template<size_t stride, Empty U> inline void attrib(size_t, size_t) {}
+
+    template<size_t stride, Inhabited U> inline void attrib(size_t index, size_t pointer) {
+        glVertexAttribPointer(index, Head<U>::dim, Head<U>::type, GL_FALSE, stride, (void *) pointer);
         glEnableVertexAttribArray(index);
 
-        GVA<stride, List<Ts...>>::attrib(index + 1, pointer + sizeof(T));
+        attrib<stride, Tail<U>>(index + 1, pointer + sizeof(Value<Head<U>>));
     }
 
-    inline static void bind(GLuint program, size_t index) {
-        glBindAttribLocation(program, index, param.unquote);
+    template<size_t stride, typename U> inline void attrib()
+    { attrib<stride, U>(0, 0); }
 
-        GVA<stride, List<Ts...>>::bind(program, index + 1);
-    }
+    template<size_t stride, Empty U> inline void bind(GLuint, size_t) {}
 
-    inline static void attrib() { attrib(0, 0); }
-    inline static void bind(GLuint program) { bind(program, 0); }
-};
+    template<size_t stride, Inhabited U> inline void bind(GLuint program, size_t index) {
+        glBindAttribLocation(program, index, Head<U>::param);
+        bind<stride, Tail<U>>(program, index + 1);
+    };
+
+    template<size_t stride, typename U> inline void bind(GLuint program)
+    { bind<stride, U>(program, 0); }
+}
 
 class Shader {
 private:
@@ -67,7 +64,7 @@ List<Field<"_texCoord",   Tuple<GLfloat, GLfloat>, GL_FLOAT, 2>,
      Field<"_gyrovector", Gyrovector<GLfloat>,     GL_FLOAT, 2>,
      Field<"_height",     GLfloat,                 GL_FLOAT, 1>>;
 
-using ShaderData = Apply<Tuple, Map<FieldType, ShaderParams>>;
+using ShaderData = Apply<Tuple, Map<Value, ShaderParams>>;
 constexpr size_t shaderStride = sizeof(ShaderData);
 
 using VBO = std::vector<ShaderData>;

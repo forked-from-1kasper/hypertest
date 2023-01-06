@@ -24,7 +24,7 @@ Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometr
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    GVA<shaderStride, ShaderParams>::attrib();
+    GVA::attrib<shaderStride, ShaderParams>();
 }
 
 Chunk::~Chunk() {
