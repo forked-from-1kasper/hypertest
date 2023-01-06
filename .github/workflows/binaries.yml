@@ -20,6 +20,7 @@ jobs:
             base-devel
             tree
             mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-luajit
             mingw-w64-x86_64-glew
             mingw-w64-x86_64-glfw
             mingw-w64-x86_64-glm
@@ -39,3 +40,4 @@ jobs:
             Hyper.fs
             Hyper.vs
             Hyper.exe
+            config.lua

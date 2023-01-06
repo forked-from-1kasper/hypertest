@@ -10,6 +10,7 @@
 #include <GLFW/glfw3.h>
 
 #include <PicoPNG.hpp>
+#include <Lua.hpp>
 
 #include <Hyper/Fundamentals.hpp>
 #include <Hyper/Tesselation.hpp>
@@ -17,6 +18,7 @@
 #include <Hyper/Fuchsian.hpp>
 #include <Hyper/Geometry.hpp>
 #include <Hyper/Physics.hpp>
+#include <Hyper/Config.hpp>
 #include <Hyper/Shader.hpp>
 #include <Hyper/Sheet.hpp>
 
@@ -51,7 +53,7 @@ namespace Mouse {
     Real xpos, ypos, speed = 0.7;
 }
 
-Real fov = 80, near = 1e-3, far = 150.0;
+Real fov, near, far;
 Real speed = 2 * Fundamentals::meter;
 
 Game game; Entity player(&game.atlas);
@@ -96,7 +98,7 @@ void display(GLFWwindow * window) {
         );
     }
 
-    auto direction = player.camera().direction(), right = player.camera().right(), up = glm::cross(direction, right);
+    auto direction = player.camera().direction(), right = player.camera().right(), up = glm::cross(right, direction);
 
     view = glm::lookAt(glm::vec3(0.0f), direction, up);
     view = glm::scale(view, glm::vec3(1.0f, Fundamentals::meter, 1.0f));
@@ -219,7 +221,7 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
 
 void setupWindowSize(GLFWwindow * window, int width, int height) {
     Window::width = width; Window::height = height; glViewport(0, 0, width, height);
-    projection = glm::perspective(Real(fov), Real(width) / Real(height), near, far);
+    projection = glm::perspective(glm::radians(fov), Real(width) / Real(height), near, far);
 }
 
 constexpr auto title = "Hypertest";
@@ -262,11 +264,6 @@ void setupGL(GLFWwindow * window) {
 
     setupTexture();
     shader->uniform("textureSheet", 0);
-
-    shader->uniform("fog.enabled", false);
-    shader->uniform("fog.min",     1.0f);
-    shader->uniform("fog.max",     10.0f);
-    shader->uniform("fog.color",   glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
     setupWindowSize(window, Window::width, Window::height);
 }
@@ -314,6 +311,10 @@ Chunk * markChunk(Chunk * chunk) {
     chunk->set(14, 16, 9, {0});
     chunk->set(15, 16, 9, {0});
 
+    chunk->set(3, 1, 5, {2});
+    chunk->set(4, 2, 5, {2});
+    chunk->set(5, 1, 5, {2});
+
     chunk->refresh(game.nodeRegistry, player.camera().position.action());
     return chunk;
 }
@@ -337,6 +338,17 @@ void setupGame() {
     player.teleport(Position(), 10);
 }
 
+void applyConfig(Config & config) {
+    fov  = config.fov;
+    near = config.near;
+    far  = config.far;
+
+    shader->uniform("fog.enabled", config.fog.enabled);
+    shader->uniform("fog.min",     config.fog.min);
+    shader->uniform("fog.max",     config.fog.max);
+    shader->uniform("fog.color",   config.fog.color);
+}
+
 void cleanUp(GLFWwindow * window) {
     delete shader;
 
@@ -345,9 +357,13 @@ void cleanUp(GLFWwindow * window) {
 }
 
 int main() {
+    Lua::VM vm;
+
+    Config config(&vm, "config.lua");
+
     auto window = setupWindow();
-    setupGL(window);
-    setupGame();
+    setupGL(window); setupGame();
+    applyConfig(config);
 
     while (!glfwWindowShouldClose(window)) {
         display(window);
@@ -356,5 +372,6 @@ int main() {
     }
 
     cleanUp(window);
+
     return 0;
 }

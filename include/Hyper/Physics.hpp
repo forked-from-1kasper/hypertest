@@ -26,7 +26,7 @@ public:
     inline constexpr void action(const Fuchsian<Integer> & G)
     { _action = G; _action.simpl(); _center = G.origin(); }
 
-    // If speed is too high to jump over ≥2 chunks, does nothing.
+    // It doesn’t do anything if the speed is fast enough to jump over ≥2 chunks.
     // (Of course, this can be easily fixed by iterating
     //  not only over neighbours, but it seems useless.)
     std::pair<Position, bool> move(const Gyrovector<Real> &, const Real dt) const;
