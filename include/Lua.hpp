@@ -10,7 +10,7 @@
 #include <iostream>
 
 template<typename T> concept Optional = requires(T t)
-{ typename T::value_type; std::same_as<T, std::optional<typename T::value_type>>; };
+{ typename T::value_type; requires std::same_as<T, std::optional<typename T::value_type>>; };
 
 template<typename F> using Retval = decltype((std::declval<F>())());
 
