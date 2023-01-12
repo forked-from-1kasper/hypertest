@@ -17,16 +17,22 @@ public:
     Position() : _domain(Möbius<Real>::identity()), _action(Tesselation::I) { _center = _action.origin(); }
 
     Position(const auto & P, const auto & G, const auto & g) : _domain(P), _action(G), _center(g) {}
-    Position(const auto & P, const auto & G) : _domain(P) { action(G); }
+    Position(const auto & P, const auto & G) : _domain(P) { set(G); }
 
-    inline constexpr auto domain() const { return _domain; }
-    inline constexpr auto action() const { return _action; }
-    inline constexpr auto center() const { return _center; }
+    inline constexpr const auto & domain() const { return _domain; }
+    inline constexpr const auto & action() const { return _action; }
+    inline constexpr const auto & center() const { return _center; }
 
-    inline constexpr void action(const Fuchsian<Integer> & G)
+    inline constexpr void set(const Position & P)
+    { _domain = P.domain(); _action = P.action(); _center = P.center(); }
+
+    inline constexpr void set(const Möbius<Real> & M, const Fuchsian<Integer> & G)
+    { _domain = M; _action = G; _center = G.origin(); }
+
+    inline constexpr void set(const Fuchsian<Integer> & G)
     { _action = G; _action.simpl(); _center = G.origin(); }
 
-    // It doesn’t do anything if the speed is fast enough to jump over ≥2 chunks.
+    // It doesn’t do anything if the speed is big enough to jump over ≥2 chunks.
     // (Of course, this can be easily fixed by iterating
     //  not only over neighbours, but it seems useless.)
     std::pair<Position, bool> move(const Gyrovector<Real> &, const Real dt) const;
@@ -50,16 +56,17 @@ class Entity {
 private:
     Rank _i, _j; Object _camera; Atlas * _atlas; Chunk * _chunk;
 
-    // Needs to be replaced by more general bounding box
-    bool isFree(Chunk * C, Rank x, Real L, Rank z);
+    bool jumped = false;
+
+    bool stuck(Chunk *, Rank, Real, Rank);
 
     bool moveHorizontally(const Gyrovector<Real> & v, const Real dt);
-    void moveVertically(const Real dt);
+    bool moveVertically(const Real dt);
 
 public:
-    Real jumpSpeed = 0;
-    Real height    = 1.8;
-    Real gravity   = 9.8;
+    Real eye, height, jumpSpeed;
+
+    Real gravity = 9.8;
 
     Entity(Atlas * atlas) : _i(0), _j(0), _atlas(atlas), _chunk(nullptr) {}
 
@@ -67,15 +74,15 @@ public:
     bool move(const Gyrovector<Real> & v, Real dt);
     void teleport(const Position &, const Real);
 
-    const inline auto camera() const { return _camera; }
     constexpr void roc(const Real roc) { _camera.roc = roc; }
-    constexpr void push(const Real speed) { _camera.roc += speed; }
+    constexpr void jump() { jumped = true; }
 
-    constexpr inline auto atlas() const { return _atlas; }
-    constexpr inline auto chunk() const { return _chunk; }
+    inline constexpr const auto & camera() const { return _camera; }
+    inline constexpr const auto & atlas()  const { return _atlas;  }
+    inline constexpr const auto & chunk()  const { return _chunk;  }
 
-    constexpr inline auto i() const { return _i; }
-    constexpr inline auto j() const { return _j; }
+    inline constexpr const auto & i() const { return _i; }
+    inline constexpr const auto & j() const { return _j; }
 
     constexpr inline void jumpHeight(Real height)
     { jumpSpeed = sqrt(2 * gravity * height); }

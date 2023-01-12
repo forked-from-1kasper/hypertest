@@ -92,3 +92,6 @@ template<typename T> inline T gyrocos(const Gyrovector<T> & P₁, const Gyrovect
 
 template<typename T> inline T gyroangle(const Gyrovector<T> & P₁, const Gyrovector<T> & P₂)
 { return acos(gyrocos(P₁, P₂)); }
+
+template<typename T> constexpr T det(const Gyrovector<T> & A, const Gyrovector<T> & B)
+{ return A.x() * B.y() - B.x() * A.y(); }

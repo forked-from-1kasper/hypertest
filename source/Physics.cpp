@@ -7,9 +7,9 @@ std::pair<Position, bool> Position::move(const Gyrovector<Real> & v, const Real 
         return std::pair(Position(P, _action, _center), false);
 
     for (size_t k = 0; k < Tesselation::neighbours.size(); k++) {
-        const auto Δ   = Tesselation::neighbours[k];
-        const auto Δ⁻¹ = Tesselation::neighbours⁻¹[k];
-        const auto Q   = (Δ⁻¹ * P).normalize();
+        const auto & Δ   = Tesselation::neighbours[k];
+        const auto & Δ⁻¹ = Tesselation::neighbours⁻¹[k];
+        const auto   Q   = (Δ⁻¹ * P).normalize();
 
         if (Chunk::isInsideOfDomain(Q.origin()))
             return std::pair(Position(Q, _action * Δ), true);
@@ -37,37 +37,49 @@ glm::vec3 Object::direction() const {
 glm::vec3 Object::right() const
 { return glm::vec3(sin(yaw - τ/4), 0.0, cos(yaw - τ/4)); }
 
-bool Entity::isFree(Chunk * C, Rank x, Real L, Rank z)
-{ return !C || (C->walkable(x, std::floor(L), z) && C->walkable(x, std::floor(L + height), z)); }
+bool Entity::stuck(Chunk * C, Rank x, Real y, Rank z) {
+    if (C == nullptr) return false;
 
-bool Entity::moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
-    Chunk * C; auto [P, chunkChanged] = camera().position.move(v, dt);
-    C = chunkChanged ? atlas()->poll(camera().position.action(), P.action()) : chunk();
+    for (Level L = std::floor(y); L <= std::floor(y + height); L++)
+        if (!Chunk::outside(L) && !C->walkable(x, L, z))
+            return true;
 
-    auto Q = (C->isometry().inverse() * P.action()).field<Real>() * P.domain();
-    auto [i, j] = Chunk::cell(Q.origin());
-
-    if (!isFree(C, i, camera().climb, j)) return false;
-
-    _chunk = C; _camera.position = P; _i = i; _j = j;
-    return chunkChanged;
+    return false;
 }
 
-void Entity::moveVertically(const Real dt) {
-    _camera.roc -= dt * gravity;
+bool Entity::moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
+    auto [P, chunkChanged] = _camera.position.move(v, dt);
+    auto C = chunkChanged ? atlas()->poll(_camera.position.action(), P.action()) : chunk();
 
-    auto L = camera().climb + dt * camera().roc;
+    if (C != nullptr) {
+        auto Q = (C->isometry().inverse() * P.action()).field<Real>() * P.domain();
+        auto [i, j] = Chunk::round(Q.origin());
 
-    if (isFree(_chunk, _i, L, _j)) { _camera.climb = L; _camera.flying = true; }
-    else _camera.roc = 0;
+        if (stuck(C, i, _camera.climb, j)) return false;
 
-    if (!chunk()->walkable(_i, std::floor(L), _j)) _camera.flying = false;
+        _i = i; _j = j;
+    }
+
+    _chunk = C; _camera.position.set(P); return chunkChanged;
+}
+
+bool Entity::moveVertically(const Real dt) {
+    auto roc = _camera.roc - dt * gravity;
+    if (jumped) { roc += jumpSpeed; jumped = false; }
+
+    auto L = _camera.climb + dt * roc;
+
+    if (stuck(_chunk, _i, L, _j)) { _camera.roc = 0; _camera.flying = false; }
+    else { _camera.climb = L; _camera.roc = roc; _camera.flying = true; }
+
+    return false;
 }
 
 bool Entity::move(const Gyrovector<Real> & v, Real dt)
-{ bool chunkChanged = moveHorizontally(v, dt); moveVertically(dt); return chunkChanged; }
+{ return moveHorizontally(v, dt) | moveVertically(dt); }
 
 void Entity::teleport(const Position & P, const Real climb) {
-    _camera.position = P; _camera.climb = climb;
-    _chunk = atlas()->lookup(P.center());
+    _camera.climb = climb;
+    _camera.position.set(P);
+    _chunk = _atlas->lookup(P.center());
 }

@@ -102,7 +102,7 @@ void display(GLFWwindow * window) {
 
     view = glm::lookAt(glm::vec3(0.0f), direction, up);
     view = glm::scale(view, glm::vec3(1.0f, Fundamentals::meter, 1.0f));
-    view = glm::translate(view, glm::vec3(0.0f, -player.camera().climb - player.height, 0.0f));
+    view = glm::translate(view, glm::vec3(0.0f, -player.camera().climb - player.eye, 0.0f));
 
     shader->uniform("view", view);
     shader->uniform("projection", projection);
@@ -115,8 +115,12 @@ void display(GLFWwindow * window) {
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    for (auto & chunk : game.atlas.get())
+    for (auto chunk : game.atlas.get()) {
+        if (chunk->needRefresh())
+            chunk->refresh(game.nodeRegistry, player.camera().position.action());
+
         chunk->render(shader);
+    }
 }
 
 Texture texture1, texture2;
@@ -152,9 +156,7 @@ void freeMouse(GLFWwindow * window) {
 }
 
 void mouseButtonCallback(GLFWwindow * window, int button, int action, int mods)
-{
-    if (Window::hovered && Window::focused && !Mouse::grabbed) grabMouse(window);
-}
+{ if (Window::hovered && Window::focused && !Mouse::grabbed) grabMouse(window); }
 
 void cursorEnterCallback(GLFWwindow * window, int entered) {
     Window::hovered = entered;
@@ -166,10 +168,10 @@ void windowFocusCallback(GLFWwindow * window, int focused) {
     if (!Window::focused) freeMouse(window);
 }
 
-void jump() { if (!player.camera().flying) player.push(player.jumpSpeed); }
+void jump() { if (!player.camera().flying) player.jump(); }
 
 void setBlock(Rank i, Real L, Rank k, NodeId id) {
-    if (!player.chunk()) return;
+    if (player.chunk() == nullptr) return;
 
     if (Chunk::outside(player.camera().climb)) return;
 
@@ -180,7 +182,7 @@ void setBlock(Rank i, Real L, Rank k, NodeId id) {
     auto j = Level(std::floor(player.camera().climb));
 
     player.chunk()->set(i, j, k, {id});
-    player.chunk()->refresh(game.nodeRegistry, player.camera().position.action());
+    player.chunk()->requestRefresh();
 }
 
 void placeBlockNextToPlayer()
@@ -287,7 +289,7 @@ Chunk * buildFloor(Chunk * chunk) {
 
     chunk->set(0, 1, 0, {2});
 
-    chunk->refresh(game.nodeRegistry, player.camera().position.action());
+    chunk->requestRefresh();
     return chunk;
 }
 
@@ -308,7 +310,7 @@ Chunk * buildTestStructure(Chunk * chunk) {
             for (size_t j = 1; j < 16; j++)
                 chunk->set(i, j, k, {2});
 
-    chunk->refresh(game.nodeRegistry, player.camera().position.action());
+    chunk->requestRefresh();
     return chunk;
 }
 
@@ -317,6 +319,7 @@ Chunk * markChunk(Chunk * chunk) {
         for (size_t j = 1; j <= i; j++)
             chunk->set(i, j, 9, {2});
 
+    chunk->set(12, 16, 9, {0});
     chunk->set(13, 16, 9, {0});
     chunk->set(14, 16, 9, {0});
     chunk->set(15, 16, 9, {0});
@@ -325,7 +328,7 @@ Chunk * markChunk(Chunk * chunk) {
     chunk->set(4, 2, 5, {2});
     chunk->set(5, 1, 5, {2});
 
-    chunk->refresh(game.nodeRegistry, player.camera().position.action());
+    chunk->requestRefresh();
     return chunk;
 }
 
@@ -344,6 +347,8 @@ void setupGame(Config & config) {
 
     game.atlas.onLoad = &buildFloor;
 
+    player.eye = 1.62;
+    player.height = 1.8;
     player.jumpHeight(1.25);
     player.teleport(Position(), 10);
 }

@@ -74,13 +74,19 @@ void drawRightParallelogrammicPrism(VBO & vbo, EBO & ebo, Texture & T, Mask m, R
     if (m.left)    drawSide(vbo, ebo, T, P.A, P.D, h₁, h₂);
 }
 
+template<typename T> Parallelogram<T> Chunk::parallelogram(Rank i, Rank j) {
+    return {
+        Grid::corners[i + 0][j + 0], Grid::corners[i + 1][j + 0],
+        Grid::corners[i + 1][j + 1], Grid::corners[i + 0][j + 1]
+    };
+}
+
+template Parallelogram<GLfloat> Chunk::parallelogram(Rank, Rank);
+template Parallelogram<Real>    Chunk::parallelogram(Rank, Rank);
+
 void drawNode(VBO & vbo, EBO & ebo, Texture & T, Mask m, Rank x, Level y, Rank z) {
-    drawRightParallelogrammicPrism(vbo, ebo, T, m, Real(y), 1,
-        { Grid::corners[x + 0][z + 0],
-          Grid::corners[x + 1][z + 0],
-          Grid::corners[x + 1][z + 1],
-          Grid::corners[x + 0][z + 1] }
-    );
+    auto P = Chunk::parallelogram<GLfloat>(x, z);
+    drawRightParallelogrammicPrism(vbo, ebo, T, m, Real(y), 1, P);
 }
 
 void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
@@ -120,6 +126,7 @@ void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(ShaderIndex), indices.data(), GL_DYNAMIC_DRAW);
 
     glBindVertexArray(0);
+    _needRefresh = false;
 }
 
 void Chunk::updateMatrix(const Fuchsian<Integer> & origin) {
@@ -153,7 +160,7 @@ bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {
     return (α < 0) == (β < 0) && (β < 0) == (γ < 0) && (γ < 0) == (δ < 0);
 }
 
-std::pair<Rank, Rank> Chunk::cell(const Gyrovector<Real> & w) {
+std::pair<Rank, Rank> Chunk::round(const Gyrovector<Real> & w) {
     using namespace Fundamentals;
 
     for (Rank i = 0; i < chunkSize; i++)

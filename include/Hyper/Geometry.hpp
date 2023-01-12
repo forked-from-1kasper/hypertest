@@ -40,7 +40,7 @@ private:
     Gaussian²<Integer> _pos; // used for indexing, should be equal to `isometry.origin()`
     Node data[Fundamentals::chunkSize][Fundamentals::worldHeight][Fundamentals::chunkSize];
 
-    GLuint vao, vbo, ebo; VBO vertices; EBO indices;
+    bool _needRefresh; GLuint vao, vbo, ebo; VBO vertices; EBO indices;
 
 public:
     Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry);
@@ -52,6 +52,9 @@ public:
 
     bool walkable(Rank, Real, Rank);
 
+    inline constexpr auto requestRefresh() { _needRefresh = true; }
+    inline constexpr auto needRefresh() { return _needRefresh; }
+
     inline constexpr auto get(Rank i, Level j, Rank k) const { return data[i][j][k]; }
 
     inline constexpr auto isometry() const { return _isometry; }
@@ -60,8 +63,10 @@ public:
     inline void set(size_t i, size_t j, size_t k, const Node & node)
     { data[i][j][k] = node; }
 
+    template<typename T> static Parallelogram<T> parallelogram(Rank, Rank);
+
     static bool touch(const Gyrovector<Real> &, Rank, Rank);
-    static std::pair<Rank, Rank> cell(const Gyrovector<Real> &);
+    static std::pair<Rank, Rank> round(const Gyrovector<Real> &);
 
     static bool isInsideOfDomain(const Gyrovector<Real> &);
 
