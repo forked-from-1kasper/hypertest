@@ -20,5 +20,9 @@ struct Config {
         Real fov, near, far;
     } camera;
 
+    struct {
+        GLfloat aimSize;
+    } gui;
+
     Config(Lua::VM *, const char *);
 };

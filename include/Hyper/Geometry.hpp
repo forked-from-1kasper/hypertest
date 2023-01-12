@@ -40,7 +40,7 @@ private:
     Gaussian²<Integer> _pos; // used for indexing, should be equal to `isometry.origin()`
     Node data[Fundamentals::chunkSize][Fundamentals::worldHeight][Fundamentals::chunkSize];
 
-    bool _needRefresh; GLuint vao, vbo, ebo; VBO vertices; EBO indices;
+    bool _needRefresh; Shader<VoxelShader>::VAO vao;
 
 public:
     Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry);
@@ -48,7 +48,7 @@ public:
 
     void refresh(NodeRegistry &, const Fuchsian<Integer> &);
     void updateMatrix(const Fuchsian<Integer> &);
-    void render(Shader *);
+    void render(Shader<VoxelShader> *);
 
     bool walkable(Rank, Real, Rank);
 
@@ -86,7 +86,7 @@ public:
     ~Atlas();
 
     Chunk * poll(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry);
-    Chunk * lookup(const Gaussian²<Integer> &);
+    Chunk * lookup(const Gaussian²<Integer> &) const;
 
     void updateMatrix(const Fuchsian<Integer> &);
     void unload(const Gaussian²<Integer> &);

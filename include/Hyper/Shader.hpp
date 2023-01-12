@@ -42,33 +42,140 @@ namespace GVA {
     { bind<stride, U>(program, 0); }
 }
 
-class Shader {
+template<typename> constexpr bool alwaysFalse = false;
+
+namespace GL {
+    template<typename T> constexpr GLenum GetType() {
+        if constexpr(std::same_as<T, GLbyte>)
+            return GL_BYTE;
+        else if constexpr(std::same_as<T, GLubyte>)
+            return GL_UNSIGNED_BYTE;
+        else if constexpr(std::same_as<T, GLshort>)
+            return GL_SHORT;
+        else if constexpr(std::same_as<T, GLushort>)
+            return GL_UNSIGNED_SHORT;
+        else if constexpr(std::same_as<T, GLint>)
+            return GL_INT;
+        else if constexpr(std::same_as<T, GLuint>)
+            return GL_UNSIGNED_INT;
+        else if constexpr(std::same_as<T, GLfixed>)
+            return GL_FIXED;
+        else if constexpr(std::same_as<T, GLhalf>)
+            return GL_HALF_FLOAT;
+        else if constexpr(std::same_as<T, GLfloat>)
+            return GL_FLOAT;
+        else if constexpr(std::same_as<T, GLdouble>)
+            return GL_DOUBLE;
+        else
+            static_assert(alwaysFalse<T>, "Unexpected OpenGL type");
+    }
+
+    template<typename T> constexpr GLenum type = GetType<T>();
+
+    template<typename T> void uniform(GLuint, const char *, const T &);
+}
+
+template<typename Spec> class Shader {
 private:
     GLuint _index;
 
 public:
+    using Index  = Spec::Index;
+    using Params = Spec::Params;
+
+    using Data = Apply<Tuple, Map<Value, Params>>;
+
+    constexpr static GLenum indexType = GL::type<Index>;
+    constexpr static size_t stride = sizeof(Data);
+
+    using VBO = std::vector<Data>;
+    using EBO = std::vector<Index>;
+
     Shader(const char *, const char * vertex, const char * fragment);
     ~Shader();
 
-    template<typename T> void uniform(const char *, const T &) const;
+    inline constexpr auto index() const { return _index; }
+
+    inline static void attrib() { GVA::attrib<stride, Params>(); }
+
+    template<typename T> void uniform(const char * loc, const T & value)
+    { GL::uniform<T>(_index, loc, value); };
+
     void activate();
 
-    inline constexpr auto index() const { return _index; }
+    struct VAO {
+        GLuint vao, vbo, ebo;
+        VBO vertices;
+        EBO indices;
+
+        void initialize() {
+            glGenVertexArrays(1, &vao);
+            glGenBuffers(1, &vbo);
+            glGenBuffers(1, &ebo);
+
+            glBindVertexArray(vao);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+            attrib();
+        }
+
+        void upload(const GLenum usage) {
+            glBindVertexArray(vao);
+
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBufferData(GL_ARRAY_BUFFER, vertices.size() * stride, vertices.data(), usage);
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(Index), indices.data(), usage);
+
+            glBindVertexArray(0);
+        }
+
+        void draw(const GLenum type) {
+            glBindVertexArray(vao);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+            glDrawElements(type, indices.size(), indexType, nullptr);
+        }
+
+        inline void push() { indices.push_back(vertices.size()); }
+
+        template<typename... Ts> inline void emit(const Ts&... ts)
+        { vertices.push_back(Tuple(ts...)); }
+
+        void clear() {
+            vertices.clear();
+            indices.clear();
+        }
+
+        void free() {
+            glDeleteBuffers(1, &vbo);
+            glDeleteBuffers(1, &ebo);
+            glDeleteVertexArrays(1, &vao);
+        }
+    };
 };
 
-using ShaderIndex = unsigned int;
-constexpr GLenum shaderIndexType = GL_UNSIGNED_INT;
+struct VoxelShader {
+    using Index = GLuint;
 
-using ShaderParams =
-List<Field<"_texCoord",   Tuple<GLfloat, GLfloat>, GL_FLOAT, 2>,
-     Field<"_gyrovector", Gyrovector<GLfloat>,     GL_FLOAT, 2>,
-     Field<"_height",     GLfloat,                 GL_FLOAT, 1>>;
+    using Params =
+    List<Field<"_texCoord",   Tuple<GLfloat, GLfloat>, GL_FLOAT, 2>,
+         Field<"_gyrovector", Gyrovector<GLfloat>,     GL_FLOAT, 2>,
+         Field<"_height",     GLfloat,                 GL_FLOAT, 1>>;
 
-using ShaderData = Apply<Tuple, Map<Value, ShaderParams>>;
-constexpr size_t shaderStride = sizeof(ShaderData);
+    constexpr static size_t infoBufferSize = 2048;
+};
 
-using VBO = std::vector<ShaderData>;
-using EBO = std::vector<ShaderIndex>;
+struct DummyShader {
+    using Index = GLuint;
 
-template<typename... Ts> inline void emit(VBO & vbo, const Ts&... ts)
+    using Params =
+    List<Field<"_vertex", glm::vec2, GL_FLOAT, 2>,
+         Field<"_color",  glm::vec4, GL_FLOAT, 4>>;
+
+    constexpr static size_t infoBufferSize = 2048;
+};
+
+template<typename T, typename... Ts> inline void emit(std::vector<T> & vbo, const Ts&... ts)
 { vbo.push_back(Tuple(ts...)); }

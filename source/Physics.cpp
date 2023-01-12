@@ -18,6 +18,11 @@ std::pair<Position, bool> Position::move(const Gyrovector<Real> & v, const Real 
     return std::pair(*this, false);
 }
 
+std::pair<Rank, Rank> Position::round(const Chunk * C) const {
+    auto Q = (C->isometry().inverse() * _action).field<Real>() * _domain;
+    return Chunk::round(Q.origin());
+}
+
 void Object::rotate(const Real Δyaw, const Real Δpitch) {
     constexpr auto ε = 1e-6;
     yaw += Δyaw; pitch += Δpitch;
@@ -52,11 +57,8 @@ bool Entity::moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
     auto C = chunkChanged ? atlas()->poll(_camera.position.action(), P.action()) : chunk();
 
     if (C != nullptr) {
-        auto Q = (C->isometry().inverse() * P.action()).field<Real>() * P.domain();
-        auto [i, j] = Chunk::round(Q.origin());
-
+        auto [i, j] = P.round(C);
         if (stuck(C, i, _camera.climb, j)) return false;
-
         _i = i; _j = j;
     }
 

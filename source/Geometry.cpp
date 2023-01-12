@@ -18,25 +18,18 @@ Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometr
     _pos = isometry.origin();
     updateMatrix(origin);
 
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo); glGenBuffers(1, &ebo);
-
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-    GVA::attrib<shaderStride, ShaderParams>();
+    vao.initialize();
 }
 
-Chunk::~Chunk() {
-    glDeleteBuffers(1, &vbo);
-    glDeleteBuffers(1, &ebo);
-    glDeleteVertexArrays(1, &vao);
-}
+Chunk::~Chunk() { vao.free(); }
 
 bool Chunk::walkable(Rank x, Real L, Rank z) {
     if (x >= Fundamentals::chunkSize || z >= Fundamentals::chunkSize) return true;
     return Chunk::outside(L) || (get(x, Level(L), z).id == 0);
 }
+
+using VBO = Shader<VoxelShader>::VBO;
+using EBO = Shader<VoxelShader>::EBO;
 
 void drawParallelogram(VBO & vbo, EBO & ebo, Texture & T, const Parallelogram<GLfloat> & P, GLfloat h) {
     auto index = vbo.size();
@@ -92,7 +85,7 @@ void drawNode(VBO & vbo, EBO & ebo, Texture & T, Mask m, Rank x, Level y, Rank z
 void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
     using namespace Fundamentals;
 
-    vertices.clear(); indices.clear();
+    vao.clear();
 
     NodeDef nodeDef; Mask m;
     for (Level j = 0; true; j++) {
@@ -110,22 +103,14 @@ void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
                 m.right   = (i == chunkSize - 1) || (get(i + 1, j + 0, k + 0).id == 0);
 
                 nodeDef = nodeRegistry.get(id);
-                drawNode(vertices, indices, nodeDef.texture, m, i, j, k);
+                drawNode(vao.vertices, vao.indices, nodeDef.texture, m, i, j, k);
             }
         }
 
         if (j == worldTop) break;
     }
 
-    glBindVertexArray(vao);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(ShaderData), vertices.data(), GL_DYNAMIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(ShaderIndex), indices.data(), GL_DYNAMIC_DRAW);
-
-    glBindVertexArray(0);
+    vao.upload(GL_DYNAMIC_DRAW);
     _needRefresh = false;
 }
 
@@ -134,16 +119,13 @@ void Chunk::updateMatrix(const Fuchsian<Integer> & origin) {
     relative = relative.normalize();
 }
 
-void Chunk::render(Shader * shader) {
+void Chunk::render(Shader<VoxelShader> * shader) {
     shader->uniform("relative.a", relative.a);
     shader->uniform("relative.b", relative.b);
     shader->uniform("relative.c", relative.c);
     shader->uniform("relative.d", relative.d);
 
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glDrawElements(GL_TRIANGLES, indices.size(), shaderIndexType, nullptr);
+    vao.draw(GL_TRIANGLES);
 }
 
 bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {
@@ -198,7 +180,7 @@ Atlas::~Atlas() {
         delete chunk;
 }
 
-Chunk * Atlas::lookup(const Gaussian²<Integer> & pos) {
+Chunk * Atlas::lookup(const Gaussian²<Integer> & pos) const {
     for (auto chunk : container)
         if (chunk->pos() == pos)
             return chunk;

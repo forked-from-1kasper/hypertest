@@ -36,8 +36,11 @@ jobs:
           path: |
             texture1.png
             texture2.png
-            Common.glsl
-            Hyper.fs
-            Hyper.vs
+            shaders/Voxel/Common.glsl
+            shaders/Voxel/Fragment.glsl
+            shaders/Voxel/Vertex.glsl
+            shaders/Dummy/Common.glsl
+            shaders/Dummy/Fragment.glsl
+            shaders/Dummy/Vertex.glsl
             Hyper.exe
             config.lua

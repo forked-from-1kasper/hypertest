@@ -46,6 +46,12 @@ namespace Window {
     bool focused = true;
 
     int width = 900, height = 900;
+
+    Real aspect = 1.0;
+}
+
+namespace GUI {
+    GLfloat aimSize = 0.015;
 }
 
 namespace Mouse {
@@ -59,13 +65,46 @@ Real speed = 2 * Fundamentals::meter;
 Game game; Entity player(&game.atlas);
 
 glm::mat4 view, projection;
-Shader * shader;
+
+Shader<DummyShader> * dummyShader;
+Shader<VoxelShader> * voxelShader;
+
+Shader<DummyShader>::VAO guiVao;
 
 bool move(Entity & E, const Gyrovector<Real> & v, Real Δt) {
     constexpr Real Δtₘₐₓ = 1.0/5.0; bool P = false;
 
     while (Δt >= Δtₘₐₓ) { auto Q = E.move(v, Δtₘₐₓ); P = P || Q; Δt -= Δtₘₐₓ; }
     auto R = E.move(v, Δt); return P || R;
+}
+
+std::tuple<bool, Chunk *, Rank, Level, Rank> raycast(bool volume, const Atlas * atlas, const Real maxlength, const glm::vec3 dir, const Real Δt, Chunk * C₀, Position P₀, Real H₀) {
+    Real traveled = 0.0;
+
+    Gyrovector<Real> vₕ(dir.x, dir.z);
+    auto vₛ = dir.y / Fundamentals::meter;
+
+    auto [i₀, k₀] = P₀.round(C₀); auto j₀ = std::floor(H₀);
+
+    while (traveled <= maxlength) {
+        auto [P, chunkChanged] = P₀.move(vₕ, Δt); auto H = H₀ + vₛ * Δt;
+        auto C = chunkChanged ? atlas->lookup(P.center()) : C₀;
+
+        if (Chunk::outside(H) || C == nullptr)
+            return std::tuple(false, C₀, i₀, j₀, k₀);
+
+        auto [i, k] = P.round(C); Level j = std::floor(H);
+
+        if (C->get(i, j, k).id != 0) {
+            if (volume) return std::tuple(true, C, i, j, k);
+            else return std::tuple(true, C₀, i₀, j₀, k₀);
+        }
+
+        traveled += glm::length(dir) * Δt;
+        C₀ = C; P₀ = P; H₀ = H; i₀ = i; j₀ = j; k₀ = k;
+    }
+
+    return std::tuple(false, C₀, i₀, j₀, k₀);
 }
 
 double globaltime = 0;
@@ -104,13 +143,17 @@ void display(GLFWwindow * window) {
     view = glm::scale(view, glm::vec3(1.0f, Fundamentals::meter, 1.0f));
     view = glm::translate(view, glm::vec3(0.0f, -player.camera().climb - player.eye, 0.0f));
 
-    shader->uniform("view", view);
-    shader->uniform("projection", projection);
+    voxelShader->activate();
 
-    shader->uniform("origin.a", origin.a);
-    shader->uniform("origin.b", origin.b);
-    shader->uniform("origin.c", origin.c);
-    shader->uniform("origin.d", origin.d);
+    voxelShader->uniform("view", view);
+    voxelShader->uniform("projection", projection);
+
+    voxelShader->uniform("origin.a", origin.a);
+    voxelShader->uniform("origin.b", origin.b);
+    voxelShader->uniform("origin.c", origin.c);
+    voxelShader->uniform("origin.d", origin.d);
+
+    glBlendFunc(GL_ONE, GL_ZERO);
 
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -119,8 +162,13 @@ void display(GLFWwindow * window) {
         if (chunk->needRefresh())
             chunk->refresh(game.nodeRegistry, player.camera().position.action());
 
-        chunk->render(shader);
+        chunk->render(voxelShader);
     }
+
+    dummyShader->activate();
+
+    glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
+    guiVao.draw(GL_LINES);
 }
 
 Texture texture1, texture2;
@@ -155,8 +203,24 @@ void freeMouse(GLFWwindow * window) {
     Mouse::grabbed = false;
 }
 
-void mouseButtonCallback(GLFWwindow * window, int button, int action, int mods)
-{ if (Window::hovered && Window::focused && !Mouse::grabbed) grabMouse(window); }
+void mouseButtonCallback(GLFWwindow * window, int button, int action, int mods) {
+    if (Mouse::grabbed && (button == GLFW_MOUSE_BUTTON_LEFT || button == GLFW_MOUSE_BUTTON_RIGHT) && action == GLFW_PRESS) {
+        auto [success, C, i, j, k] = raycast(
+            button == GLFW_MOUSE_BUTTON_LEFT,
+            player.atlas(),
+            0.3,
+            player.camera().direction(),
+            Fundamentals::meter / 4.0,
+            player.chunk(),
+            player.camera().position,
+            player.camera().climb + player.eye
+        );
+        NodeId id = (button == GLFW_MOUSE_BUTTON_LEFT) ? 0 : 2;
+        if (success) { C->set(i, j, k, {id}); C->requestRefresh(); }
+    }
+
+    if (Window::hovered && Window::focused && !Mouse::grabbed) grabMouse(window);
+}
 
 void cursorEnterCallback(GLFWwindow * window, int entered) {
     Window::hovered = entered;
@@ -204,8 +268,6 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
             case GLFW_KEY_S:          Keyboard::backward = true; break;
             case GLFW_KEY_A:          Keyboard::left     = true; break;
             case GLFW_KEY_D:          Keyboard::right    = true; break;
-            case GLFW_KEY_Z:          placeBlockNextToPlayer();  break;
-            case GLFW_KEY_X:          deleteBlockNextToPlayer(); break;
             case GLFW_KEY_O:          returnToSpawn();           break;
             case GLFW_KEY_SPACE:      jump();                    break;
         }
@@ -221,9 +283,28 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
     }
 }
 
+void drawAim(Shader<DummyShader>::VAO & vao) {
+    vao.clear();
+
+    constexpr auto white = glm::vec4(1.0);
+    vao.push(); vao.emit(glm::vec2(-GUI::aimSize / Window::aspect, 0), white);
+    vao.push(); vao.emit(glm::vec2(+GUI::aimSize / Window::aspect, 0), white);
+
+    vao.push(); vao.emit(glm::vec2(0, -GUI::aimSize), white);
+    vao.push(); vao.emit(glm::vec2(0, +GUI::aimSize), white);
+
+    vao.upload(GL_STATIC_DRAW);
+}
+
 void setupWindowSize(GLFWwindow * window, int width, int height) {
-    Window::width = width; Window::height = height; glViewport(0, 0, width, height);
-    projection = glm::perspective(glm::radians(fov), Real(width) / Real(height), near, far);
+    Window::width  = width;
+    Window::height = height;
+    Window::aspect = Real(width) / Real(height);
+
+    glViewport(0, 0, width, height);
+    projection = glm::perspective(glm::radians(fov), Window::aspect, near, far);
+
+    drawAim(guiVao);
 }
 
 constexpr auto title = "Hypertest";
@@ -258,26 +339,30 @@ GLFWwindow * setupWindow(Config & config) {
 
 void setupGL(GLFWwindow * window, Config & config) {
     glfwMakeContextCurrent(window);
+    glewExperimental = GL_TRUE; glewInit();
 
-    glewExperimental = GL_TRUE;
-    glewInit();
+    glEnable(GL_BLEND); glEnable(GL_DEPTH_TEST);
 
-    glEnable(GL_DEPTH_TEST);
+    voxelShader = new Shader<VoxelShader>("shaders/Voxel/Common.glsl", "shaders/Voxel/Vertex.glsl", "shaders/Voxel/Fragment.glsl");
+    voxelShader->activate();
 
-    shader = new Shader("Common.glsl", "Hyper.vs", "Hyper.fs");
-    shader->activate();
-
-    shader->uniform("fog.enabled", config.fog.enabled);
-    shader->uniform("fog.min",     config.fog.min);
-    shader->uniform("fog.max",     config.fog.max);
-    shader->uniform("fog.color",   config.fog.color);
+    voxelShader->uniform("fog.enabled", config.fog.enabled);
+    voxelShader->uniform("fog.min",     config.fog.min);
+    voxelShader->uniform("fog.max",     config.fog.max);
+    voxelShader->uniform("fog.color",   config.fog.color);
 
     fov  = config.camera.fov;
     near = config.camera.near;
     far  = config.camera.far;
 
     setupWindowSize(window, Window::width, Window::height);
-    setupTexture(); shader->uniform("textureSheet", 0);
+    setupTexture(); voxelShader->uniform("textureSheet", 0);
+
+    dummyShader = new Shader<DummyShader>("shaders/Dummy/Common.glsl", "shaders/Dummy/Vertex.glsl", "shaders/Dummy/Fragment.glsl");
+    dummyShader->activate();
+
+    guiVao.initialize();
+    GUI::aimSize = config.gui.aimSize;
 }
 
 Chunk * buildFloor(Chunk * chunk) {
@@ -354,7 +439,10 @@ void setupGame(Config & config) {
 }
 
 void cleanUp(GLFWwindow * window) {
-    delete shader;
+    guiVao.free();
+
+    delete dummyShader;
+    delete voxelShader;
 
     glfwDestroyWindow(window);
     glfwTerminate();

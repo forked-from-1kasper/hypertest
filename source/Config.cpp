@@ -53,4 +53,13 @@ Config::Config(Lua::VM * vm, const char * filename) {
             return vm->get<std::optional<glm::vec4>>();
         }).value_or(glm::vec4(1.0f));
     });
+
+    vm->withfield("gui", [&]() {
+        if (!vm->instanceof<Lua::Type::Table>())
+            throw std::runtime_error("`gui` expected to be a table");
+
+        gui.aimSize = vm->withfield("aimSize", [&]() {
+            return vm->get<std::optional<lua_Number>>();
+        }).value_or(0.015);
+    });
 }
