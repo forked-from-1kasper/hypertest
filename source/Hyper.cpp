@@ -347,8 +347,8 @@ void setupGL(GLFWwindow * window, Config & config) {
     voxelShader->activate();
 
     voxelShader->uniform("fog.enabled", config.fog.enabled);
-    voxelShader->uniform("fog.min",     config.fog.min);
-    voxelShader->uniform("fog.max",     config.fog.max);
+    voxelShader->uniform("fog.near",    config.fog.near);
+    voxelShader->uniform("fog.far",     config.fog.far);
     voxelShader->uniform("fog.color",   config.fog.color);
 
     fov  = config.camera.fov;

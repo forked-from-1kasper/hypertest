@@ -10,6 +10,6 @@ struct Moebius {
 struct Fog {
     bool  enabled;
     vec4  color;
-    float min;
-    float max;
+    float near;
+    float far;
 };

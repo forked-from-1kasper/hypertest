@@ -41,11 +41,11 @@ Config::Config(Lua::VM * vm, const char * filename) {
             return vm->get<std::optional<bool>>();
         }).value_or(false);
 
-        fog.min = vm->withfield("min", [&]() {
+        fog.near = vm->withfield("near", [&]() {
             return vm->get<std::optional<lua_Number>>();
         }).value_or(1.0);
 
-        fog.max = vm->withfield("max", [&]() {
+        fog.far = vm->withfield("far", [&]() {
             return vm->get<std::optional<lua_Number>>();
         }).value_or(10.0);
 

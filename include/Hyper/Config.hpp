@@ -8,7 +8,7 @@
 struct Config {
     struct {
         bool enabled;
-        GLfloat min, max;
+        GLfloat near, far;
         glm::vec4 color;
     } fog;
 

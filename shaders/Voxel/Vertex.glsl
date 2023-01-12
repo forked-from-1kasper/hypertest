@@ -28,7 +28,7 @@ void Klein(inout vec2 z)
 
 float getFogFactor(in float d) {
     if (fog.enabled)
-        return clamp(1.0 - (fog.max - d) / (fog.max - fog.min), 0.0, 1.0);
+        return clamp(1.0 - (fog.far - d) / (fog.far - fog.near), 0.0, 1.0);
     else return 0.0;
 }
 
