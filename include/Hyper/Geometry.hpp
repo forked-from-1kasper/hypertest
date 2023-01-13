@@ -12,9 +12,28 @@
 #include <Hyper/Shader.hpp>
 #include <Hyper/Sheet.hpp>
 
-template<typename T>
-struct Parallelogram {
+namespace Tesselation {
+    using namespace Fundamentals;
+
+    constexpr size_t N = 16;
+
+    using Grid = Array²<Gyrovector<Real>, chunkSize + 1>;
+    using Neighbours = std::array<Fuchsian<Integer>, N>;
+    using Neighbours⁻¹ = std::array<Möbius<Real>, N>;
+
+    extern const Fuchsian<Integer> I, U, L, D, R;
+
+    extern const Neighbours   neighbours;
+    extern const Neighbours⁻¹ neighbours⁻¹;
+    extern const Grid         corners;
+}
+
+template<typename T> struct Parallelogram {
     Gyrovector<T> A, B, C, D;
+
+    Parallelogram() {}
+    Parallelogram(auto A, auto B, auto C, auto D) : A(A), B(B), C(C), D(D) {}
+
     const auto rev() const { return Parallelogram<T>(D, C, B, A); }
 };
 

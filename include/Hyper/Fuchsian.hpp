@@ -24,6 +24,10 @@ template<EuclideanDomain T>
 struct Gaussian {
     T real, imag;
 
+    constexpr Gaussian() : real(0), imag(0) {}
+    constexpr Gaussian(T real) : real(real), imag(0) {}
+    constexpr Gaussian(T real, T imag) : real(real), imag(imag) {}
+
     constexpr inline auto operator-() const { return Gaussian(-real, -imag); }
     constexpr inline auto operator+() const { return *this; }
 
@@ -135,8 +139,10 @@ using Gaussian² = std::pair<Gaussian<T>, Gaussian<T>>;
 
 template<EuclideanDomain T>
 struct Fuchsian {
-    static constexpr auto s = sqrt(6.0);
     Gaussian<T> a, b, c, d;
+
+    constexpr Fuchsian() {}
+    constexpr Fuchsian(auto a, auto b, auto c, auto d) : a(a), b(b), c(c), d(d) {}
 
     constexpr Gaussian<T> det() const { return a * d - b * c; }
 
@@ -151,6 +157,12 @@ struct Fuchsian {
     }
 
     template<typename U> constexpr inline Möbius<U> field() const {
+        #ifdef __clang__
+            constexpr U s = 2.449489742783178;
+        #else
+            constexpr U s = sqrt(6.0);
+        #endif
+
         return { a.template field<U>(),     b.template field<U>() / s,
                  c.template field<U>() * s, d.template field<U>() };
     }

@@ -7,10 +7,12 @@
 
 #include <Hyper/Gyrovector.hpp>
 
-template<typename T> constexpr T sqr(T x) { return x * x; }
-template<typename T> constexpr T sign(T x) { return (x > 0) - (x < 0); }
-
 constexpr double τ = 2 * 3.141592653589793238462643383279502884197169399375105820974944;
+
+namespace Math {
+    template<typename T> constexpr T sqr(T x) { return x * x; }
+    template<typename T> constexpr T sign(T x) { return (x > 0) - (x < 0); }
+}
 
 using Real    = double;
 using Integer = int64_t;
@@ -69,9 +71,15 @@ namespace Fundamentals {
     constexpr int chunkSize   = 16;
     constexpr int worldHeight = worldTop + 1;
 
-    constexpr auto k = τ / 6;                      // π/3
-    constexpr auto D = sqrt(2/(tan(k/2) + 1) - 1); // √(2 − √3)
-    constexpr auto L = sqrt(cos(k));               // 1/√2
+#ifdef __clang__
+    constexpr Real k = 1.0471975511965976;
+    constexpr Real D = 0.51763809020504159;
+    constexpr Real L = 0.70710678118654757;
+#else
+    constexpr Real k = τ / 6;                      // π/3
+    constexpr Real D = sqrt(2/(tan(k/2) + 1) - 1); // √(2 − √3)
+    constexpr Real L = sqrt(cos(k));               // 1/√2
+#endif
 
     const auto gauge = Gyrovector<Real>(D, 0);
     const auto meter = glm::length(Projection::apply(gauge)) / Real(chunkSize);

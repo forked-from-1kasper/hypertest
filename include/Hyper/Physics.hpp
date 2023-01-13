@@ -2,7 +2,6 @@
 
 #include <glm/vec3.hpp>
 
-#include <Hyper/Tesselation.hpp>
 #include <Hyper/Geometry.hpp>
 #include <Hyper/Fuchsian.hpp>
 #include <Hyper/Moebius.hpp>

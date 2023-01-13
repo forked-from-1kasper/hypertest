@@ -5,7 +5,7 @@ BINARY     = Hyper
 
 CXX     = g++
 CFLAGS  = -Wall -std=c++2a -Iinclude/
-CFLAGS += -Wno-misleading-indentation -Wno-unused-but-set-variable
+CFLAGS += -Wno-bitwise-instead-of-logical -Wno-unused-private-field -Wno-misleading-indentation -Wno-unused-but-set-variable
 
 ifeq ($(OS),Windows_NT)
 	BINARY = Hyper.exe
@@ -27,8 +27,7 @@ endif
 DEPS     = PicoPNG Lua
 MODULES  = Hyper Config Shader Geometry Sheet Physics
 HEADERS  = Hyper/Fuchsian Hyper/Fundamentals
-HEADERS += Hyper/Grid Hyper/Gyrovector
-HEADERS += Hyper/Moebius Hyper/Tesselation
+HEADERS += Hyper/Gyrovector Hyper/Moebius
 HEADERS += Enumerable List Literal Tuple
 
 add = $(addprefix $(2)/,$(addsuffix $(1),$(3)))

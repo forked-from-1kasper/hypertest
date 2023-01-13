@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Hyper/Fundamentals.hpp>
 #include <Hyper/Gyrovector.hpp>
 
 template<typename T>
@@ -7,6 +8,9 @@ struct Möbius {
     constexpr static auto zero = Gyrovector<T>(0, 0);
 
     std::complex<T> a, b, c, d;
+
+    constexpr Möbius() {}
+    constexpr Möbius(auto a, auto b, auto c, auto d) : a(a), b(b), c(c), d(d) {}
 
     constexpr std::complex<T> det() const { return a * d - b * c; }
 

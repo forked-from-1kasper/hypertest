@@ -1,7 +1,79 @@
 #include <Hyper/Geometry.hpp>
-#include <Hyper/Grid.hpp>
 
-NodeRegistry::NodeRegistry() { attach(0UL, NodeDef("Air", Texture())); }
+namespace Array {
+    template<std::size_t N, typename T, typename U>
+    auto inverse(const std::array<Fuchsian<T>, N> & xs) {
+        std::array<Möbius<U>, N> retval;
+
+        for (size_t i = 0; i < N; i++)
+            retval[i] = xs[i].inverse().template field<U>();
+
+        return retval;
+    }
+}
+
+namespace Tesselation {
+    using ℤi = Gaussian<Integer>;
+
+    // Chunk’s neighbours in tesselation
+    const Fuchsian<Integer> I { ℤi(+1, +0), ℤi(+0, +0), ℤi(+0, +0), ℤi(+1, +0) };
+    const Fuchsian<Integer> U { ℤi(+6, +0), ℤi(+6, +6), ℤi(+1, -1), ℤi(+6, +0) };
+    const Fuchsian<Integer> L { ℤi(+6, +0), ℤi(+6, -6), ℤi(+1, +1), ℤi(+6, +0) };
+    const Fuchsian<Integer> D { ℤi(+6, +0), ℤi(-6, -6), ℤi(-1, +1), ℤi(+6, +0) };
+    const Fuchsian<Integer> R { ℤi(+6, +0), ℤi(-6, +6), ℤi(-1, -1), ℤi(+6, +0) };
+
+    const Neighbours neighbours {
+        U, L, D, R,
+        // corners
+        U * L, U * L * D, U * L * D * R,
+        U * R, U * R * D, U * R * D * L,
+        D * L, D * L * U, D * L * U * R,
+        D * R, D * R * U, D * R * U * L
+    };
+
+    const Neighbours⁻¹ neighbours⁻¹ = Array::inverse<N, Integer, Real>(neighbours);
+
+    // Generation of chunk’s grid
+    const auto Φ(Real x, Real y) {
+        using namespace Fundamentals;
+
+        if (x == 0 && y == 0) return Gyrovector<Real>(0, 0);
+
+        auto L = fabs(x) + fabs(y);
+
+        Gyrovector<Real> u(Math::sign(x) * L, 0), v(0, Math::sign(y) * L);
+        return u + fabs(y / L) * (-u + v);
+    }
+
+    const auto Ψ(Real x, Real y) {
+        auto u = (x + y) / 2, v = (x - y) / 2;
+        return Φ(u * Fundamentals::D, v * Fundamentals::D);
+    }
+
+    const auto yield(int i, int j) {
+        using namespace Fundamentals;
+
+        auto x = Real(2 * i - chunkSize) / Real(chunkSize);
+        auto y = Real(2 * j - chunkSize) / Real(chunkSize);
+        return Ψ(x, y);
+    }
+
+    const auto init() {
+        using namespace Fundamentals;
+
+        Array²<Gyrovector<Real>, chunkSize + 1> retval;
+
+        for (int i = 0; i <= chunkSize; i++)
+            for (int j = 0; j <= chunkSize; j++)
+                retval[i][j] = yield(i, j);
+
+        return retval;
+    }
+
+    const Grid corners = init();
+}
+
+NodeRegistry::NodeRegistry() { attach(0UL, {"Air", Texture()}); }
 
 Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry) : _isometry(isometry), data{} {
     // there should be better way to do this
@@ -69,8 +141,8 @@ void drawRightParallelogrammicPrism(VBO & vbo, EBO & ebo, Texture & T, Mask m, R
 
 template<typename T> Parallelogram<T> Chunk::parallelogram(Rank i, Rank j) {
     return {
-        Grid::corners[i + 0][j + 0], Grid::corners[i + 1][j + 0],
-        Grid::corners[i + 1][j + 1], Grid::corners[i + 0][j + 1]
+        Tesselation::corners[i + 0][j + 0], Tesselation::corners[i + 1][j + 0],
+        Tesselation::corners[i + 1][j + 1], Tesselation::corners[i + 0][j + 1]
     };
 }
 
@@ -129,10 +201,10 @@ void Chunk::render(Shader<VoxelShader> * shader) {
 }
 
 bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {
-    const auto A = Grid::corners[i + 0][j + 0];
-    const auto B = Grid::corners[i + 1][j + 0];
-    const auto C = Grid::corners[i + 1][j + 1];
-    const auto D = Grid::corners[i + 0][j + 1];
+    const auto A = Tesselation::corners[i + 0][j + 0];
+    const auto B = Tesselation::corners[i + 1][j + 0];
+    const auto C = Tesselation::corners[i + 1][j + 1];
+    const auto D = Tesselation::corners[i + 0][j + 1];
 
     const auto α = w.sub(A).cross(B.sub(A));
     const auto β = w.sub(B).cross(C.sub(B));
@@ -160,8 +232,8 @@ bool Chunk::isInsideOfDomain(const Gyrovector<Real> & w₀) {
     Gyrovector<Real> w(fabs(w₀.x()), fabs(w₀.y()));
 
     for (Rank i = 0; i < chunkSize; i++) {
-        const auto A = Grid::corners[chunkSize][i + 0];
-        const auto B = Grid::corners[chunkSize][i + 1];
+        const auto A = Tesselation::corners[chunkSize][i + 0];
+        const auto B = Tesselation::corners[chunkSize][i + 1];
 
         const auto α = w.sub(A).cross(B.sub(A));
         const auto β = w.sub(B).cross(-B);

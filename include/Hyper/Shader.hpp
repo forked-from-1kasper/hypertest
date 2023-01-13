@@ -16,7 +16,7 @@ struct Field {
     using value = T;
 };
 
-template<typename T> using Value = T::value;
+template<typename T> using Value = typename T::value;
 
 namespace GVA {
     template<size_t stride, Empty U> inline void attrib(size_t, size_t) {}
@@ -80,8 +80,8 @@ private:
     GLuint _index;
 
 public:
-    using Index  = Spec::Index;
-    using Params = Spec::Params;
+    using Index  = typename Spec::Index;
+    using Params = typename Spec::Params;
 
     using Data = Apply<Tuple, Map<Value, Params>>;
 

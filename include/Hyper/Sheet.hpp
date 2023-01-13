@@ -42,7 +42,7 @@ public:
     inline constexpr auto capacity() const { return total() / size(); }
 
     inline const std::vector<std::string> files() const { return _files; }
-    inline const bool full() const { return _files.size() == sqr(capacity()); }
+    inline const bool full() const { return _files.size() == Math::sqr(capacity()); }
 
     inline const auto index(size_t k) { return std::pair(k / capacity(), k % capacity()); }
 };

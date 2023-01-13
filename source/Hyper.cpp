@@ -13,7 +13,6 @@
 #include <Lua.hpp>
 
 #include <Hyper/Fundamentals.hpp>
-#include <Hyper/Tesselation.hpp>
 #include <Hyper/Gyrovector.hpp>
 #include <Hyper/Fuchsian.hpp>
 #include <Hyper/Geometry.hpp>
@@ -207,8 +206,7 @@ void mouseButtonCallback(GLFWwindow * window, int button, int action, int mods) 
     if (Mouse::grabbed && (button == GLFW_MOUSE_BUTTON_LEFT || button == GLFW_MOUSE_BUTTON_RIGHT) && action == GLFW_PRESS) {
         auto [success, C, i, j, k] = raycast(
             button == GLFW_MOUSE_BUTTON_LEFT,
-            player.atlas(),
-            0.3,
+            player.atlas(), 0.3,
             player.camera().direction(),
             Fundamentals::meter / 4.0,
             player.chunk(),
@@ -355,13 +353,13 @@ void setupGL(GLFWwindow * window, Config & config) {
     near = config.camera.near;
     far  = config.camera.far;
 
-    setupWindowSize(window, Window::width, Window::height);
     setupTexture(); voxelShader->uniform("textureSheet", 0);
 
     dummyShader = new Shader<DummyShader>("shaders/Dummy/Common.glsl", "shaders/Dummy/Vertex.glsl", "shaders/Dummy/Fragment.glsl");
     dummyShader->activate();
 
     aimVao.initialize();
+    setupWindowSize(window, Window::width, Window::height);
     GUI::aimSize = config.gui.aimSize;
 }
 
@@ -420,8 +418,8 @@ Chunk * markChunk(Chunk * chunk) {
 void setupGame(Config & config) {
     using namespace Tesselation;
 
-    game.nodeRegistry.attach(1UL, NodeDef("Stuff", texture1));
-    game.nodeRegistry.attach(2UL, NodeDef("Weird Stuff", texture2));
+    game.nodeRegistry.attach(1UL, {"Stuff", texture1});
+    game.nodeRegistry.attach(2UL, {"Weird Stuff", texture2});
 
     buildTestStructure(game.atlas.poll(player.camera().position.action(), I));
 
