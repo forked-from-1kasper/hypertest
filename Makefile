@@ -4,7 +4,7 @@ BUILDDIR   = build
 BINARY     = Hyper
 
 CXX     = g++
-CFLAGS  = -Wall -std=c++2a -Iinclude/
+CFLAGS  = -Wall -std=c++2a -I$(INCLUDEDIR)
 CFLAGS += -Wno-bitwise-instead-of-logical -Wno-unused-private-field -Wno-misleading-indentation -Wno-unused-but-set-variable
 
 ifeq ($(OS),Windows_NT)
