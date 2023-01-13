@@ -359,8 +359,8 @@ void setupGL(GLFWwindow * window, Config & config) {
     dummyShader->activate();
 
     aimVao.initialize();
-    setupWindowSize(window, Window::width, Window::height);
     GUI::aimSize = config.gui.aimSize;
+    setupWindowSize(window, Window::width, Window::height);
 }
 
 Chunk * buildFloor(Chunk * chunk) {
