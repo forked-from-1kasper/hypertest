@@ -69,7 +69,7 @@ glm::mat4 view, projection;
 Shader<DummyShader> * dummyShader;
 Shader<VoxelShader> * voxelShader;
 
-Shader<DummyShader>::VAO guiVao;
+Shader<DummyShader>::VAO aimVao;
 
 bool move(Entity & E, const Gyrovector<Real> & v, Real Δt) {
     constexpr Real Δtₘₐₓ = 1.0/5.0; bool P = false;
@@ -168,7 +168,7 @@ void display(GLFWwindow * window) {
     dummyShader->activate();
 
     glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
-    guiVao.draw(GL_LINES);
+    aimVao.draw(GL_LINES);
 }
 
 Texture texture1, texture2;
@@ -287,11 +287,11 @@ void drawAim(Shader<DummyShader>::VAO & vao) {
     vao.clear();
 
     constexpr auto white = glm::vec4(1.0);
-    vao.push(); vao.emit(glm::vec2(-GUI::aimSize / Window::aspect, 0), white);
-    vao.push(); vao.emit(glm::vec2(+GUI::aimSize / Window::aspect, 0), white);
+    vao.push(); vao.emit(glm::vec3(-GUI::aimSize / Window::aspect, 0, 0), white);
+    vao.push(); vao.emit(glm::vec3(+GUI::aimSize / Window::aspect, 0, 0), white);
 
-    vao.push(); vao.emit(glm::vec2(0, -GUI::aimSize), white);
-    vao.push(); vao.emit(glm::vec2(0, +GUI::aimSize), white);
+    vao.push(); vao.emit(glm::vec3(0, -GUI::aimSize, 0), white);
+    vao.push(); vao.emit(glm::vec3(0, +GUI::aimSize, 0), white);
 
     vao.upload(GL_STATIC_DRAW);
 }
@@ -304,7 +304,7 @@ void setupWindowSize(GLFWwindow * window, int width, int height) {
     glViewport(0, 0, width, height);
     projection = glm::perspective(glm::radians(fov), Window::aspect, near, far);
 
-    drawAim(guiVao);
+    drawAim(aimVao);
 }
 
 constexpr auto title = "Hypertest";
@@ -361,7 +361,7 @@ void setupGL(GLFWwindow * window, Config & config) {
     dummyShader = new Shader<DummyShader>("shaders/Dummy/Common.glsl", "shaders/Dummy/Vertex.glsl", "shaders/Dummy/Fragment.glsl");
     dummyShader->activate();
 
-    guiVao.initialize();
+    aimVao.initialize();
     GUI::aimSize = config.gui.aimSize;
 }
 
@@ -439,7 +439,7 @@ void setupGame(Config & config) {
 }
 
 void cleanUp(GLFWwindow * window) {
-    guiVao.free();
+    aimVao.free();
 
     delete dummyShader;
     delete voxelShader;

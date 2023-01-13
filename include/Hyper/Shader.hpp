@@ -171,7 +171,7 @@ struct DummyShader {
     using Index = GLuint;
 
     using Params =
-    List<Field<"_vertex", glm::vec2, GL_FLOAT, 2>,
+    List<Field<"_vertex", glm::vec3, GL_FLOAT, 3>,
          Field<"_color",  glm::vec4, GL_FLOAT, 4>>;
 
     constexpr static size_t infoBufferSize = 2048;
