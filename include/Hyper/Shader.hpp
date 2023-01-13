@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GL/glew.h>
+#include <vector>
 #include <string>
 
 #include <Hyper/Gyrovector.hpp>
