@@ -30,7 +30,7 @@ namespace Tesselation {
 
     /*
         𝔻  = { z ∈ ℂ | |z| ≤ 1 }
-        𝔻ₛ = { z ∈ C | |z| ≤ s }
+        𝔻ₛ = { z ∈ ℂ | |z| ≤ s }
 
         (In particular, 𝔻₁ = 𝔻.)
 
