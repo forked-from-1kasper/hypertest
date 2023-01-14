@@ -108,8 +108,10 @@ struct Gaussian {
     }
 
     // Given two Gaussian integers α and β, it multiplies them by ±1/±i
-    // so that both of α components become positive
-    constexpr auto normalizeRational(Gaussian<T> & δ) {
+    // so that both of α components become non-negative
+    constexpr void normalizeRational(Gaussian<T> & δ) {
+        if (real == 0 && imag == 0) { δ.real = 1; δ.imag = 0; return; }
+
         switch (Ord(std::pair(real >= 0, imag >= 0))) {
             /* −1 */ case Ord²(false, false): negate(); δ.negate(); break;
             /* +i */ case Ord²(true,  false): muli(); δ.muli(); break;
