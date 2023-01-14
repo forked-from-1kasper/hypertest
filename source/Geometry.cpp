@@ -28,6 +28,41 @@ namespace Tesselation {
     clangexpr Fuchsian<Integer> D { ℤi(+6, +0), ℤi(-6, -6), ℤi(-1, +1), ℤi(+6, +0) };
     clangexpr Fuchsian<Integer> R { ℤi(+6, +0), ℤi(-6, +6), ℤi(-1, -1), ℤi(+6, +0) };
 
+    /*
+        𝔻  = { z ∈ ℂ | |z| ≤ 1 }
+        𝔻ₛ = { z ∈ C | |z| ≤ s }
+
+        (In particular, 𝔻₁ = 𝔻.)
+
+        Möbius transformation of translation towards vector b ∈ 𝔻 in Poincaré disk model is given by the formula:
+            Φ = [1, b; b*, 1], so φ(z) = (z + b) / (b* z + 1).
+        (https://en.wikipedia.org/wiki/M%C3%B6bius_transformation#Subgroups_of_the_M%C3%B6bius_group)
+
+        Knowing that D½ = √(2 − √3) (see `include/Hyper/Fundamentals.hpp`),
+        we have direction vectors: a = D½ and b = iD½.
+
+        Result of their coaddition is a required translation vector:
+            Coadd(a, b) = ((1 − |a|²)a + (1 − |b|²)b) / (1 − |a|²|b|²)
+                        = ((1 − D½²)D½ + (1 − D½²)iD½) / (1 − D½⁴)
+                        = D½(1 − D½²)/(1 − D½⁴) × (1 + i)
+                        = (1 + i)/√6
+
+        So corresponding Möbius transformation is given by the formula:
+            Φ = [1, (1 + i)/√6; (1 − i)/√6, 1].
+
+        Now let z ∈ 𝔻, s > 0, φ(z) = (az + b) / (cz + d).
+        Then sφ(z/s) = s(az/s + b) / (cz/s + d) = (az + bs) / ((c/s)z + d), Φₛ = [a, bs; c/s, d].
+        We see that Φₛ maps 𝔻ₛ to 𝔻ₛ, so this operation is exactly a change of curvature.
+
+        We choose s = √6, then:
+            Φₛ = [1, 1 + i; (1 − i)/6, 1]
+        Since (az + b) / (cz + d) = (kaz + kb) / (kcz + kd), we may take:
+            Φₛ′ = 6 × Φₛ = [6, 6 + 6i; 1 − i, 6]
+        This is exactly U matrix.
+
+        Choosing other signs in a = ±D½ and b = ±iD½, we will obtain L, D and R.
+    */
+
     clangexpr Neighbours neighbours {
         U, L, D, R,
         // corners

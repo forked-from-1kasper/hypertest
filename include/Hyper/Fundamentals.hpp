@@ -87,12 +87,12 @@ namespace Fundamentals {
 
     /*
         “k = τ/6” is used because corresponding tesselation (https://en.wikipedia.org/wiki/Order-6_square_tiling)
-        has nice representation using integer-valued matrices (see source/Geometry.cpp).
+        has nice representation using integer-valued matrices (see `source/Geometry.cpp`).
         (See also https://proceedings.neurips.cc/paper/2019/file/82c2559140b95ccda9c6ca4a8b981f1e-Paper.pdf,
          “Numerically Accurate Hyperbolic Embeddings Using Tiling-Based Models”.)
 
         D½ can be calculated from hyperbolic AAA to SSS conversion law.
-        We have a triangle with two half diagonals and one square’s side as sides, its angles — α = τ/4, β = θ/2 and γ = θ/2.
+        We have a triangle with two half diagonals and one square’s side as sides, its angles — α = τ/4, β = θ/2 and γ = θ/2 (θ = τ/6).
         So then D½² = (cos(γ) + cos(α + β)) / (cos(γ) + cos(α - β))
                     = (cos(θ/2) + cos(τ/4 + θ/2)) / (cos(θ/2) + cos(τ/4 − θ/2))
                     = (cos(θ/2) − sin(θ/2)) / (cos(θ/2) + sin(θ/2)) (because cos(τ/4 + x) = −sin(x) and cos(τ/4 − x) = sin(x))
@@ -107,6 +107,14 @@ namespace Fundamentals {
            = (cos(τ/4) + cos(θ/2 + θ/2)) / (cos(τ/4) + cos(θ/2 − θ/2))
            = (0 + cos(θ)) / (0 + 1) (because cos(τ/4) = 0 and cos(0) = 1)
            = cos(θ)
+
+        Similarly, you can find the length of the entire diagonal:
+        D² = (cos(θ) + cos(θ/2 + θ/2)) / (cos(θ) + cos(θ/2 − θ/2))
+           = 2cos(θ) / (cos(θ) + 1)
+           = 2 / 3,
+         D = √(2/3) = √6/3
+
+        Note that 2 × D½ ≠ D.
     */
 
     const auto gauge = Gyrovector<Real>(D½, 0);

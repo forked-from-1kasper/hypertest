@@ -157,6 +157,7 @@ struct Fuchsian {
     }
 
     template<typename U> constexpr inline Möbius<U> field() const {
+        // See `source/Geometry.cpp` for “s” meaning.
         #ifdef __clang__
             constexpr U s = 2.449489742783178;
         #else
