@@ -25,7 +25,7 @@ namespace Math {
     };
 
     template<typename... Ts> inline bool equal(Ts... ts) { return EqualM<Ts...>::apply(ts...); }
-    template<typename... Ts> inline bool samesign(Ts... ts) { return equal((ts > 0)...); }
+    template<typename... Ts> inline bool samesign(Ts... ts) { return equal((ts < 0)...); }
 }
 
 using Real    = double;
