@@ -71,16 +71,44 @@ namespace Fundamentals {
     constexpr int chunkSize   = 16;
     constexpr int worldHeight = worldTop + 1;
 
+    // https://www.researchgate.net/publication/299161235_THE_HYPERBOLIC_SSQUARE_AND_MOBIUS_TRANSFORMATIONS
+    // https://link.springer.com/book/10.1007/978-3-031-02396-5, “A Gyrovector Space Approach to Hyperbolic Geometry”
+    // https://www.amazon.com/Analytic-Hyperbolic-Geometry-Einsteins-Relativity/dp/9811244103, “Analytic Hyperbolic Geometry and Albert Einstein’s Special Theory of Relativity”
+
 #ifdef __clang__
-    constexpr Real k = 1.0471975511965976;
-    constexpr Real D = 0.51763809020504159;
-    constexpr Real L = 0.70710678118654757;
+    constexpr Real k  = 1.0471975511965976;
+    constexpr Real D½ = 0.51763809020504159;
+    constexpr Real L  = 0.70710678118654757;
 #else
-    constexpr Real k = τ / 6;                      // π/3
-    constexpr Real D = sqrt(2/(tan(k/2) + 1) - 1); // √(2 − √3)
-    constexpr Real L = sqrt(cos(k));               // 1/√2
+    constexpr Real k  = τ / 6;                      // π/3, angle of chunk’s square
+    constexpr Real D½ = sqrt(2/(tan(k/2) + 1) - 1); // √(2 − √3), gyrodiagonal “half gyrolength” of chunk’s gyrosquare
+    constexpr Real L  = sqrt(cos(k));               // 1/√2, chunk’s side (gyro)length
 #endif
 
-    const auto gauge = Gyrovector<Real>(D, 0);
+    /*
+        “k = τ/6” is used because corresponding tesselation (https://en.wikipedia.org/wiki/Order-6_square_tiling)
+        has nice representation using integer-valued matrices (see source/Geometry.cpp).
+        (See also https://proceedings.neurips.cc/paper/2019/file/82c2559140b95ccda9c6ca4a8b981f1e-Paper.pdf,
+         “Numerically Accurate Hyperbolic Embeddings Using Tiling-Based Models”.)
+
+        D½ can be calculated from hyperbolic AAA to SSS conversion law.
+        We have a triangle with two half diagonals and one square’s side as sides, its angles — α = τ/4, β = θ/2 and γ = θ/2.
+        So then D½² = (cos(γ) + cos(α + β)) / (cos(γ) + cos(α - β))
+                    = (cos(θ/2) + cos(τ/4 + θ/2)) / (cos(θ/2) + cos(τ/4 − θ/2))
+                    = (cos(θ/2) − sin(θ/2)) / (cos(θ/2) + sin(θ/2)) (because cos(τ/4 + x) = −sin(x) and cos(τ/4 − x) = sin(x))
+                    = (2cos(θ/2) − cos(θ/2) − sin(θ/2)) / (cos(θ/2) + sin(θ/2))
+                    = 2cos(θ/2) / (cos(θ/2) + sin(θ/2)) − 1
+                    = 2/(1 + sin(θ/2)/cos(θ/2)) − 1
+                    = 2/(1 + tan(θ/2)) − 1
+        (See also https://en.wikipedia.org/wiki/List_of_trigonometric_identities, “List of trigonometric identities”.)
+
+        Applying this rule to the other side, we get L:
+        L² = (cos(α) + cos(β + γ)) / (cos(α) + cos(β − γ))
+           = (cos(τ/4) + cos(θ/2 + θ/2)) / (cos(τ/4) + cos(θ/2 − θ/2))
+           = (0 + cos(θ)) / (0 + 1) (because cos(τ/4) = 0 and cos(0) = 1)
+           = cos(θ)
+    */
+
+    const auto gauge = Gyrovector<Real>(D½, 0);
     const auto meter = glm::length(Projection::apply(gauge)) / Real(chunkSize);
 }

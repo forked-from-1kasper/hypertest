@@ -1,26 +1,30 @@
+CXX       ?= g++
 SRCDIR     = source
 INCLUDEDIR = include
-BUILDDIR   = build
-BINARY     = Hyper
+BUILDDIR  ?= build
 
-CXX     = g++
-CFLAGS  = -Wall -std=c++2a -I$(INCLUDEDIR)
-CFLAGS += -Wno-bitwise-instead-of-logical -Wno-unused-private-field -Wno-misleading-indentation -Wno-unused-but-set-variable
+ifeq ($(BARBARIZED),true)
+	SRCDIR     := barbarized/$(SRCDIR)
+	INCLUDEDIR := barbarized/$(INCLUDEDIR)
+endif
+
+override CFLAGS += -Wall -std=c++2a -I$(INCLUDEDIR)
+override CFLAGS += -Wno-bitwise-instead-of-logical -Wno-unused-private-field -Wno-misleading-indentation -Wno-unused-but-set-variable
 
 ifeq ($(OS),Windows_NT)
-	BINARY = Hyper.exe
-	LDFLAGS = -lluajit-5.1 -lglfw3 -lglew32 -lopengl32 -lglu32
+	BINARY ?= Hyper.exe
+	override LDFLAGS += -lluajit-5.1 -lglfw3 -lglew32 -lopengl32 -lglu32
 else
-	BINARY = Hyper
+	BINARY ?= Hyper
 
 	UNAME := $(shell uname -s)
 
 	ifeq ($(UNAME),Linux)
-		LDFLAGS = -lluajit-5.1 -lglfw -lGLEW -lGL -lGLU
+		override LDFLAGS += -lluajit-5.1 -lglfw -lGLEW -lGL -lGLU
 	endif
 
 	ifeq ($(UNAME),Darwin)
-		LDFLAGS = -lluajit-5.1 -lglfw -lGLEW -framework CoreVideo -framework OpenGL -framework IOKit -framework Cocoa -framework Carbon
+		override LDFLAGS += -lluajit-5.1 -lglfw -lGLEW -framework CoreVideo -framework OpenGL -framework IOKit -framework Cocoa -framework Carbon
 	endif
 endif
 
@@ -55,6 +59,7 @@ $(BUILDDIR):
 
 clean:
 	rm -f $(BINARY) $(OBJS)
+	rm -rf barbarized
 
 barbarize:
 	python3 barbarize.py $(CPPS) $(HPPS)

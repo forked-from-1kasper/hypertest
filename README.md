@@ -5,3 +5,10 @@ $ sudo apt install make g++ libglfw3-dev libglew-dev libluajit-5.1-dev libglm-de
 $ make
 $ make run
 ```
+
+For clang:
+```bash
+$ make barbarize
+$ make all BARBARIZED=true CXX=clang++
+$ make run
+```

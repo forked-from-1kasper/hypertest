@@ -12,6 +12,8 @@ def barbarize(s):
             yield c
 
 for filename in argv[1:]:
+    print(filename)
+
     with open(filename, 'r') as fin:
         data = fin.read()
 

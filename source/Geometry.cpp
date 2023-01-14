@@ -1,8 +1,14 @@
 #include <Hyper/Geometry.hpp>
 
+#ifdef __clang__
+    #define clangexpr const
+#else
+    #define clangexpr constexpr
+#endif
+
 namespace Array {
     template<std::size_t N, typename T, typename U>
-    auto inverse(const std::array<Fuchsian<T>, N> & xs) {
+    clangexpr auto inverse(const std::array<Fuchsian<T>, N> & xs) {
         std::array<Möbius<U>, N> retval;
 
         for (size_t i = 0; i < N; i++)
@@ -16,13 +22,13 @@ namespace Tesselation {
     using ℤi = Gaussian<Integer>;
 
     // Chunk’s neighbours in tesselation
-    const Fuchsian<Integer> I { ℤi(+1, +0), ℤi(+0, +0), ℤi(+0, +0), ℤi(+1, +0) };
-    const Fuchsian<Integer> U { ℤi(+6, +0), ℤi(+6, +6), ℤi(+1, -1), ℤi(+6, +0) };
-    const Fuchsian<Integer> L { ℤi(+6, +0), ℤi(+6, -6), ℤi(+1, +1), ℤi(+6, +0) };
-    const Fuchsian<Integer> D { ℤi(+6, +0), ℤi(-6, -6), ℤi(-1, +1), ℤi(+6, +0) };
-    const Fuchsian<Integer> R { ℤi(+6, +0), ℤi(-6, +6), ℤi(-1, -1), ℤi(+6, +0) };
+    clangexpr Fuchsian<Integer> I { ℤi(+1, +0), ℤi(+0, +0), ℤi(+0, +0), ℤi(+1, +0) };
+    clangexpr Fuchsian<Integer> U { ℤi(+6, +0), ℤi(+6, +6), ℤi(+1, -1), ℤi(+6, +0) };
+    clangexpr Fuchsian<Integer> L { ℤi(+6, +0), ℤi(+6, -6), ℤi(+1, +1), ℤi(+6, +0) };
+    clangexpr Fuchsian<Integer> D { ℤi(+6, +0), ℤi(-6, -6), ℤi(-1, +1), ℤi(+6, +0) };
+    clangexpr Fuchsian<Integer> R { ℤi(+6, +0), ℤi(-6, +6), ℤi(-1, -1), ℤi(+6, +0) };
 
-    const Neighbours neighbours {
+    clangexpr Neighbours neighbours {
         U, L, D, R,
         // corners
         U * L, U * L * D, U * L * D * R,
@@ -31,10 +37,10 @@ namespace Tesselation {
         D * R, D * R * U, D * R * U * L
     };
 
-    const Neighbours⁻¹ neighbours⁻¹ = Array::inverse<N, Integer, Real>(neighbours);
+    clangexpr Neighbours⁻¹ neighbours⁻¹ = Array::inverse<N, Integer, Real>(neighbours);
 
     // Generation of chunk’s grid
-    const auto Φ(Real x, Real y) {
+    clangexpr auto Φ(Real x, Real y) {
         using namespace Fundamentals;
 
         if (x == 0 && y == 0) return Gyrovector<Real>(0, 0);
@@ -45,12 +51,12 @@ namespace Tesselation {
         return u + fabs(y / L) * (-u + v);
     }
 
-    const auto Ψ(Real x, Real y) {
+    clangexpr auto Ψ(Real x, Real y) {
         auto u = (x + y) / 2, v = (x - y) / 2;
-        return Φ(u * Fundamentals::D, v * Fundamentals::D);
+        return Φ(u * D½, v * D½);
     }
 
-    const auto yield(int i, int j) {
+    clangexpr auto yield(int i, int j) {
         using namespace Fundamentals;
 
         auto x = Real(2 * i - chunkSize) / Real(chunkSize);
@@ -58,7 +64,7 @@ namespace Tesselation {
         return Ψ(x, y);
     }
 
-    const auto init() {
+    clangexpr auto init() {
         using namespace Fundamentals;
 
         Array²<Gyrovector<Real>, chunkSize + 1> retval;
@@ -70,7 +76,7 @@ namespace Tesselation {
         return retval;
     }
 
-    const Grid corners = init();
+    clangexpr Grid corners = init();
 }
 
 NodeRegistry::NodeRegistry() { attach(0UL, {"Air", Texture()}); }
