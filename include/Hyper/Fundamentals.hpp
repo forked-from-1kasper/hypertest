@@ -12,6 +12,20 @@ constexpr double τ = 2 * 3.1415926535897932384626433832795028841971693993751058
 namespace Math {
     template<typename T> constexpr T sqr(T x) { return x * x; }
     template<typename T> constexpr T sign(T x) { return (x > 0) - (x < 0); }
+
+    template<typename...> struct EqualM;
+
+    template<> struct EqualM<> { static inline bool apply() { return true; } };
+
+    template<typename T> struct EqualM<T> { static inline bool apply(T) { return true; } };
+
+    template<typename T₁, typename T₂, typename... Ts> struct EqualM<T₁, T₂, Ts...> {
+        static inline bool apply(T₁ t₁, T₂ t₂, Ts... ts)
+        { return (t₁ == t₂) && EqualM<T₂, Ts...>::apply(t₂, ts...); }
+    };
+
+    template<typename... Ts> inline bool equal(Ts... ts) { return EqualM<Ts...>::apply(ts...); }
+    template<typename... Ts> inline bool samesign(Ts... ts) { return equal((ts > 0)...); }
 }
 
 using Real    = double;

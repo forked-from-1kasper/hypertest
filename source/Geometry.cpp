@@ -242,17 +242,17 @@ void Chunk::render(Shader<VoxelShader> * shader) {
 }
 
 bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {
-    const auto A = Tesselation::corners[i + 0][j + 0];
-    const auto B = Tesselation::corners[i + 1][j + 0];
-    const auto C = Tesselation::corners[i + 1][j + 1];
-    const auto D = Tesselation::corners[i + 0][j + 1];
+    const auto & A = Tesselation::corners[i + 0][j + 0];
+    const auto & B = Tesselation::corners[i + 1][j + 0];
+    const auto & C = Tesselation::corners[i + 1][j + 1];
+    const auto & D = Tesselation::corners[i + 0][j + 1];
 
-    const auto α = w.sub(A).cross(B.sub(A));
-    const auto β = w.sub(B).cross(C.sub(B));
-    const auto γ = w.sub(C).cross(D.sub(C));
-    const auto δ = w.sub(D).cross(A.sub(D));
-
-    return (α < 0) == (β < 0) && (β < 0) == (γ < 0) && (γ < 0) == (δ < 0);
+    return Math::samesign(
+        w.sub(A).cross(B.sub(A)),
+        w.sub(B).cross(C.sub(B)),
+        w.sub(C).cross(D.sub(C)),
+        w.sub(D).cross(A.sub(D))
+    );
 }
 
 std::pair<Rank, Rank> Chunk::round(const Gyrovector<Real> & w) {
@@ -273,14 +273,11 @@ bool Chunk::isInsideOfDomain(const Gyrovector<Real> & w₀) {
     Gyrovector<Real> w(fabs(w₀.x()), fabs(w₀.y()));
 
     for (Rank i = 0; i < chunkSize; i++) {
-        const auto A = Tesselation::corners[chunkSize][i + 0];
-        const auto B = Tesselation::corners[chunkSize][i + 1];
+        const auto & A = Tesselation::corners[chunkSize][i + 0];
+        const auto & B = Tesselation::corners[chunkSize][i + 1];
 
-        const auto α = w.sub(A).cross(B.sub(A));
-        const auto β = w.sub(B).cross(-B);
-        const auto γ = w.cross(A);
-
-        if ((α < 0) == (β < 0) && (β < 0) == (γ < 0)) return true;
+        if (Math::samesign(w.sub(A).cross(B.sub(A)), w.sub(B).cross(-B), w.cross(A)))
+            return true;
     }
 
     return false;
