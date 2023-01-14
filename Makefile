@@ -30,7 +30,7 @@ endif
 
 DEPS     = PicoPNG Lua
 MODULES  = Hyper Config Shader Geometry Sheet Physics
-HEADERS  = Hyper/Fuchsian Hyper/Fundamentals
+HEADERS  = Hyper/Gaussian Hyper/Fuchsian Hyper/Fundamentals
 HEADERS += Hyper/Gyrovector Hyper/Moebius
 HEADERS += Enumerable List Literal Tuple
 
