@@ -299,9 +299,11 @@ void setupWindowSize(GLFWwindow * window, int width, int height) {
     Window::height = height;
     Window::aspect = Real(width) / Real(height);
 
-    glViewport(0, 0, width, height);
-    projection = glm::perspective(glm::radians(fov), Window::aspect, near, far);
+    int frameBufferWidth, frameBufferHeight;
+    glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
+    glViewport(0, 0, frameBufferWidth, frameBufferHeight);
 
+    projection = glm::perspective(glm::radians(fov), Window::aspect, near, far);
     drawAim(aimVao);
 }
 
