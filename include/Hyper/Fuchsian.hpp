@@ -37,8 +37,10 @@ struct Fuchsian {
     constexpr inline auto inverse() const { return Fuchsian<T>(d, -b, -c, a); }
 
     constexpr inline auto origin() const {
+        if (b.isZero()) return std::pair(b, Gaussian<T>(1, 0));
+
         auto σ = Gaussian<T>::hcf(b, d), α = b / σ, β = d / σ;
-        α.normalizeRational(β); return std::pair(α, β);
+        α.normalize(β); return std::pair(α, β);
     }
 
     constexpr auto operator==(const Fuchsian<T> & G) const

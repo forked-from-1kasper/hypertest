@@ -62,7 +62,7 @@ bool Entity::moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
         _i = i; _j = j;
     }
 
-    _chunk = C; _camera.position.set(P); return chunkChanged;
+    _chunk = C; _camera.position = P; return chunkChanged;
 }
 
 bool Entity::moveVertically(const Real dt) {
@@ -82,6 +82,6 @@ bool Entity::move(const Gyrovector<Real> & v, Real dt)
 
 void Entity::teleport(const Position & P, const Real climb) {
     _camera.climb = climb;
-    _camera.position.set(P);
+    _camera.position = P;
     _chunk = _atlas->lookup(P.center());
 }

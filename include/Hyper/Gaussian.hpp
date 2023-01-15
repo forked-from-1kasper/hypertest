@@ -65,8 +65,8 @@ struct Gaussian {
     }
 
     constexpr auto isZero() const { return real == 0 && imag == 0; }
-    constexpr auto isUnit() const { return (std::abs(real) == 1 && imag == 0)
-                                        || (real == 0 && std::abs(imag) == 1); }
+    constexpr auto isUnit() const { return (abs(real) == 1 && imag == 0)
+                                        || (real == 0 && abs(imag) == 1); }
 
     constexpr void negate()  { real = -real; imag = -imag; }
     constexpr void twice()   { real <<= 1; imag <<= 1; }
@@ -107,19 +107,17 @@ struct Gaussian {
         }
     }
 
-    // Given two Gaussian integers α and β, it multiplies them by ±1/±i
-    // so that both of α components become non-negative
-    constexpr void normalizeRational(Gaussian<T> & δ) {
-        if (real == 0 && imag == 0) { δ.real = 1; δ.imag = 0; return; }
-
+    // Given N Gaussian integers α and βᵢ (1 ≤ i ≤ N), it multiplies them
+    // by ±1/±i so that both of α components become non-negative
+    template<std::same_as<Gaussian<T>>... Ts> constexpr void normalize(Ts&... ts) {
         switch (Ord(std::pair(real >= 0, imag >= 0))) {
-            /* −1 */ case Ord²(false, false): negate(); δ.negate(); break;
-            /* +i */ case Ord²(true,  false): muli(); δ.muli(); break;
-            /* −i */ case Ord²(false, true):  mulnegi(); δ.mulnegi(); break;
+            /* −1 */ case Ord²(false, false): negate(); (ts.negate(), ...); break;
+            /* +i */ case Ord²(true,  false): muli(); (ts.muli(), ...); break;
+            /* −i */ case Ord²(false, true):  mulnegi(); (ts.mulnegi(), ...); break;
             /* +1 */ case Ord²(true,  true):  break;
         }
 
-        if (real == 0) { mulnegi(); δ.mulnegi(); }
+        if (real == 0) { mulnegi(); (ts.mulnegi(), ...); }
     }
 
     constexpr auto operator==(const Gaussian<T> & w) const

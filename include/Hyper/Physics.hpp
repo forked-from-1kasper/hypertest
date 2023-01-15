@@ -22,9 +22,6 @@ public:
     inline constexpr const auto & action() const { return _action; }
     inline constexpr const auto & center() const { return _center; }
 
-    inline constexpr void set(const Position & P)
-    { _domain = P.domain(); _action = P.action(); _center = P.center(); }
-
     inline constexpr void set(const Möbius<Real> & M, const Fuchsian<Integer> & G)
     { _domain = M; _action = G; _center = G.origin(); }
 

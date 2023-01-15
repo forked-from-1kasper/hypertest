@@ -61,6 +61,8 @@ namespace Mouse {
 Real fov, near, far;
 Real speed = 2 * Fundamentals::meter;
 
+Real chunkRenderDistance;
+
 Game game; Entity player(&game.atlas);
 
 glm::mat4 view, projection;
@@ -69,6 +71,13 @@ Shader<DummyShader> * dummyShader;
 Shader<VoxelShader> * voxelShader;
 
 Shader<DummyShader>::VAO aimVao;
+
+Real chunkDiameter(const Real n) {
+    static const auto i = Gyrovector<Real>(Fundamentals::D½, 0);
+    static const auto j = Gyrovector<Real>(0, Fundamentals::D½);
+    static const auto k = Coadd(i, j);
+    return (n * k).abs();
+}
 
 bool move(Entity & E, const Gyrovector<Real> & v, Real Δt) {
     constexpr Real Δtₘₐₓ = 1.0/5.0; bool P = false;
@@ -161,7 +170,8 @@ void display(GLFWwindow * window) {
         if (chunk->needRefresh())
             chunk->refresh(game.nodeRegistry, player.camera().position.action());
 
-        chunk->render(voxelShader);
+        if (chunk->awayness() <= chunkRenderDistance)
+            chunk->render(voxelShader);
     }
 
     dummyShader->activate();
@@ -372,7 +382,8 @@ Chunk * buildFloor(Chunk * chunk) {
         for (size_t j = 0; j < chunkSize; j++)
             chunk->set(i, 0, j, {1});
 
-    chunk->set(0, 1, 0, {2});
+    chunk->set(1, 1, 1, {2});
+    chunk->set(1, 2, 1, {2});
 
     chunk->requestRefresh();
     return chunk;
@@ -431,6 +442,8 @@ void setupGame(Config & config) {
     }
 
     game.atlas.onLoad = &buildFloor;
+
+    chunkRenderDistance = chunkDiameter(config.camera.chunkRenderDistance);
 
     player.eye = 1.62;
     player.height = 1.8;

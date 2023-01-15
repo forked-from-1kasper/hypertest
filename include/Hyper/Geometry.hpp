@@ -55,7 +55,7 @@ public:
 
 class Chunk {
 private:
-    Fuchsian<Integer> _isometry; Möbius<Real> relative; // used for drawing
+    Fuchsian<Integer> _isometry; Möbius<Real> relative; Real _awayness; // used for drawing
     Gaussian²<Integer> _pos; // used for indexing, should be equal to `isometry.origin()`
     Node data[Fundamentals::chunkSize][Fundamentals::worldHeight][Fundamentals::chunkSize];
 
@@ -76,6 +76,7 @@ public:
 
     inline constexpr auto get(Rank i, Level j, Rank k) const { return data[i][j][k]; }
 
+    inline constexpr auto awayness() const { return _awayness; }
     inline constexpr auto isometry() const { return _isometry; }
     inline constexpr auto pos()      const { return _pos;      }
 

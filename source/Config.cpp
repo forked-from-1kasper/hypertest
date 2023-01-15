@@ -20,6 +20,10 @@ Config::Config(Lua::VM * vm, const char * filename) {
         if (!vm->instanceof<Lua::Type::Table>())
             throw std::runtime_error("`camera` expected to be a table");
 
+        camera.chunkRenderDistance = vm->withfield("chunkRenderDistance", [&]() {
+            return vm->get<std::optional<lua_Number>>();
+        }).value_or(10.0);
+
         camera.fov = vm->withfield("fov", [&]() {
             return vm->get<std::optional<lua_Number>>();
         }).value_or(80.0);

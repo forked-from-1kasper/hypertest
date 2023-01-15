@@ -17,7 +17,7 @@ struct Config {
     } window;
 
     struct {
-        Real fov, near, far;
+        Real chunkRenderDistance, fov, near, far;
     } camera;
 
     struct {

@@ -4,8 +4,15 @@
 
 #include <glm/vec2.hpp>
 #include <glm/glm.hpp>
+#include <gmpxx.h>
 
 #include <Hyper/Gyrovector.hpp>
+
+#ifdef __clang__
+    #define clangexpr const
+#else
+    #define clangexpr constexpr
+#endif
 
 constexpr double τ = 2 * 3.141592653589793238462643383279502884197169399375105820974944;
 
@@ -114,6 +121,7 @@ namespace Fundamentals {
                     = 2cos(θ/2) / (cos(θ/2) + sin(θ/2)) − 1
                     = 2/(1 + sin(θ/2)/cos(θ/2)) − 1
                     = 2/(1 + tan(θ/2)) − 1
+                    = √(2 − √3)
         (See also https://en.wikipedia.org/wiki/List_of_trigonometric_identities, “List of trigonometric identities”.)
 
         Applying this rule to the other side, we get L:
@@ -128,7 +136,14 @@ namespace Fundamentals {
            = 2 / 3,
          D = √(2/3) = √6/3
 
-        Note that 2 × D½ ≠ D.
+        Note that 2 × D½ ≠ D. However, gyrodistance in Poincaré disk model is given by the formula:
+            d(u, v) = |−u ⨁ v| = |−u + v|/|1 − vu*|
+        So d(−D½, D½) = 2D½/|1 − D½ × (−D½)*|       = 2D½/|1 + D½²|
+                      = 2√(2 − √3) / (3 − √3)       = 2√[(2 − √3)/(3 − √3)²]
+                      = 2√[(2 − √3)/(9 − 6√3 + 3)]  = 2√[(2 − √3)/(12 − 6√3)]
+                      = 2√(1/6)                     = √(4/6)
+                      = √(2/3)                      = D,
+        as expected.
     */
 
     const auto gauge = Gyrovector<Real>(D½, 0);

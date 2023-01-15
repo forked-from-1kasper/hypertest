@@ -1,11 +1,5 @@
 #include <Hyper/Geometry.hpp>
 
-#ifdef __clang__
-    #define clangexpr const
-#else
-    #define clangexpr constexpr
-#endif
-
 namespace Array {
     template<std::size_t N, typename T, typename U>
     clangexpr auto inverse(const std::array<Fuchsian<T>, N> & xs) {
@@ -22,11 +16,11 @@ namespace Tesselation {
     using ℤi = Gaussian<Integer>;
 
     // Chunk’s neighbours in tesselation
-    clangexpr Fuchsian<Integer> I { ℤi(+1, +0), ℤi(+0, +0), ℤi(+0, +0), ℤi(+1, +0) };
-    clangexpr Fuchsian<Integer> U { ℤi(+6, +0), ℤi(+6, +6), ℤi(+1, -1), ℤi(+6, +0) };
-    clangexpr Fuchsian<Integer> L { ℤi(+6, +0), ℤi(+6, -6), ℤi(+1, +1), ℤi(+6, +0) };
-    clangexpr Fuchsian<Integer> D { ℤi(+6, +0), ℤi(-6, -6), ℤi(-1, +1), ℤi(+6, +0) };
-    clangexpr Fuchsian<Integer> R { ℤi(+6, +0), ℤi(-6, +6), ℤi(-1, -1), ℤi(+6, +0) };
+    const Fuchsian<Integer> I { ℤi(+1, +0), ℤi(+0, +0), ℤi(+0, +0), ℤi(+1, +0) };
+    const Fuchsian<Integer> U { ℤi(+6, +0), ℤi(+6, +6), ℤi(+1, -1), ℤi(+6, +0) };
+    const Fuchsian<Integer> L { ℤi(+6, +0), ℤi(+6, -6), ℤi(+1, +1), ℤi(+6, +0) };
+    const Fuchsian<Integer> D { ℤi(+6, +0), ℤi(-6, -6), ℤi(-1, +1), ℤi(+6, +0) };
+    const Fuchsian<Integer> R { ℤi(+6, +0), ℤi(-6, +6), ℤi(-1, -1), ℤi(+6, +0) };
 
     /*
         𝔻  = { z ∈ ℂ | |z| ≤ 1 }
@@ -63,16 +57,19 @@ namespace Tesselation {
         Choosing other signs in a = ±D½ and b = ±iD½, we will obtain L, D and R.
     */
 
-    clangexpr Neighbours neighbours {
+    template<std::same_as<Fuchsian<Integer>>... Ts> auto simpl(const Ts... ts)
+    { Neighbours retval {ts...}; for (auto & G : retval) G.simpl(); return retval; }
+
+    const Neighbours neighbours = simpl(
         U, L, D, R,
         // corners
         U * L, U * L * D, U * L * D * R,
         U * R, U * R * D, U * R * D * L,
         D * L, D * L * U, D * L * U * R,
         D * R, D * R * U, D * R * U * L
-    };
+    );
 
-    clangexpr Neighbours⁻¹ neighbours⁻¹ = Array::inverse<N, Integer, Real>(neighbours);
+    const Neighbours⁻¹ neighbours⁻¹ = Array::inverse<N, Integer, Real>(neighbours);
 
     // Generation of chunk’s grid
     clangexpr auto Φ(Real x, Real y) {
@@ -117,16 +114,41 @@ namespace Tesselation {
 NodeRegistry::NodeRegistry() { attach(0UL, {"Air", Texture()}); }
 
 Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry) : _isometry(isometry), data{} {
-    // there should be better way to do this
-    auto P = isometry.field<Real>();
-    auto ω = P.det() / (P.d * P.d);
+    /*
+        Unfortunately, precomposition of `isometry` with (z ↦ z × exp(iπk/2)) for k ∈ ℤ
+        will yield matrix able to render this chunk in the same place but rotated about its own center by πk/2 radians.
 
-    if (ω.real() > 0 && ω.imag() >= 0) {}
-    else if (ω.real() <= 0 && ω.imag() > 0) { _isometry.a.mulnegi(); _isometry.c.mulnegi(); }
-    else if (ω.real() < 0 && ω.imag() <= 0) { _isometry.a.negate();  _isometry.c.negate();  }
-    else if (ω.real() >= 0 && ω.imag() < 0) { _isometry.a.muli();    _isometry.c.muli();    }
+        So if we don’t resolve this ambiguity, the same chunk may render with different rotation
+        according only to player’s path, and this will definitely crush the landscape
+        (Imagine random rotations of chunks in Minecraft in a mountainous biome.)
 
-    if (ω.real() == 0) { _isometry.a.mulnegi(); _isometry.c.mulnegi(); }
+        Since exp(iπk/2) ∈ {±1, ±i}, such rotation is equivalent to multiplying `a` and `c` by ±1/±i at the same time.
+        `isometry` is pre-divided by hcf(a, b, c, d), so there is always ability
+        to multiply *all* terms by ±1/±i yielding the same transformation.
+        (Two Möbius transformations are equal iff their matrices differ by multiplicative constant.)
+
+        Hence we have 4 × 4 = 16 options. It’s important that we can always select multipliers
+        so that both components of `a` and `b` will be non-negative, that’s what we’re doing.
+    */
+
+    // We assume that det(_isometry) = ad − bc ≠ 0, because:
+    //  1) det(I), det(U), det(L), det(D), det(R) ≠ 0 (see above),
+    //     so determinant from any of their product is also non-zero.
+    //     (Since det(AB) = det(A)det(B) & ℂ is a field.)
+    //  2) Matrix with zero determinant corresponds to constant transformation,
+    //     but it makes no sense in this context.
+    if (!_isometry.a.isZero()) {
+        // a ≠ 0 and b ≠ 0
+        if (!_isometry.b.isZero()) _isometry.b.normalize(_isometry.a, _isometry.c, _isometry.d);
+        // det(_isometry) = ad − bc = ad ≠ 0, so a ≠ 0 and d ≠ 0
+        else _isometry.d.normalize(_isometry.a, _isometry.c);
+
+        _isometry.a.normalize(_isometry.c);
+    } else {
+        // det(_isometry) = ad − bc = −bc ≠ 0, so b ≠ 0 and c ≠ 0
+        _isometry.b.normalize(_isometry.c, _isometry.d);
+        _isometry.c.normalize();
+    }
 
     _pos = isometry.origin();
     updateMatrix(origin);
@@ -228,8 +250,9 @@ void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
 }
 
 void Chunk::updateMatrix(const Fuchsian<Integer> & origin) {
-    relative = (origin.inverse() * _isometry).field<Real>();
-    relative = relative.normalize();
+    relative  = (origin.inverse() * _isometry).field<Real>();
+    relative  = relative.normalize();
+    _awayness = relative.origin().abs();
 }
 
 void Chunk::render(Shader<VoxelShader> * shader) {
