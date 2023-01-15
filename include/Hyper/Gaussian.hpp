@@ -65,8 +65,8 @@ struct Gaussian {
     }
 
     constexpr auto isZero() const { return real == 0 && imag == 0; }
-    constexpr auto isUnit() const { return (abs(real) == 1 && imag == 0)
-                                        || (real == 0 && abs(imag) == 1); }
+    constexpr auto isUnit() const { return (std::abs(real) == 1 && imag == 0)
+                                        || (real == 0 && std::abs(imag) == 1); }
 
     constexpr void negate()  { real = -real; imag = -imag; }
     constexpr void twice()   { real <<= 1; imag <<= 1; }
