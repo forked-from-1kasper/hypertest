@@ -8,24 +8,57 @@
 
 #include <Hyper/Fundamentals.hpp>
 #include <Hyper/Fuchsian.hpp>
-#include <Hyper/Moebius.hpp>
 #include <Hyper/Shader.hpp>
 #include <Hyper/Sheet.hpp>
+#include <Hyper/AutD.hpp>
+#include <List.hpp>
 
 namespace Tesselation {
     using namespace Fundamentals;
 
-    constexpr size_t N = 16;
+    enum class Direction { Identity, Up, Down, Left, Right };
+    using enum Direction;
+
+    template<typename T> T interpret(Direction);
+
+    template<Direction... ds> struct Compose {
+        template<typename T> static T eval()
+        { return (interpret<T>(ds) * ...); }
+    };
+
+    template<typename, typename> struct Eval;
+
+    template<typename T> struct Eval<T, List<>>
+    { static inline void insert(size_t, auto &) {} };
+
+    template<typename T, typename U, typename... Us> struct Eval<T, List<U, Us...>> {
+        static inline void insert(size_t i, auto & ret) {
+            ret[i] = U::template eval<T>(); ret[i].normalize();
+            Eval<T, List<Us...>>::insert(i + 1, ret);
+        }
+    };
+
+    template<typename T, typename Us> std::array<T, Length<Us>> eval()
+    { std::array<T, Length<Us>> retval; Eval<T, Us>::insert(0, retval); return retval; }
 
     using Grid = Array²<Gyrovector<Real>, chunkSize + 1>;
-    using Neighbours = std::array<Fuchsian<Integer>, N>;
-    using Neighbours⁻¹ = std::array<Möbius<Real>, N>;
 
-    extern const Fuchsian<Integer> I, U, L, D, R;
+    using Neighbours = List<
+        Compose<Up>, Compose<Left>, Compose<Down>, Compose<Right>,
+        Compose<Up,   Left>,  Compose<Up,   Left,  Down>, Compose<Up,   Left,  Down, Right>,
+        Compose<Up,   Right>, Compose<Up,   Right, Down>, Compose<Up,   Right, Down, Left>,
+        Compose<Down, Left>,  Compose<Down, Left,  Up>,   Compose<Down, Left,  Up,   Right>,
+        Compose<Down, Right>, Compose<Down, Right, Up>,   Compose<Down, Right, Up,   Left>
+    >;
 
-    extern const Neighbours   neighbours;
-    extern const Neighbours⁻¹ neighbours⁻¹;
-    extern const Grid         corners;
+    constexpr size_t amount = Length<Neighbours>;
+
+    template<typename T> using Array = std::array<T, amount>;
+
+    extern const Fuchsian<Integer>        I, U, L, D, R;
+    extern const Array<Fuchsian<Integer>> neighbours;
+    extern const Array<Aut𝔻<Real>>        neighbours⁻¹;
+    extern const Grid                     corners;
 }
 
 template<typename T> struct Parallelogram {

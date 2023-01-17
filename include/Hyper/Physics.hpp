@@ -4,16 +4,16 @@
 
 #include <Hyper/Geometry.hpp>
 #include <Hyper/Fuchsian.hpp>
-#include <Hyper/Moebius.hpp>
+#include <Hyper/AutD.hpp>
 
 class Position {
 private:
-    Möbius<Real>       _domain;
+    Aut𝔻<Real>         _domain;
     Fuchsian<Integer>  _action;
     Gaussian²<Integer> _center;
 
 public:
-    Position() : _domain(Möbius<Real>::identity()), _action(Tesselation::I) { _center = _action.origin(); }
+    Position() : _domain(Aut𝔻<Real>()), _action(Tesselation::I) { _center = _action.origin(); }
 
     Position(const auto & P, const auto & G, const auto & g) : _domain(P), _action(G), _center(g) {}
     Position(const auto & P, const auto & G) : _domain(P) { set(G); }
@@ -23,13 +23,13 @@ public:
 
     inline constexpr const auto & domain() const { return _domain; }
 
-    inline void set(const Möbius<Real> & M, const Fuchsian<Integer> & G)
+    inline void set(const Aut𝔻<Real> & M, const Fuchsian<Integer> & G)
     { _domain = M; _action = G; _center = G.origin(); }
 
     inline void set(const Fuchsian<Integer> & G)
-    { _action = G; _action.simpl(); _center = G.origin(); }
+    { _action = G; _action.normalize(); _center = G.origin(); }
 
-    inline void set(const Möbius<Real> & M) { _domain = M; }
+    inline void set(const Aut𝔻<Real> & M) { _domain = M; }
 
     // It doesn’t do anything if the speed is big enough to jump over ≥2 chunks.
     // (Of course, this can be easily fixed by iterating

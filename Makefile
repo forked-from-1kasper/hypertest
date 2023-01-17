@@ -31,7 +31,7 @@ endif
 DEPS     = PicoPNG Lua
 MODULES  = Hyper Config Shader Geometry Sheet Physics
 HEADERS  = Hyper/Gaussian Hyper/Fuchsian Hyper/Fundamentals
-HEADERS += Hyper/Gyrovector Hyper/Moebius Hyper/EuclideanDomain
+HEADERS += Hyper/Gyrovector Hyper/Moebius Hyper/AutD Hyper/EuclideanDomain
 HEADERS += Enumerable List Literal Tuple
 
 add = $(addprefix $(2)/,$(addsuffix $(1),$(3)))

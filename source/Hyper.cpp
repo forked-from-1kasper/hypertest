@@ -158,8 +158,8 @@ void display(GLFWwindow * window) {
 
     voxelShader->uniform("origin.a", origin.a);
     voxelShader->uniform("origin.b", origin.b);
-    voxelShader->uniform("origin.c", origin.c);
-    voxelShader->uniform("origin.d", origin.d);
+    voxelShader->uniform("origin.c", origin.c());
+    voxelShader->uniform("origin.d", origin.d());
 
     glBlendFunc(GL_ONE, GL_ZERO);
 
@@ -446,7 +446,7 @@ void setupGame(Config & config) {
     }
 
     player.eye = 1.62; player.height = 1.8; player.jumpHeight(1.25);
-    player.teleport(Position(Möbius<Real>(1, 0, 0, 1), Tesselation::I), 10);
+    player.teleport(Position(), 10);
 }
 
 void cleanUp(GLFWwindow * window) {

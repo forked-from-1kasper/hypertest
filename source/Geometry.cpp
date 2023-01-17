@@ -1,19 +1,5 @@
 #include <Hyper/Geometry.hpp>
 
-namespace Array {
-    template<std::size_t N, typename T, typename U>
-    clangexpr auto inverse(const std::array<Fuchsian<T>, N> & xs) {
-        std::array<Möbius<U>, N> retval;
-
-        for (size_t i = 0; i < N; i++) {
-            retval[i] = xs[i].inverse().template field<U>();
-            retval[i].normalize();
-        }
-
-        return retval;
-    }
-}
-
 namespace Tesselation {
     using ℤi = Gaussian<Integer>;
 
@@ -59,19 +45,31 @@ namespace Tesselation {
         Choosing other signs in a = ±D½ and b = ±iD½, we will obtain L, D and R.
     */
 
-    template<std::same_as<Fuchsian<Integer>>... Ts> auto simpl(const Ts... ts)
-    { Neighbours retval {ts...}; for (auto & G : retval) G.simpl(); return retval; }
+    template<> Fuchsian<Integer> interpret(Direction d) {
+        switch (d) {
+            case Up:    return U;
+            case Down:  return D;
+            case Left:  return L;
+            case Right: return R;
+            default:    return I;
+        }
+    }
 
-    const Neighbours neighbours = simpl(
-        U, L, D, R,
-        // corners
-        U * L, U * L * D, U * L * D * R,
-        U * R, U * R * D, U * R * D * L,
-        D * L, D * L * U, D * L * U * R,
-        D * R, D * R * U, D * R * U * L
-    );
+    template<> Aut𝔻<Real> interpret(Direction d)
+    { return Aut𝔻<Real>(interpret<Fuchsian<Integer>>(d).field<Real>().origin()); }
 
-    const Neighbours⁻¹ neighbours⁻¹ = Array::inverse<N, Integer, Real>(neighbours);
+    template<std::size_t N, typename T>
+    clangexpr auto inverse(const std::array<T, N> & xs) {
+        std::array<T, N> retval;
+
+        for (size_t i = 0; i < N; i++)
+            retval[i] = xs[i].inverse();
+
+        return retval;
+    }
+
+    const Array<Fuchsian<Integer>> neighbours = eval<Fuchsian<Integer>, Neighbours>();
+    const Array<Aut𝔻<Real>> neighbours⁻¹ = inverse(eval<Aut𝔻<Real>, Neighbours>());
 
     // Generation of chunk’s grid
     clangexpr auto Φ(Real x, Real y) {
@@ -252,8 +250,8 @@ void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
 }
 
 void Chunk::updateMatrix(const Fuchsian<Integer> & origin) {
-    relative = (origin.inverse() * _isometry).field<Real>(); relative.normalize();
-    _awayness = relative.origin().abs();
+    relative = (origin.inverse() * _isometry).field<Real>();
+    relative.normalize(); _awayness = relative.origin().abs();
 }
 
 void Chunk::render(Shader<VoxelShader> * shader) {

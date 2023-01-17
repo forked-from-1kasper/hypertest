@@ -1,7 +1,7 @@
 #include <Hyper/Physics.hpp>
 
 std::pair<Position, bool> Position::move(const Gyrovector<Real> & v, const Real dt) const {
-    auto P = _domain * Möbius<Real>::translate(v.scale(dt)); P.normalize();
+    auto P = _domain * Aut𝔻<Real>(v.scale(dt)); P.normalize();
 
     if (Chunk::isInsideOfDomain(P.origin()))
         return std::pair(Position(P, _action, _center), false);
@@ -20,7 +20,7 @@ std::pair<Position, bool> Position::move(const Gyrovector<Real> & v, const Real 
 }
 
 std::pair<Rank, Rank> Position::round(const Chunk * C) const {
-    auto Q = (C->isometry().inverse() * _action).field<Real>() * _domain;
+    auto Q = (C->isometry().inverse() * _action).field<Real>() * Möbius<Real>(_domain);
     return Chunk::round(Q.origin());
 }
 

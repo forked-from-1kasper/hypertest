@@ -39,3 +39,10 @@ struct MapM<φ, List<>> { using val = List<>; };
 
 template<template<typename> typename φ, typename T, typename... Ts>
 struct MapM<φ, List<T, Ts...>> { using val = Cons<φ<T>, Map<φ, List<Ts...>>>; };
+
+template<typename> struct LengthM;
+
+template<typename... Ts> struct LengthM<List<Ts...>>
+{ constexpr static size_t val = sizeof...(Ts); };
+
+template<typename T> constexpr static size_t Length = LengthM<T>::val;

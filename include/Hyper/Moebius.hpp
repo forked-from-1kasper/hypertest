@@ -3,13 +3,11 @@
 #include <Hyper/Fundamentals.hpp>
 #include <Hyper/Gyrovector.hpp>
 
-template<typename T>
-struct Möbius {
-    constexpr static auto zero = Gyrovector<T>(0, 0);
-
+// M = (az + b) / (cz + d)
+template<typename T> struct Möbius {
     std::complex<T> a, b, c, d;
 
-    constexpr Möbius() {}
+    constexpr Möbius() : a(1), b(0), c(0), d(1) {}
     constexpr Möbius(auto a, auto b, auto c, auto d) : a(a), b(b), c(c), d(d) {}
 
     constexpr std::complex<T> det() const { return a * d - b * c; }
@@ -22,14 +20,14 @@ struct Möbius {
     constexpr Gyrovector<T> apply(const Gyrovector<T> & w) const
     { return (a * w.val + b) / (c * w.val + d); }
 
-    constexpr inline Gyrovector<T> origin() const { return apply(zero); }
+    constexpr inline auto origin() const { return Gyrovector<T>(b / d); }
 
     constexpr inline Möbius<T> inverse() const { return Möbius<T>(d, -b, -c, a); }
 
-    constexpr static inline Möbius<T> identity() { return {1, 0, 0, 1}; }
+    constexpr static inline Möbius<T> identity() { return Möbius<T>(1, 0, 0, 1); }
 
     constexpr static Möbius<T> translate(const Gyrovector<T> & N)
-    { return {1, N.val, std::conj(N.val), 1}; }
+    { return Möbius<T>(1, N.val, std::conj(N.val), 1); }
 
     friend std::ostream & operator<< (std::ostream & stream, const Möbius<T> & M)
     { return stream << "(" << M.a << ", " << M.b << ", " << M.c << ", " << M.d << ")"; }

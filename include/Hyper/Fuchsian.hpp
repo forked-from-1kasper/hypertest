@@ -12,7 +12,7 @@ struct Fuchsian {
 
     constexpr Gaussian<T> det() const { return a * d - b * c; }
 
-    constexpr void simpl() {
+    constexpr void normalize() {
         auto σ(a);
 
         σ = Gaussian<T>::hcf(b, σ);
@@ -62,4 +62,4 @@ template<typename T> constexpr Fuchsian<T> operator*(const Fuchsian<T> & A, cons
     };
 }
 
-template<typename T> void operator*=(Fuchsian<T> & A, const Fuchsian<T> & B) { A = A * B; A.simpl(); }
+template<typename T> void operator*=(Fuchsian<T> & A, const Fuchsian<T> & B) { A = A * B; A.normalize(); }
