@@ -13,10 +13,11 @@ struct Möbius {
     constexpr Möbius(auto a, auto b, auto c, auto d) : a(a), b(b), c(c), d(d) {}
 
     constexpr std::complex<T> det() const { return a * d - b * c; }
+    constexpr std::complex<T> tr()  const { return a + d; }
     constexpr std::complex<T> rot() const { return det() / Math::sqr(d); }
 
     constexpr inline Möbius<T> div(std::complex<T> k) const { return {a / k, b / k, c / k, d / k}; }
-    constexpr inline Möbius<T> normalize() const { return div(sqrt(det())); }
+    constexpr inline void normalize() { auto σ = sqrt(det()); a /= σ; b /= σ; c /= σ; d /= σ; }
 
     constexpr Gyrovector<T> apply(const Gyrovector<T> & w) const
     { return (a * w.val + b) / (c * w.val + d); }

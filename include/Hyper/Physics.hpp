@@ -18,15 +18,18 @@ public:
     Position(const auto & P, const auto & G, const auto & g) : _domain(P), _action(G), _center(g) {}
     Position(const auto & P, const auto & G) : _domain(P) { set(G); }
 
-    inline constexpr const auto & domain() const { return _domain; }
-    inline constexpr const auto & action() const { return _action; }
-    inline constexpr const auto & center() const { return _center; }
+    inline const auto & center() const { return _center; }
+    inline const auto & action() const { return _action; }
 
-    inline constexpr void set(const Möbius<Real> & M, const Fuchsian<Integer> & G)
+    inline constexpr const auto & domain() const { return _domain; }
+
+    inline void set(const Möbius<Real> & M, const Fuchsian<Integer> & G)
     { _domain = M; _action = G; _center = G.origin(); }
 
-    inline constexpr void set(const Fuchsian<Integer> & G)
+    inline void set(const Fuchsian<Integer> & G)
     { _action = G; _action.simpl(); _center = G.origin(); }
+
+    inline void set(const Möbius<Real> & M) { _domain = M; }
 
     // It doesn’t do anything if the speed is big enough to jump over ≥2 chunks.
     // (Of course, this can be easily fixed by iterating

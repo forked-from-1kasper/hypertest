@@ -19,7 +19,10 @@ struct Fuchsian {
         σ = Gaussian<T>::hcf(c, σ);
         σ = Gaussian<T>::hcf(d, σ);
 
-        a = a / σ; b = b / σ; c = c / σ; d = d / σ;
+        a.divexact(σ);
+        b.divexact(σ);
+        c.divexact(σ);
+        d.divexact(σ);
     }
 
     template<typename U> constexpr inline Möbius<U> field() const {
@@ -37,10 +40,10 @@ struct Fuchsian {
     constexpr inline auto inverse() const { return Fuchsian<T>(d, -b, -c, a); }
 
     constexpr inline auto origin() const {
-        if (b.isZero()) return std::pair(b, Gaussian<T>(1, 0));
+        if (b.isZero()) return std::pair(b, Gaussian<T>(Math::one<T>));
 
-        auto σ = Gaussian<T>::hcf(b, d), α = b / σ, β = d / σ;
-        α.normalize(β); return std::pair(α, β);
+        auto α(b), β(d); auto σ = Gaussian<T>::hcf(α, β);
+        α.divexact(σ); β.divexact(σ); α.normalize(β); return std::pair(α, β);
     }
 
     constexpr auto operator==(const Fuchsian<T> & G) const

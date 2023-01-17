@@ -77,8 +77,9 @@ public:
     inline constexpr auto get(Rank i, Level j, Rank k) const { return data[i][j][k]; }
 
     inline constexpr auto awayness() const { return _awayness; }
-    inline constexpr auto isometry() const { return _isometry; }
-    inline constexpr auto pos()      const { return _pos;      }
+
+    inline const auto isometry() const { return _isometry; }
+    inline const auto pos()      const { return _pos;      }
 
     inline void set(size_t i, size_t j, size_t k, const Node & node)
     { data[i][j][k] = node; }

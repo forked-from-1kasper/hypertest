@@ -8,30 +8,30 @@ ifeq ($(BARBARIZED),true)
 	INCLUDEDIR := barbarized/$(INCLUDEDIR)
 endif
 
-override CFLAGS += -Wall -std=c++2a -I$(INCLUDEDIR)
+override CFLAGS += -Wall -std=c++20 -I$(INCLUDEDIR)
 override CFLAGS += -Wno-bitwise-instead-of-logical -Wno-unused-private-field -Wno-misleading-indentation -Wno-unused-but-set-variable
 
 ifeq ($(OS),Windows_NT)
 	BINARY ?= Hyper.exe
-	override LDFLAGS += -lluajit-5.1 -lglfw3 -lglew32 -lopengl32 -lglu32
+	override LDFLAGS += -lgmpxx -lgmp -lluajit-5.1 -lglfw3 -lglew32 -lopengl32 -lglu32
 else
 	BINARY ?= Hyper
 
 	UNAME := $(shell uname -s)
 
 	ifeq ($(UNAME),Linux)
-		override LDFLAGS += -lluajit-5.1 -lglfw -lGLEW -lGL -lGLU
+		override LDFLAGS += -lgmpxx -lgmp -lluajit-5.1 -lglfw -lGLEW -lGL -lGLU
 	endif
 
 	ifeq ($(UNAME),Darwin)
-		override LDFLAGS += -lluajit-5.1 -lglfw -lGLEW -framework CoreVideo -framework OpenGL -framework IOKit -framework Cocoa -framework Carbon
+		override LDFLAGS += -lgmpxx -lgmp -lluajit-5.1 -lglfw -lGLEW -framework CoreVideo -framework OpenGL -framework IOKit -framework Cocoa -framework Carbon
 	endif
 endif
 
 DEPS     = PicoPNG Lua
 MODULES  = Hyper Config Shader Geometry Sheet Physics
 HEADERS  = Hyper/Gaussian Hyper/Fuchsian Hyper/Fundamentals
-HEADERS += Hyper/Gyrovector Hyper/Moebius
+HEADERS += Hyper/Gyrovector Hyper/Moebius Hyper/EuclideanDomain
 HEADERS += Enumerable List Literal Tuple
 
 add = $(addprefix $(2)/,$(addsuffix $(1),$(3)))

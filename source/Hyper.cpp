@@ -434,21 +434,19 @@ void setupGame(Config & config) {
     game.nodeRegistry.attach(1UL, {"Stuff", texture1});
     game.nodeRegistry.attach(2UL, {"Weird Stuff", texture2});
 
-    buildTestStructure(game.atlas.poll(player.camera().position.action(), I));
-
-    for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++) {
-        auto C = buildTestStructure(game.atlas.poll(player.camera().position.action(), Tesselation::neighbours[k]));
-        if (k == 0) markChunk(C);
-    }
-
     game.atlas.onLoad = &buildFloor;
 
     chunkRenderDistance = chunkDiameter(config.camera.chunkRenderDistance);
 
-    player.eye = 1.62;
-    player.height = 1.8;
-    player.jumpHeight(1.25);
-    player.teleport(Position(), 10);
+    buildTestStructure(game.atlas.poll(Tesselation::I, Tesselation::I));
+
+    for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++) {
+        auto C = buildTestStructure(game.atlas.poll(Tesselation::I, Tesselation::neighbours[k]));
+        if (k == 0) markChunk(C);
+    }
+
+    player.eye = 1.62; player.height = 1.8; player.jumpHeight(1.25);
+    player.teleport(Position(Möbius<Real>(1, 0, 0, 1), Tesselation::I), 10);
 }
 
 void cleanUp(GLFWwindow * window) {

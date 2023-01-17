@@ -5,8 +5,10 @@ namespace Array {
     clangexpr auto inverse(const std::array<Fuchsian<T>, N> & xs) {
         std::array<Möbius<U>, N> retval;
 
-        for (size_t i = 0; i < N; i++)
+        for (size_t i = 0; i < N; i++) {
             retval[i] = xs[i].inverse().template field<U>();
+            retval[i].normalize();
+        }
 
         return retval;
     }
@@ -29,7 +31,7 @@ namespace Tesselation {
         (In particular, 𝔻₁ = 𝔻.)
 
         Möbius transformation of translation towards vector b ∈ 𝔻 in Poincaré disk model is given by the formula:
-            Φ = [1, b; b*, 1], so φ(z) = (z + b) / (b* z + 1).
+            Φ = [1, b; b*, 1], so φ(z) = (z + b) / (zb* + 1).
         (https://en.wikipedia.org/wiki/M%C3%B6bius_transformation#Subgroups_of_the_M%C3%B6bius_group)
 
         Knowing that D½ = √(2 − √3) (see `include/Hyper/Fundamentals.hpp`),
@@ -250,8 +252,7 @@ void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
 }
 
 void Chunk::updateMatrix(const Fuchsian<Integer> & origin) {
-    relative  = (origin.inverse() * _isometry).field<Real>();
-    relative  = relative.normalize();
+    relative = (origin.inverse() * _isometry).field<Real>(); relative.normalize();
     _awayness = relative.origin().abs();
 }
 

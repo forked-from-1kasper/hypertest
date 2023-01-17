@@ -1,7 +1,7 @@
 #include <Hyper/Physics.hpp>
 
 std::pair<Position, bool> Position::move(const Gyrovector<Real> & v, const Real dt) const {
-    auto P = _domain * Möbius<Real>::translate(v.scale(dt)); P = P.normalize();
+    auto P = _domain * Möbius<Real>::translate(v.scale(dt)); P.normalize();
 
     if (Chunk::isInsideOfDomain(P.origin()))
         return std::pair(Position(P, _action, _center), false);
@@ -9,7 +9,8 @@ std::pair<Position, bool> Position::move(const Gyrovector<Real> & v, const Real 
     for (size_t k = 0; k < Tesselation::neighbours.size(); k++) {
         const auto & Δ   = Tesselation::neighbours[k];
         const auto & Δ⁻¹ = Tesselation::neighbours⁻¹[k];
-        const auto   Q   = (Δ⁻¹ * P).normalize();
+
+        auto Q = (Δ⁻¹ * P); Q.normalize();
 
         if (Chunk::isInsideOfDomain(Q.origin()))
             return std::pair(Position(Q, _action * Δ), true);
