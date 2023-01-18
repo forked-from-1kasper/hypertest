@@ -24,24 +24,29 @@ std::pair<Rank, Rank> Position::round(const Chunk * C) const {
     return Chunk::round(Q.origin());
 }
 
-void Object::rotate(const Real Δyaw, const Real Δpitch) {
+void Object::rotate(const Real Δyaw, const Real Δpitch, const Real Δroll) {
     constexpr auto ε = 1e-6;
-    yaw += Δyaw; pitch += Δpitch;
 
-    yaw   = std::fmod(yaw, τ);
-    pitch = std::clamp(pitch, -τ/4 + ε, τ/4 - ε);
+    yaw   = std::fmod(yaw + Δyaw, τ);
+    pitch = std::clamp(pitch + Δpitch, -τ/4 + ε, τ/4 - ε);
+    roll  = std::fmod(roll + Δroll, τ);
 }
 
 glm::vec3 Object::direction() const {
-    auto dx = cos(pitch) * sin(yaw);
-    auto dy = sin(pitch);
-    auto dz = cos(pitch) * cos(yaw);
-
-    return glm::vec3(dx, dy, dz);
+    return glm::vec3(
+        cos(pitch) * sin(yaw),
+        sin(pitch),
+        cos(pitch) * cos(yaw)
+    );
 }
 
-glm::vec3 Object::right() const
-{ return glm::vec3(sin(yaw - τ/4), 0.0, cos(yaw - τ/4)); }
+glm::vec3 Object::right() const {
+    return glm::vec3(
+        cos(roll) * sin(yaw - τ/4),
+        sin(roll),
+        cos(roll) * cos(yaw - τ/4)
+    );
+}
 
 bool Entity::stuck(Chunk * C, Rank x, Real y, Rank z) {
     if (C == nullptr) return false;

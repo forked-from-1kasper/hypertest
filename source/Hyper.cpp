@@ -141,7 +141,8 @@ void display(GLFWwindow * window) {
 
         player.rotate(
             Mouse::speed * dt * (Window::width/2 - Mouse::xpos),
-            Mouse::speed * dt * (Window::height/2 - Mouse::ypos)
+            Mouse::speed * dt * (Window::height/2 - Mouse::ypos),
+            0.0f
         );
     }
 

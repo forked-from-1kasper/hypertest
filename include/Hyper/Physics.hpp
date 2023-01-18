@@ -45,9 +45,9 @@ struct Object {
     Real climb = 0, roc = 0;
     bool flying = false;
 
-    Real yaw = 0, pitch = 0;
+    Real yaw = 0, pitch = 0, roll = 0;
 
-    void rotate(const Real, const Real);
+    void rotate(const Real, const Real, const Real);
 
     glm::vec3 direction() const;
     glm::vec3 right() const;
@@ -88,6 +88,6 @@ public:
     constexpr inline void jumpHeight(Real height)
     { jumpSpeed = sqrt(2 * gravity * height); }
 
-    inline void rotate(const Real Δyaw, const Real Δpitch)
-    { _camera.rotate(Δyaw, Δpitch); }
+    inline void rotate(const Real Δyaw, const Real Δpitch, const Real Δroll)
+    { _camera.rotate(Δyaw, Δpitch, Δroll); }
 };
