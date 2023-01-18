@@ -34,7 +34,7 @@ public:
     // It doesn’t do anything if the speed is big enough to jump over ≥2 chunks.
     // (Of course, this can be easily fixed by iterating
     //  not only over neighbours, but it seems useless.)
-    std::pair<Position, bool> move(const Gyrovector<Real> &, const Real dt) const;
+    std::pair<Position, bool> move(const Gyrovector<Real> &) const;
 
     std::pair<Rank, Rank> round(const Chunk *) const;
 };

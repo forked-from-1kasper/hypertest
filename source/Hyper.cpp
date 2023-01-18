@@ -95,7 +95,7 @@ std::tuple<bool, Chunk *, Rank, Level, Rank> raycast(bool volume, const Atlas * 
     auto [i₀, k₀] = P₀.round(C₀); auto j₀ = std::floor(H₀);
 
     while (traveled <= maxlength) {
-        auto [P, chunkChanged] = P₀.move(vₕ, Δt); auto H = H₀ + vₛ * Δt;
+        auto [P, chunkChanged] = P₀.move(vₕ.scale(Δt)); auto H = H₀ + vₛ * Δt;
         auto C = chunkChanged ? atlas->lookup(P.center()) : C₀;
 
         if (Chunk::outside(H) || C == nullptr)

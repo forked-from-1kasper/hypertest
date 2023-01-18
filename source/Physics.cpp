@@ -1,7 +1,7 @@
 #include <Hyper/Physics.hpp>
 
-std::pair<Position, bool> Position::move(const Gyrovector<Real> & v, const Real dt) const {
-    auto P = _domain * Aut𝔻<Real>(v.scale(dt)); P.normalize();
+std::pair<Position, bool> Position::move(const Gyrovector<Real> & v) const {
+    auto P = _domain * Aut𝔻<Real>(v); P.normalize();
 
     if (Chunk::isInsideOfDomain(P.origin()))
         return std::pair(Position(P, _action, _center), false);
@@ -54,7 +54,7 @@ bool Entity::stuck(Chunk * C, Rank x, Real y, Rank z) {
 }
 
 bool Entity::moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
-    auto [P, chunkChanged] = _camera.position.move(v, dt);
+    auto [P, chunkChanged] = _camera.position.move(v.scale(dt));
     auto C = chunkChanged ? atlas()->poll(_camera.position.action(), P.action()) : chunk();
 
     if (C != nullptr) {
