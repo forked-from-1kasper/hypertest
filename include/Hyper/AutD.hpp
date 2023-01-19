@@ -24,7 +24,7 @@
         f(z) = (az + b)/(zb* + a*)
 
     It’s easy to see that product of two matrices of this type is again such matrix:
-          [a₁, b₁; b₁*, a₁*] . [a₂, b₂; b₂*, a₂*]
+          [a₁, b₁; b₁*, a₁*] × [a₂, b₂; b₂*, a₂*]
         = [a₁a₂ + b₁b₂*, a₁b₂ + b₁a₂*; a₂b₁* + a₁*b₂*, b₂b₁* + a₁*a₂*]
         = [a₁a₂ + b₁b₂*, a₁b₂ + b₁a₂*; (a₁b₂ + b₁a₂*)*, (a₁a₂ + b₁b₂*)*]
         = [a₃, b₃; b₃*, a₃*],
@@ -48,7 +48,7 @@
           = [a², a²(b/a); aa*(b/a)*, aa*]
           = [a², a²(b/a); (b/a)*, 1] (because |a| = 1, then aa* = |a|² = 1)
           = [exp(iφ), exp(iφ)z₀; z₀*, 1],
-    where exp(iφ) = a² and z₀ = b/a.
+    where exp(iφ) = a², z₀ = b/a and M₁ ~ M₂ ↔ ∃ z ∈ ℂ: M₁ = zM₂.
 */
 
 // M = (az + b) / (zb* + a*)
