@@ -3,17 +3,16 @@
 std::pair<Position, bool> Position::move(const Gyrovector<Real> & v) const {
     auto P = _domain * Aut𝔻<Real>(v); P.normalize();
 
-    if (Chunk::isInsideOfDomain(P.origin()))
+    auto w = P.origin();
+
+    if (Chunk::isInsideOfDomain(w))
         return std::pair(Position(P, _action, _center), false);
 
-    for (size_t k = 0; k < Tesselation::neighbours.size(); k++) {
-        const auto & Δ   = Tesselation::neighbours[k];
-        const auto & Δ⁻¹ = Tesselation::neighbours⁻¹[k];
+    if (auto k = Chunk::matchNeighbour(w)) {
+        const auto & Δ   = Tesselation::neighbours[*k];
+        const auto & Δ⁻¹ = Tesselation::neighbours⁻¹[*k];
 
-        auto Q = (Δ⁻¹ * P); Q.normalize();
-
-        if (Chunk::isInsideOfDomain(Q.origin()))
-            return std::pair(Position(Q, _action * Δ), true);
+        return std::pair(Position(Δ⁻¹ * P, _action * Δ), true);
     }
 
     return std::pair(*this, false);
@@ -57,6 +56,8 @@ bool Entity::stuck(Chunk * C, Rank x, Real y, Rank z) {
 
     return false;
 }
+
+bool Entity::stuck() { return stuck(_chunk, _i, _camera.climb, _j); }
 
 bool Entity::moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
     auto [P, chunkChanged] = _camera.position.move(v.scale(dt));

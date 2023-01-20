@@ -2,6 +2,7 @@
 
 #include <array>
 
+#include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
 #include <glm/glm.hpp>
 #include <gmpxx.h>
@@ -66,7 +67,7 @@ namespace Projection {
             case Model::Klein: {
                 auto σ = 1 + y₁ * y₁ + y₂ * y₂;
                 x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ; break;
-            };
+            }
 
             case Model::Gans: {
                 auto σ = 1 - y₁ * y₁ - y₂ * y₂;
@@ -79,6 +80,26 @@ namespace Projection {
 
     constexpr auto apply(const Gyrovector<Real> & v)
     { return apply(v.x(), v.y()); }
+
+    constexpr auto unapply(const glm::vec3 w) {
+        float x, z;
+
+        switch (model) {
+            case Model::Poincaré: x = w.x; z = w.z; break;
+
+            case Model::Klein: {
+                auto σ = 1.0f + sqrt(1.0f - w.x * w.x - w.z * w.z);
+                x = w.x / σ; z = w.z / σ; break;
+            }
+
+            case Model::Gans: {
+                auto σ = 1.0f + sqrt(w.x * w.x + w.z * w.z + 1.0f);
+                x = w.x / σ; z = w.z / σ; break;
+            }
+        }
+
+        return glm::vec3(x, w.y, z);
+    }
 }
 
 namespace Fundamentals {

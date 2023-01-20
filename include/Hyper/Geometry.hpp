@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 #include <map>
@@ -88,7 +89,7 @@ public:
 
 class Chunk {
 private:
-    Fuchsian<Integer> _isometry; Möbius<Real> relative; Real _awayness; // used for drawing
+    Fuchsian<Integer> _isometry; Möbius<Real> _relative; Real _awayness; // used for drawing
     Gaussian²<Integer> _pos; // used for indexing, should be equal to `isometry.origin()`
     Node data[Fundamentals::chunkSize][Fundamentals::worldHeight][Fundamentals::chunkSize];
 
@@ -112,6 +113,7 @@ public:
     inline constexpr auto awayness() const { return _awayness; }
 
     inline const auto isometry() const { return _isometry; }
+    inline const auto relative() const { return _relative; }
     inline const auto pos()      const { return _pos;      }
 
     inline void set(size_t i, size_t j, size_t k, const Node & node)
@@ -123,6 +125,7 @@ public:
     static std::pair<Rank, Rank> round(const Gyrovector<Real> &);
 
     static bool isInsideOfDomain(const Gyrovector<Real> &);
+    static std::optional<size_t> matchNeighbour(const Gyrovector<Real> &);
 
     inline static bool outside(Real L) { return L < 0 || L >= Fundamentals::worldHeight; }
 };

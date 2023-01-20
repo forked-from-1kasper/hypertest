@@ -16,7 +16,7 @@ public:
     Position() : _domain(Aut𝔻<Real>()), _action(Tesselation::I) { _center = _action.origin(); }
 
     Position(const auto & P, const auto & G, const auto & g) : _domain(P), _action(G), _center(g) {}
-    Position(const auto & P, const auto & G) : _domain(P) { set(G); }
+    Position(const auto & P, const auto & G) : _domain(P) { _domain.normalize(); set(G); }
 
     inline const auto & center() const { return _center; }
     inline const auto & action() const { return _action; }
@@ -59,8 +59,6 @@ private:
 
     bool jumped = false;
 
-    bool stuck(Chunk *, Rank, Real, Rank);
-
     bool moveHorizontally(const Gyrovector<Real> & v, const Real dt);
     bool moveVertically(const Real dt);
 
@@ -70,6 +68,9 @@ public:
     Real gravity = 9.8;
 
     Entity(Atlas * atlas) : _i(0), _j(0), _atlas(atlas), _chunk(nullptr) {}
+
+    bool stuck();
+    bool stuck(Chunk *, Rank, Real, Rank);
 
     // Returns true iff chunk changes
     bool move(const Gyrovector<Real> & v, Real dt);

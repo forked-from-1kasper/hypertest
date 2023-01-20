@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GL/glew.h>
+#include <optional>
 #include <vector>
 #include <string>
 
@@ -155,6 +156,78 @@ public:
             glDeleteVertexArrays(1, &vao);
         }
     };
+};
+
+enum class Status { Inactive, Issued, Working };
+
+template<typename T, typename Msg> class PBO {
+    using Result = std::optional<std::pair<T, Msg>>;
+    using enum Status;
+
+private:
+    GLenum format; GLsizei width, height;
+    Status status = Inactive; Msg message;
+    GLuint buffer; GLsync sync;
+
+public:
+    PBO(GLenum format, GLsizei width, GLsizei height) : format(format), width(width), height(height) {}
+
+    void initialize() {
+        glGenBuffers(1, &buffer);
+        glBindBuffer(GL_PIXEL_PACK_BUFFER, buffer);
+        glBufferData(GL_PIXEL_PACK_BUFFER, sizeof(T) * width * height, nullptr, GL_STREAM_READ);
+        glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+    }
+
+    void issue(Msg value) {
+        if (status == Inactive) {
+            message = value;
+            status  = Issued;
+        }
+    }
+
+    Result read(GLint x, GLint y) {
+        switch (status) {
+            case Issued: {
+                glBindBuffer(GL_PIXEL_PACK_BUFFER, buffer);
+
+                glReadPixels(x, y, width, height, format, GL::type<T>, nullptr);
+                sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+
+                glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
+                status = Working;
+                return std::nullopt;
+            }
+
+            case Working: {
+                Result retval = std::nullopt;
+
+                if (glClientWaitSync(sync, 0, 0) == GL_ALREADY_SIGNALED) {
+                    status = Inactive;
+
+                    glBindBuffer(GL_PIXEL_PACK_BUFFER, buffer);
+                    auto value = (T*) glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+
+                    if (value != nullptr) {
+                        retval = std::optional(std::pair(*value, message));
+                        glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+                    }
+
+                    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+                    glDeleteSync(sync);
+                }
+
+                return retval;
+            }
+
+            default: return std::nullopt;
+        }
+    }
+
+    void free() {
+        glDeleteBuffers(1, &buffer);
+    }
 };
 
 struct VoxelShader {

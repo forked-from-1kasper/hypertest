@@ -190,7 +190,7 @@ void drawSide(VBO & vbo, EBO & ebo, Texture & T, const Gyrovector<GLfloat> & A, 
 
 struct Mask { bool top : 1, bottom : 1, back : 1, forward : 1, left : 1, right : 1; };
 
-void drawRightParallelogrammicPrism(VBO & vbo, EBO & ebo, Texture & T, Mask m, Real h, Real Δh, const Parallelogram<GLfloat> & P) {
+void drawRightParallelogrammicPrism(VBO & vbo, EBO & ebo, Texture & T, Mask m, GLfloat h, GLfloat Δh, const Parallelogram<GLfloat> & P) {
     const auto h₁ = h, h₂ = h + Δh;
 
     if (m.top)     drawParallelogram(vbo, ebo, T, P, h₂);
@@ -214,7 +214,7 @@ template Parallelogram<Real>    Chunk::parallelogram(Rank, Rank);
 
 void drawNode(VBO & vbo, EBO & ebo, Texture & T, Mask m, Rank x, Level y, Rank z) {
     auto P = Chunk::parallelogram<GLfloat>(x, z);
-    drawRightParallelogrammicPrism(vbo, ebo, T, m, Real(y), 1, P);
+    drawRightParallelogrammicPrism(vbo, ebo, T, m, GLfloat(y), 1.0f, P);
 }
 
 void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
@@ -250,15 +250,15 @@ void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
 }
 
 void Chunk::updateMatrix(const Fuchsian<Integer> & origin) {
-    relative = (origin.inverse() * _isometry).field<Real>();
-    relative.normalize(); _awayness = relative.origin().abs();
+    _relative = (origin.inverse() * _isometry).field<Real>();
+    _relative.normalize(); _awayness = _relative.origin().abs();
 }
 
 void Chunk::render(Shader<VoxelShader> * shader) {
-    shader->uniform("relative.a", relative.a);
-    shader->uniform("relative.b", relative.b);
-    shader->uniform("relative.c", relative.c);
-    shader->uniform("relative.d", relative.d);
+    shader->uniform("relative.a", _relative.a);
+    shader->uniform("relative.b", _relative.b);
+    shader->uniform("relative.c", _relative.c);
+    shader->uniform("relative.d", _relative.d);
 
     vao.draw(GL_TRIANGLES);
 }
@@ -303,6 +303,16 @@ bool Chunk::isInsideOfDomain(const Gyrovector<Real> & w₀) {
     }
 
     return false;
+}
+
+std::optional<size_t> Chunk::matchNeighbour(const Gyrovector<Real> & P) {
+    for (size_t k = 0; k < Tesselation::neighbours.size(); k++) {
+        const auto & Δ⁻¹ = Tesselation::neighbours⁻¹[k];
+        if (Chunk::isInsideOfDomain(Δ⁻¹.apply(P)))
+            return std::optional(k);
+    }
+
+    return std::nullopt;
 }
 
 Atlas::Atlas() : onLoad(nullptr) {}

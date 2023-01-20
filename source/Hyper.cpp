@@ -72,6 +72,10 @@ Shader<VoxelShader> * voxelShader;
 
 Shader<DummyShader>::VAO aimVao;
 
+enum class Action { Remove, Place };
+
+PBO<GLfloat, Action> pbo(GL_DEPTH_COMPONENT, 1, 1);
+
 Real chunkDiameter(const Real n) {
     static const auto i = Gyrovector<Real>(Fundamentals::D½, 0);
     static const auto j = Gyrovector<Real>(0, Fundamentals::D½);
@@ -86,33 +90,84 @@ bool move(Entity & E, const Gyrovector<Real> & v, Real Δt) {
     auto R = E.move(v, Δt); return P || R;
 }
 
-std::tuple<bool, Chunk *, Rank, Level, Rank> raycast(bool volume, const Atlas * atlas, const Real maxlength, const glm::vec3 dir, const Real Δt, Chunk * C₀, Position P₀, Real H₀) {
-    Real traveled = 0.0;
+glm::vec3 unproject(const glm::mat4 & view, const glm::mat4 & projection, const GLfloat depth) {
+    auto v = glm::inverse(view) * glm::inverse(projection) * glm::vec4(0.0f, 0.0f, depth, 1.0f);
+    return glm::vec3(v.x / v.w, v.y / v.w, v.z / v.w);
+}
 
-    Gyrovector<Real> vₕ(dir.x, dir.z);
-    auto vₛ = dir.y / Fundamentals::meter;
+glm::vec3 trace(const glm::mat4 & view, const glm::mat4 & projection, const GLfloat zbuffer, const GLfloat H, bool forward) {
+    auto h = glm::vec3(0.0f, H, 0.0f);
 
-    auto [i₀, k₀] = P₀.round(C₀); auto j₀ = std::floor(H₀);
+    auto w₀ = Projection::unapply(unproject(view, projection, 2.0f * zbuffer - 1.0f));
+    auto dist₀ = glm::length(w₀ - h);
 
-    while (traveled <= maxlength) {
-        auto [P, chunkChanged] = P₀.move(vₕ.scale(Δt)); auto H = H₀ + vₛ * Δt;
-        auto C = chunkChanged ? atlas->lookup(P.center()) : C₀;
+    const GLfloat ε = Fundamentals::meter / 3.0f;
+    GLfloat dist = dist₀ + (forward ? +ε : -ε);
 
-        if (Chunk::outside(H) || C == nullptr)
-            return std::tuple(false, C₀, i₀, j₀, k₀);
+    return (dist / dist₀) * (w₀ - h) + h;
+}
 
-        auto [i, k] = P.round(C); Level j = std::floor(H);
-
-        if (C->get(i, j, k).id != 0) {
-            if (volume) return std::tuple(true, C, i, j, k);
-            else return std::tuple(true, C₀, i₀, j₀, k₀);
-        }
-
-        traveled += glm::length(dir) * Δt;
-        C₀ = C; P₀ = P; H₀ = H; i₀ = i; j₀ = j; k₀ = k;
+std::optional<std::pair<Chunk *, Gyrovector<Real>>> getNeighbour(const Gyrovector<Real> & P) {
+    if (Chunk::isInsideOfDomain(P)) {
+        auto Q = player.chunk()->relative().inverse().apply(P);
+        return std::optional(std::pair(player.chunk(), Q));
     }
 
-    return std::tuple(false, C₀, i₀, j₀, k₀);
+    for (size_t k = 0; k < Tesselation::neighbours.size(); k++) {
+        auto G = player.chunk()->isometry() * Tesselation::neighbours[k];
+        if (auto C = game.atlas.lookup(G.origin())) {
+            auto Q = C->relative().inverse().apply(P);
+
+            if (Chunk::isInsideOfDomain(Q))
+                return std::optional(std::pair(C, Q));
+        }
+    }
+
+    return std::nullopt;
+}
+
+void jump() { if (!player.camera().flying) player.jump(); }
+
+void setBlock(Chunk * C, Rank i, Real L, Rank k, NodeId id) {
+    if (C == nullptr || Chunk::outside(L))
+        return;
+
+    if (i >= Fundamentals::chunkSize || k >= Fundamentals::chunkSize)
+        return;
+
+    auto j = Level(std::floor(L));
+
+    if (id != 0 && C->get(i, j, k).id != 0)
+        return;
+
+    C->set(i, j, k, {id});
+
+    if (player.stuck())
+        C->set(i, j, k, {0});
+
+    C->requestRefresh();
+}
+
+void click(const Aut𝔻<Real> & origin, const GLfloat zbuffer, const Action action) {
+    const auto maxₕ = 3.0 * Fundamentals::meter, maxᵥ = 4.0;
+    const auto H = player.camera().climb + player.eye;
+
+    auto v = trace(view, projection, zbuffer, H, action == Action::Remove);
+    auto P = Gyrovector(v.x, v.z);
+
+    if (P.abs() <= maxₕ && fabs(v.y - H) <= maxᵥ) {
+        if (auto ret = getNeighbour(origin.inverse().apply(P))) {
+            auto [C, Q] = *ret; auto [i, k] = Chunk::round(Q);
+
+            if (action == Action::Place)  setBlock(C, i, v.y, k, 2);
+            if (action == Action::Remove) setBlock(C, i, v.y, k, 0);
+        }
+    }
+}
+
+void returnToSpawn() {
+    player.teleport(Position(), 5); player.roc(0);
+    game.atlas.updateMatrix(player.camera().position.action());
 }
 
 double globaltime = 0;
@@ -175,6 +230,9 @@ void display(GLFWwindow * window) {
             chunk->render(voxelShader);
     }
 
+    if (auto value = pbo.read(Window::width/2 - 1, Window::height/2))
+    { auto [zbuffer, action] = *value; click(origin, zbuffer, action); }
+
     dummyShader->activate();
 
     glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
@@ -214,18 +272,12 @@ void freeMouse(GLFWwindow * window) {
 }
 
 void mouseButtonCallback(GLFWwindow * window, int button, int action, int mods) {
-    if (Mouse::grabbed && (button == GLFW_MOUSE_BUTTON_LEFT || button == GLFW_MOUSE_BUTTON_RIGHT) && action == GLFW_PRESS) {
-        auto [success, C, i, j, k] = raycast(
-            button == GLFW_MOUSE_BUTTON_LEFT,
-            player.atlas(), 0.3,
-            player.camera().direction(),
-            Fundamentals::meter / 4.0,
-            player.chunk(),
-            player.camera().position,
-            player.camera().climb + player.eye
-        );
-        NodeId id = (button == GLFW_MOUSE_BUTTON_LEFT) ? 0 : 2;
-        if (success) { C->set(i, j, k, {id}); C->requestRefresh(); }
+    if (Mouse::grabbed) switch (button) {
+        case GLFW_MOUSE_BUTTON_LEFT: case GLFW_MOUSE_BUTTON_RIGHT: {
+            if (action == GLFW_PRESS)
+                pbo.issue((button == GLFW_MOUSE_BUTTON_LEFT) ? Action::Remove : Action::Place);
+            break;
+        }
     }
 
     if (Window::hovered && Window::focused && !Mouse::grabbed) grabMouse(window);
@@ -239,34 +291,6 @@ void cursorEnterCallback(GLFWwindow * window, int entered) {
 void windowFocusCallback(GLFWwindow * window, int focused) {
     Window::focused = focused;
     if (!Window::focused) freeMouse(window);
-}
-
-void jump() { if (!player.camera().flying) player.jump(); }
-
-void setBlock(Rank i, Real L, Rank k, NodeId id) {
-    if (player.chunk() == nullptr) return;
-
-    if (Chunk::outside(player.camera().climb)) return;
-
-    if (i >= Fundamentals::chunkSize
-     || k >= Fundamentals::chunkSize)
-        return;
-
-    auto j = Level(std::floor(player.camera().climb));
-
-    player.chunk()->set(i, j, k, {id});
-    player.chunk()->requestRefresh();
-}
-
-void placeBlockNextToPlayer()
-{ setBlock(player.i() + 1, player.camera().climb, player.j(), 1); }
-
-void deleteBlockNextToPlayer()
-{ setBlock(player.i() + 1, player.camera().climb, player.j(), 0); }
-
-void returnToSpawn() {
-    player.teleport(Position(), 5); player.roc(0);
-    game.atlas.updateMatrix(player.camera().position.action());
 }
 
 void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, int mods) {
@@ -374,6 +398,8 @@ void setupGL(GLFWwindow * window, Config & config) {
     aimVao.initialize();
     GUI::aimSize = config.gui.aimSize;
     setupWindowSize(window, Window::width, Window::height);
+
+    pbo.initialize();
 }
 
 Chunk * buildFloor(Chunk * chunk) {
@@ -451,6 +477,7 @@ void setupGame(Config & config) {
 }
 
 void cleanUp(GLFWwindow * window) {
+    pbo.free();
     aimVao.free();
 
     delete dummyShader;
