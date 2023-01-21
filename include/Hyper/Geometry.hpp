@@ -71,7 +71,8 @@ template<typename T> struct Parallelogram {
     const auto rev() const { return Parallelogram<T>(D, C, B, A); }
 };
 
-struct NodeDef { std::string name; Texture texture; };
+struct Cube { Texture top, bottom, left, right, front, back; };
+struct NodeDef { std::string name; Cube cube; };
 
 struct Node { NodeId id; };
 

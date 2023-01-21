@@ -458,8 +458,8 @@ Chunk * markChunk(Chunk * chunk) {
 void setupGame(Config & config) {
     using namespace Tesselation;
 
-    game.nodeRegistry.attach(1UL, {"Stuff", texture1});
-    game.nodeRegistry.attach(2UL, {"Weird Stuff", texture2});
+    game.nodeRegistry.attach(1UL, {"Stuff", {texture1,texture1,texture1,texture1,texture1,texture1}});
+    game.nodeRegistry.attach(2UL, {"Weird Stuff", {texture2,texture1,texture2,texture2,texture2,texture2}});
 
     game.atlas.onLoad = &buildFloor;
 
