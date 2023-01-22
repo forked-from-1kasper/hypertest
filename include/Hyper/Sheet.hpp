@@ -32,7 +32,7 @@ private:
 
 public:
     Sheet(unsigned long, unsigned long);
-    Texture attach(const std::string &);
+    size_t attach(const std::string &);
     void pack();
 
     inline constexpr auto texture()  const { return _texture;         }

@@ -25,11 +25,9 @@ Sheet::Sheet(unsigned long size, unsigned long total) : _size(size), _total(tota
     _files.push_back(placeholder);
 }
 
-Texture Sheet::attach(const std::string & file) {
+size_t Sheet::attach(const std::string & file) {
     if (full()) throw std::length_error("no space left in texture sheet");
-    _files.push_back(file);
-
-    return get(files().size() - 1);
+    _files.push_back(file); return files().size() - 1;
 }
 
 void Sheet::pack() {

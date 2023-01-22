@@ -460,8 +460,8 @@ Chunk * markChunk(Chunk * chunk) {
 void setupGame(Config & config) {
     using namespace Tesselation;
 
-    auto texture1 = game.sheet.attach("texture1.png");
-    auto texture2 = game.sheet.attach("texture2.png");
+    auto texture1 = game.sheet.get(game.sheet.attach("texture1.png"));
+    auto texture2 = game.sheet.get(game.sheet.attach("texture2.png"));
 
     game.nodeRegistry.attach({"Stuff", {texture1,texture1,texture1,texture1,texture1,texture1}});
     game.nodeRegistry.attach({"Weird Stuff", {texture2,texture1,texture2,texture2,texture2,texture2}});
