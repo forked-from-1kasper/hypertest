@@ -269,15 +269,15 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
 
     if (action == GLFW_PRESS) {
         switch (key) {
-            case GLFW_KEY_ESCAPE:     glfwSetWindowShouldClose(window, GL_TRUE); break;
-            case GLFW_KEY_W:          Keyboard::forward  = true;                 break;
-            case GLFW_KEY_S:          Keyboard::backward = true;                 break;
-            case GLFW_KEY_A:          Keyboard::left     = true;                 break;
-            case GLFW_KEY_D:          Keyboard::right    = true;                 break;
-            case GLFW_KEY_O:          returnToSpawn();                           break;
-            case GLFW_KEY_K:          player.noclip = !player.noclip;            break;
-            case GLFW_KEY_SPACE:      Keyboard::space = true; pressSpace();      break;
-            case GLFW_KEY_LEFT_SHIFT: Keyboard::lshift = true; pressLShift();    break;
+            case GLFW_KEY_ESCAPE:     glfwSetWindowShouldClose(window, GL_TRUE);     break;
+            case GLFW_KEY_W:          Keyboard::forward  = true;                     break;
+            case GLFW_KEY_S:          Keyboard::backward = true;                     break;
+            case GLFW_KEY_A:          Keyboard::left     = true;                     break;
+            case GLFW_KEY_D:          Keyboard::right    = true;                     break;
+            case GLFW_KEY_O:          returnToSpawn();                               break;
+            case GLFW_KEY_K:          player.roc(0); player.noclip = !player.noclip; break;
+            case GLFW_KEY_SPACE:      Keyboard::space = true; pressSpace();          break;
+            case GLFW_KEY_LEFT_SHIFT: Keyboard::lshift = true; pressLShift();        break;
         }
     }
 
