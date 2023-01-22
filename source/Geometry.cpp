@@ -111,7 +111,12 @@ namespace Tesselation {
     clangexpr Grid corners = init();
 }
 
-NodeRegistry::NodeRegistry() { attach({"Air", Texture()}); }
+NodeRegistry::NodeRegistry() {
+    attach({"Air", {
+        Texture(), Texture(), Texture(),
+        Texture(), Texture(), Texture()
+    }});
+}
 
 Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry) : _isometry(isometry), data{} {
     /*
