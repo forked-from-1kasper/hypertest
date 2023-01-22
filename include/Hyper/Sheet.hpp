@@ -43,7 +43,7 @@ public:
     inline const std::vector<std::string> files() const { return _files; }
     inline auto occupancy() const { return _files.size(); }
 
-    inline auto nth(size_t idx) { return Texture(this, idx); }
+    inline auto get(size_t idx) { return Texture(this, idx < occupancy() ? idx : 0); }
 
     inline const bool full() const { return _files.size() == Math::sqr(capacity()); }
     inline const auto index(size_t k) { return std::pair(k / capacity(), k % capacity()); }

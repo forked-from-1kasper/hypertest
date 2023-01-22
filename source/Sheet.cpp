@@ -4,6 +4,8 @@
 #include <Hyper/Sheet.hpp>
 #include <PicoPNG.hpp>
 
+const char placeholder[] = "placeholder.png";
+
 Texture::Texture() : sheet(nullptr) {}
 
 Texture::Texture(Sheet * sheet, size_t index) : sheet(sheet), index(index) {
@@ -19,13 +21,15 @@ Sheet::Sheet(unsigned long size, unsigned long total) : _size(size), _total(tota
     if (total <= 0) throw std::invalid_argument("total <= 0");
     if (size > total) throw std::invalid_argument("size > total");
     if (total % size != 0) throw std::invalid_argument("`total` is not divisible by `size`");
+
+    _files.push_back(placeholder);
 }
 
 Texture Sheet::attach(const std::string & file) {
     if (full()) throw std::length_error("no space left in texture sheet");
     _files.push_back(file);
 
-    return nth(files().size() - 1);
+    return get(files().size() - 1);
 }
 
 void Sheet::pack() {

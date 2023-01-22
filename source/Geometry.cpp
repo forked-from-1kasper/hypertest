@@ -168,10 +168,10 @@ using EBO = Shader<VoxelShader>::EBO;
 
 void drawParallelogram(VBO & vbo, EBO & ebo, Texture & T, const Parallelogram<GLfloat> & P, GLfloat h) {
     auto index = vbo.size();
-    emit(vbo, Tuple(T.left(),  T.down()), P.A, h); // 1
-    emit(vbo, Tuple(T.right(), T.down()), P.B, h); // 2
-    emit(vbo, Tuple(T.right(), T.up()),   P.C, h); // 3
-    emit(vbo, Tuple(T.left(),  T.up()),   P.D, h); // 4
+    emit(vbo, Tuple(T.left(),  T.up()),   P.A, h); // 1
+    emit(vbo, Tuple(T.right(), T.up()),   P.B, h); // 2
+    emit(vbo, Tuple(T.right(), T.down()), P.C, h); // 3
+    emit(vbo, Tuple(T.left(),  T.down()), P.D, h); // 4
 
     ebo.push_back(index); ebo.push_back(index + 1); ebo.push_back(index + 2);
     ebo.push_back(index); ebo.push_back(index + 2); ebo.push_back(index + 3);
