@@ -34,13 +34,14 @@ struct Game {
     NodeRegistry nodeRegistry;
     Atlas        atlas;
     Sheet        sheet;
+    Entity       player;
 
     struct {
         Real fov, near, far;
         Real distance;
     } graphics;
 
-    Game() : sheet(Fundamentals::textureSize, Fundamentals::sheetSize) {}
+    Game() : sheet(Fundamentals::textureSize, Fundamentals::sheetSize), player(&atlas) {}
 };
 
 namespace Keyboard {
@@ -68,7 +69,7 @@ namespace Mouse {
     Real xpos, ypos, speed = 0.7;
 }
 
-Game game; Entity player(&game.atlas);
+Game game;
 
 glm::mat4 view, projection;
 
@@ -112,12 +113,12 @@ glm::vec3 trace(const glm::mat4 & view, const glm::mat4 & projection, const GLfl
 
 std::optional<std::pair<Chunk *, Gyrovector<Real>>> getNeighbour(const Gyrovector<Real> & P) {
     if (Chunk::isInsideOfDomain(P)) {
-        auto Q = player.chunk()->relative().inverse().apply(P);
-        return std::optional(std::pair(player.chunk(), Q));
+        auto Q = game.player.chunk()->relative().inverse().apply(P);
+        return std::optional(std::pair(game.player.chunk(), Q));
     }
 
     for (size_t k = 0; k < Tesselation::neighbours.size(); k++) {
-        auto G = player.chunk()->isometry() * Tesselation::neighbours[k];
+        auto G = game.player.chunk()->isometry() * Tesselation::neighbours[k];
         if (auto C = game.atlas.lookup(G.origin())) {
             auto Q = C->relative().inverse().apply(P);
 
@@ -129,7 +130,7 @@ std::optional<std::pair<Chunk *, Gyrovector<Real>>> getNeighbour(const Gyrovecto
     return std::nullopt;
 }
 
-void jump() { if (!player.camera().flying) player.jump(); }
+void jump() { if (!game.player.camera().flying) game.player.jump(); }
 
 void setBlock(Chunk * C, Rank i, Real L, Rank k, NodeId id) {
     if (C == nullptr || Chunk::outside(L))
@@ -145,7 +146,7 @@ void setBlock(Chunk * C, Rank i, Real L, Rank k, NodeId id) {
 
     C->set(i, j, k, {id});
 
-    if (player.stuck())
+    if (game.player.stuck())
         C->set(i, j, k, {0});
 
     C->requestRefresh();
@@ -153,7 +154,7 @@ void setBlock(Chunk * C, Rank i, Real L, Rank k, NodeId id) {
 
 void click(const Aut𝔻<Real> & origin, const GLfloat zbuffer, const Action action) {
     const auto maxₕ = 3.0 * Fundamentals::meter, maxᵥ = 4.0;
-    const auto H = player.camera().climb + player.eye;
+    const auto H = game.player.camera().climb + game.player.eye;
 
     auto v = trace(view, projection, zbuffer, H, action == Action::Remove);
     auto P = Gyrovector(v.x, v.z);
@@ -169,8 +170,8 @@ void click(const Aut𝔻<Real> & origin, const GLfloat zbuffer, const Action act
 }
 
 void returnToSpawn() {
-    player.teleport(Position(), 5); player.roc(0);
-    game.atlas.updateMatrix(player.camera().position.action());
+    game.player.teleport(Position(), 5); game.player.roc(0);
+    game.atlas.updateMatrix(game.player.camera().position.action());
 }
 
 double globaltime = 0;
@@ -185,30 +186,31 @@ void display(GLFWwindow * window) {
 
     if (dir != 0.0) dir /= std::abs(dir);
 
-    auto n = std::polar(1.0, -player.camera().yaw);
-    Gyrovector<Real> velocity(player.walkSpeed * dir * n);
+    auto n = std::polar(1.0, -game.player.camera().yaw);
+    Gyrovector<Real> velocity(game.player.walkSpeed * dir * n);
 
-    bool chunkChanged = move(player, velocity, dt);
-    if (chunkChanged) game.atlas.updateMatrix(player.camera().position.action());
+    bool chunkChanged = move(game.player, velocity, dt);
+    if (chunkChanged) game.atlas.updateMatrix(game.player.camera().position.action());
 
-    auto origin = player.camera().position.domain().inverse();
+    auto origin = game.player.camera().position.domain().inverse();
 
     if (Mouse::grabbed) {
         glfwGetCursorPos(window, &Mouse::xpos, &Mouse::ypos);
         glfwSetCursorPos(window, Window::width/2, Window::height/2);
 
-        player.rotate(
+        game.player.rotate(
             Mouse::speed * dt * (Window::width/2 - Mouse::xpos),
             Mouse::speed * dt * (Window::height/2 - Mouse::ypos),
             0.0f
         );
     }
 
-    auto direction = player.camera().direction(), right = player.camera().right(), up = glm::cross(right, direction);
+    auto direction = game.player.camera().direction(), right = game.player.camera().right(), up = glm::cross(right, direction);
+    auto eye = glm::vec3(0.0f, -game.player.camera().climb - game.player.eye, 0.0f);
 
     view = glm::lookAt(glm::vec3(0.0f), direction, up);
     view = glm::scale(view, glm::vec3(1.0f, Fundamentals::meter, 1.0f));
-    view = glm::translate(view, glm::vec3(0.0f, -player.camera().climb - player.eye, 0.0f));
+    view = glm::translate(view, eye);
 
     voxelShader->activate();
 
@@ -227,7 +229,7 @@ void display(GLFWwindow * window) {
 
     for (auto chunk : game.atlas.get()) {
         if (chunk->needRefresh())
-            chunk->refresh(game.nodeRegistry, player.camera().position.action());
+            chunk->refresh(game.nodeRegistry, game.player.camera().position.action());
 
         if (chunk->awayness() <= game.graphics.distance)
             chunk->render(voxelShader);
@@ -466,10 +468,11 @@ void setupGame(Config & config) {
 
     game.atlas.onLoad = &buildFloor;
 
-    player.eye = 1.62;
-    player.height = 1.8;
-    player.jumpHeight(1.25);
-    player.walkSpeed = 2 * Fundamentals::meter;
+    game.player.eye = 1.62;
+    game.player.height = 1.8;
+    game.player.gravity = 9.8;
+    game.player.jumpHeight(1.25);
+    game.player.walkSpeed = 2 * Fundamentals::meter;
 
     game.graphics.distance = chunkDiameter(config.camera.chunkRenderDistance);
 
@@ -480,7 +483,7 @@ void setupGame(Config & config) {
         if (k == 0) markChunk(C);
     }
 
-    player.teleport(Position(), 10);
+    game.player.teleport(Position(), 10);
 }
 
 void cleanUp(GLFWwindow * window) {

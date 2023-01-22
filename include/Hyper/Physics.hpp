@@ -63,9 +63,7 @@ private:
     bool moveVertically(const Real dt);
 
 public:
-    Real eye, height, walkSpeed, jumpSpeed;
-
-    Real gravity = 9.8;
+    Real eye = 0.0, height = 0.0, walkSpeed = 0.0, jumpSpeed = 0.0, gravity = 0.0;
 
     Entity(Atlas * atlas) : _i(0), _j(0), _atlas(atlas), _chunk(nullptr) {}
 
