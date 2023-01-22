@@ -35,14 +35,17 @@ public:
     Texture attach(const std::string &);
     void pack();
 
-    inline constexpr auto texture() const { return _texture; }
-    inline constexpr auto size()    const { return _size;    }
-    inline constexpr auto total()   const { return _total;   }
-
+    inline constexpr auto texture()  const { return _texture;         }
+    inline constexpr auto size()     const { return _size;            }
+    inline constexpr auto total()    const { return _total;           }
     inline constexpr auto capacity() const { return total() / size(); }
 
     inline const std::vector<std::string> files() const { return _files; }
-    inline const bool full() const { return _files.size() == Math::sqr(capacity()); }
+    inline auto occupancy() const { return _files.size(); }
 
+    inline auto nth(size_t idx) { return Texture(this, idx); }
+
+    inline const bool full() const { return _files.size() == Math::sqr(capacity()); }
     inline const auto index(size_t k) { return std::pair(k / capacity(), k % capacity()); }
+
 };

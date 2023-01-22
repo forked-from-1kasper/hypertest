@@ -25,7 +25,7 @@ Texture Sheet::attach(const std::string & file) {
     if (full()) throw std::length_error("no space left in texture sheet");
     _files.push_back(file);
 
-    return Texture(this, files().size() - 1);
+    return nth(files().size() - 1);
 }
 
 void Sheet::pack() {

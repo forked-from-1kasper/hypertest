@@ -42,6 +42,11 @@ OBJS = $(call add,.o,$(BUILDDIR),$(DEPS) $(MODULES))
 
 all: $(BUILDDIR) $(BINARY)
 
+fennel:
+	git submodule init
+	git submodule update
+	make -C Fennel
+
 $(BINARY): $(OBJS)
 	$(CXX) $(OBJS) $(LDFLAGS) -o $(BINARY)
 
@@ -52,7 +57,7 @@ $(call add,.o,$(BUILDDIR),$(DEPS)): $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp $(HPPS)
 	$(CXX) -c $(CFLAGS) $< -o $@
 
 run: $(BINARY)
-	./$(BINARY)
+	./$(BINARY) games/devtest/init.lua
 
 $(BUILDDIR):
 	mkdir -p $(BUILDDIR)

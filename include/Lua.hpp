@@ -37,6 +37,8 @@ public:
     VM();
     ~VM();
 
+    void loadapi();
+    int go(const char*);
     int loadfile(const char *, int);
 
     inline Type type(const int index) { return static_cast<Type>(lua_type(machine, index)); }

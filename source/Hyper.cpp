@@ -458,12 +458,12 @@ Chunk * markChunk(Chunk * chunk) {
 void setupGame(Config & config) {
     using namespace Tesselation;
 
+    chunkRenderDistance = chunkDiameter(config.camera.chunkRenderDistance);
+
     game.nodeRegistry.attach(1UL, {"Stuff", {texture1,texture1,texture1,texture1,texture1,texture1}});
     game.nodeRegistry.attach(2UL, {"Weird Stuff", {texture2,texture1,texture2,texture2,texture2,texture2}});
 
     game.atlas.onLoad = &buildFloor;
-
-    chunkRenderDistance = chunkDiameter(config.camera.chunkRenderDistance);
 
     buildTestStructure(game.atlas.poll(Tesselation::I, Tesselation::I));
 
@@ -487,13 +487,18 @@ void cleanUp(GLFWwindow * window) {
     glfwTerminate();
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     Lua::VM vm;
 
     Config config(&vm, "config.lua");
 
     auto window = setupWindow(config);
     setupGL(window, config);
+
+    vm.loadapi();
+    for (int i = 1; i < argc; i++)
+        vm.go(argv[i]);
+
     setupGame(config);
 
     while (!glfwWindowShouldClose(window)) {
