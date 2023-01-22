@@ -78,13 +78,15 @@ struct Node { NodeId id; };
 
 class NodeRegistry {
 private:
-    NodeDef air;
+    NodeDef air; NodeId gidx = 0UL;
     std::map<NodeId, NodeDef> table;
 
 public:
     NodeRegistry();
 
-    inline void attach(NodeId id, const NodeDef & def) { table.insert({id, def}); }
+    inline NodeId attach(const NodeDef & def)
+    { table.insert({gidx, def}); return ++gidx; }
+
     inline auto get(NodeId id) { return table[id]; }
 };
 

@@ -463,8 +463,8 @@ void setupGame(Config & config) {
     auto texture1 = game.sheet.attach("texture1.png");
     auto texture2 = game.sheet.attach("texture2.png");
 
-    game.nodeRegistry.attach(1UL, {"Stuff", {texture1,texture1,texture1,texture1,texture1,texture1}});
-    game.nodeRegistry.attach(2UL, {"Weird Stuff", {texture2,texture1,texture2,texture2,texture2,texture2}});
+    game.nodeRegistry.attach({"Stuff", {texture1,texture1,texture1,texture1,texture1,texture1}});
+    game.nodeRegistry.attach({"Weird Stuff", {texture2,texture1,texture2,texture2,texture2,texture2}});
 
     game.atlas.onLoad = &buildFloor;
 
