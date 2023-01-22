@@ -80,7 +80,16 @@ std::optional<std::pair<Chunk *, Gyrovector<Real>>> getNeighbour(const Gyrovecto
     return std::nullopt;
 }
 
-void jump() { if (!Game::player.camera().flying) Game::player.jump(); }
+const Real elevationRate = 3.0;
+
+void pressLShift() { if (Game::player.noclip) Game::player.roc(-elevationRate); }
+void releaseLShift() { if (Game::player.noclip) Game::player.roc(0); }
+
+void pressSpace() {
+    if (Game::player.noclip) Game::player.roc(elevationRate);
+    else if (!Game::player.camera().flying) Game::player.jump();
+}
+void releaseSpace() { if (Game::player.noclip) Game::player.roc(0); }
 
 void setBlock(Chunk * C, Rank i, Real L, Rank k, NodeId id) {
     if (C == nullptr || Chunk::outside(L))
@@ -261,21 +270,25 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
     if (action == GLFW_PRESS) {
         switch (key) {
             case GLFW_KEY_ESCAPE:     glfwSetWindowShouldClose(window, GL_TRUE); break;
-            case GLFW_KEY_W:          Keyboard::forward  = true; break;
-            case GLFW_KEY_S:          Keyboard::backward = true; break;
-            case GLFW_KEY_A:          Keyboard::left     = true; break;
-            case GLFW_KEY_D:          Keyboard::right    = true; break;
-            case GLFW_KEY_O:          returnToSpawn();           break;
-            case GLFW_KEY_SPACE:      jump();                    break;
+            case GLFW_KEY_W:          Keyboard::forward  = true;                 break;
+            case GLFW_KEY_S:          Keyboard::backward = true;                 break;
+            case GLFW_KEY_A:          Keyboard::left     = true;                 break;
+            case GLFW_KEY_D:          Keyboard::right    = true;                 break;
+            case GLFW_KEY_O:          returnToSpawn();                           break;
+            case GLFW_KEY_K:          player.noclip = !player.noclip;            break;
+            case GLFW_KEY_SPACE:      Keyboard::space = true; pressSpace();      break;
+            case GLFW_KEY_LEFT_SHIFT: Keyboard::lshift = true; pressLShift();    break;
         }
     }
 
     if (action == GLFW_RELEASE) {
         switch (key) {
-            case GLFW_KEY_W:          Keyboard::forward  = false; break;
-            case GLFW_KEY_S:          Keyboard::backward = false; break;
-            case GLFW_KEY_A:          Keyboard::left     = false; break;
-            case GLFW_KEY_D:          Keyboard::right    = false; break;
+            case GLFW_KEY_W:          Keyboard::forward  = false;                  break;
+            case GLFW_KEY_S:          Keyboard::backward = false;                  break;
+            case GLFW_KEY_A:          Keyboard::left     = false;                  break;
+            case GLFW_KEY_D:          Keyboard::right    = false;                  break;
+            case GLFW_KEY_SPACE:      Keyboard::space    = false; releaseSpace();  break;
+            case GLFW_KEY_LEFT_SHIFT: Keyboard::lshift   = false; releaseLShift(); break;
         }
     }
 }

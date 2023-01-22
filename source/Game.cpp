@@ -28,6 +28,8 @@ namespace Keyboard {
     bool backward = false;
     bool left     = false;
     bool right    = false;
+    bool space    = false;
+    bool lshift   = false;
 }
 
 namespace Mouse {

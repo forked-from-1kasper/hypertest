@@ -64,6 +64,7 @@ private:
 
 public:
     Real eye = 0.0, height = 0.0, walkSpeed = 0.0, jumpSpeed = 0.0, gravity = 0.0;
+    bool noclip = false;
 
     Entity(Atlas * atlas) : _i(0), _j(0), _atlas(atlas), _chunk(nullptr) {}
 
@@ -75,6 +76,7 @@ public:
     void teleport(const Position &, const Real);
 
     constexpr void roc(const Real roc) { _camera.roc = roc; }
+    constexpr void elevate(const Real elevation) { _camera.climb += elevation; }
     constexpr void jump() { jumped = true; }
 
     inline constexpr const auto & camera() const { return _camera; }

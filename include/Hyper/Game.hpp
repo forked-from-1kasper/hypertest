@@ -35,6 +35,8 @@ namespace Game {
         extern bool backward;
         extern bool left;
         extern bool right;
+        extern bool space;
+        extern bool lshift;
     }
 
     namespace Mouse {
