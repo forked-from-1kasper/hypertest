@@ -34,9 +34,7 @@ private:
     lua_State * machine;
 
 public:
-    VM();
-    ~VM();
-
+    VM(); ~VM();
     void loadapi();
     int go(const char*);
     int loadfile(const char *, int);

@@ -85,7 +85,7 @@ public:
     NodeRegistry();
 
     inline NodeId attach(const NodeDef & def)
-    { table.insert({gidx, def}); return ++gidx; }
+    { table.insert({gidx, def}); return gidx++; }
 
     inline auto get(NodeId id) { return table[id]; }
 };

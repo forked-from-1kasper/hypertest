@@ -29,7 +29,7 @@ else
 endif
 
 DEPS     = PicoPNG Lua
-MODULES  = Hyper Config Shader Geometry Sheet Physics
+MODULES  = Hyper Config Shader Geometry Sheet Physics Game
 HEADERS  = Hyper/Gaussian Hyper/Fuchsian Hyper/Fundamentals
 HEADERS += Hyper/Gyrovector Hyper/Moebius Hyper/AutD Hyper/EuclideanDomain
 HEADERS += Enumerable List Literal Tuple

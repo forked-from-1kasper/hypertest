@@ -1,6 +1,7 @@
 #include <libgen.h>
 #include <string.h>
 
+#include <Hyper/Game.hpp>
 #include <Lua.hpp>
 
 namespace Stream {
@@ -68,12 +69,66 @@ int VM::go(const char * filename) {
     return loadfile(filename, 0);
 }
 
+namespace API {
+    enum Kind {
+        Texture,
+        Node
+    };
+
+    int attachTexture(lua_State * machine) {
+        auto filename = luaL_checkstring(machine, 2);
+        auto retval = Game::Registry::sheet.attach(filename);
+
+        lua_pushnumber(machine, retval);
+        return 1;
+    }
+
+    int attachNode(lua_State * machine) {
+        using namespace Game::Registry; NodeDef def;
+        luaL_checktype(machine, 2, LUA_TTABLE);
+
+        lua_getfield(machine, 2, "name");
+        def.name = std::string(luaL_checkstring(machine, -1));
+        lua_pop(machine, 1);
+
+        lua_getfield(machine, 2, "textures");
+        lua_rawgeti(machine, -1, 1); def.cube.top    = sheet.get(luaL_checkinteger(machine, -1)); lua_pop(machine, 1);
+        lua_rawgeti(machine, -1, 2); def.cube.bottom = sheet.get(luaL_checkinteger(machine, -1)); lua_pop(machine, 1);
+        lua_rawgeti(machine, -1, 3); def.cube.left   = sheet.get(luaL_checkinteger(machine, -1)); lua_pop(machine, 1);
+        lua_rawgeti(machine, -1, 4); def.cube.right  = sheet.get(luaL_checkinteger(machine, -1)); lua_pop(machine, 1);
+        lua_rawgeti(machine, -1, 5); def.cube.front  = sheet.get(luaL_checkinteger(machine, -1)); lua_pop(machine, 1);
+        lua_rawgeti(machine, -1, 6); def.cube.back   = sheet.get(luaL_checkinteger(machine, -1)); lua_pop(machine, 1);
+        lua_pop(machine, 1);
+
+        auto retval = node.attach(def);
+        lua_pushnumber(machine, retval);
+        return 1;
+    }
+
+    static int attach(lua_State * machine) {
+        auto kind = Kind(luaL_checknumber(machine, 1));
+
+        switch (kind) {
+            case Texture: return attachTexture(machine);
+            case Node:    return attachNode(machine);
+            default:      return 0;
+        }
+    }
+}
+
 static const luaL_Reg externs[] = {
-    {NULL, NULL}
+    {"register", API::attach},
+    {NULL,       NULL}
 };
 
 void VM::loadapi() {
     luaL_register(machine, proxyname, externs);
+
+    lua_pushnumber(machine, API::Kind::Texture);
+    lua_setfield(machine, -2, "TEXTURE");
+
+    lua_pushnumber(machine, API::Kind::Node);
+    lua_setfield(machine, -2, "NODE");
 
     lua_pop(machine, 1);
 }

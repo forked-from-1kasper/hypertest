@@ -6,70 +6,20 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/mat4x4.hpp>
 
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-
 #include <PicoPNG.hpp>
 #include <Lua.hpp>
 
-#include <Hyper/Fundamentals.hpp>
 #include <Hyper/Gyrovector.hpp>
 #include <Hyper/Fuchsian.hpp>
-#include <Hyper/Geometry.hpp>
-#include <Hyper/Physics.hpp>
 #include <Hyper/Config.hpp>
 #include <Hyper/Shader.hpp>
-#include <Hyper/Sheet.hpp>
+#include <Hyper/Game.hpp>
 
 using namespace std::complex_literals;
 
 void errorCallback(int error, const char * description) {
     fprintf(stderr, "Error: %s\n", description);
 }
-
-enum class Action { Remove, Place };
-
-struct Game {
-    GLFWwindow * window;
-    NodeRegistry nodeRegistry;
-    Atlas        atlas;
-    Sheet        sheet;
-    Entity       player;
-
-    struct {
-        Real fov, near, far;
-        Real distance;
-    } graphics;
-
-    Game() : sheet(Fundamentals::textureSize, Fundamentals::sheetSize), player(&atlas) {}
-};
-
-namespace Keyboard {
-    bool forward  = false;
-    bool backward = false;
-    bool left     = false;
-    bool right    = false;
-};
-
-namespace Window {
-    bool hovered = true;
-    bool focused = true;
-
-    int width = 900, height = 900;
-
-    Real aspect = 1.0;
-}
-
-namespace GUI {
-    GLfloat aimSize = 0.015;
-}
-
-namespace Mouse {
-    bool grabbed = false;
-    Real xpos, ypos, speed = 0.7;
-}
-
-Game game;
 
 glm::mat4 view, projection;
 
@@ -113,13 +63,13 @@ glm::vec3 trace(const glm::mat4 & view, const glm::mat4 & projection, const GLfl
 
 std::optional<std::pair<Chunk *, Gyrovector<Real>>> getNeighbour(const Gyrovector<Real> & P) {
     if (Chunk::isInsideOfDomain(P)) {
-        auto Q = game.player.chunk()->relative().inverse().apply(P);
-        return std::optional(std::pair(game.player.chunk(), Q));
+        auto Q = Game::player.chunk()->relative().inverse().apply(P);
+        return std::optional(std::pair(Game::player.chunk(), Q));
     }
 
     for (size_t k = 0; k < Tesselation::neighbours.size(); k++) {
-        auto G = game.player.chunk()->isometry() * Tesselation::neighbours[k];
-        if (auto C = game.atlas.lookup(G.origin())) {
+        auto G = Game::player.chunk()->isometry() * Tesselation::neighbours[k];
+        if (auto C = Game::atlas.lookup(G.origin())) {
             auto Q = C->relative().inverse().apply(P);
 
             if (Chunk::isInsideOfDomain(Q))
@@ -130,7 +80,7 @@ std::optional<std::pair<Chunk *, Gyrovector<Real>>> getNeighbour(const Gyrovecto
     return std::nullopt;
 }
 
-void jump() { if (!game.player.camera().flying) game.player.jump(); }
+void jump() { if (!Game::player.camera().flying) Game::player.jump(); }
 
 void setBlock(Chunk * C, Rank i, Real L, Rank k, NodeId id) {
     if (C == nullptr || Chunk::outside(L))
@@ -146,7 +96,7 @@ void setBlock(Chunk * C, Rank i, Real L, Rank k, NodeId id) {
 
     C->set(i, j, k, {id});
 
-    if (game.player.stuck())
+    if (Game::player.stuck())
         C->set(i, j, k, {0});
 
     C->requestRefresh();
@@ -154,7 +104,7 @@ void setBlock(Chunk * C, Rank i, Real L, Rank k, NodeId id) {
 
 void click(const Aut𝔻<Real> & origin, const GLfloat zbuffer, const Action action) {
     const auto maxₕ = 3.0 * Fundamentals::meter, maxᵥ = 4.0;
-    const auto H = game.player.camera().climb + game.player.eye;
+    const auto H = Game::player.camera().climb + Game::player.eye;
 
     auto v = trace(view, projection, zbuffer, H, action == Action::Remove);
     auto P = Gyrovector(v.x, v.z);
@@ -170,12 +120,14 @@ void click(const Aut𝔻<Real> & origin, const GLfloat zbuffer, const Action act
 }
 
 void returnToSpawn() {
-    game.player.teleport(Position(), 5); game.player.roc(0);
-    game.atlas.updateMatrix(game.player.camera().position.action());
+    Game::player.teleport(Position(), 5); Game::player.roc(0);
+    Game::atlas.updateMatrix(Game::player.camera().position.action());
 }
 
 double globaltime = 0;
 void display(GLFWwindow * window) {
+    using namespace Game;
+
     auto dt = glfwGetTime() - globaltime; globaltime += dt;
 
     auto dir = 0i;
@@ -186,27 +138,27 @@ void display(GLFWwindow * window) {
 
     if (dir != 0.0) dir /= std::abs(dir);
 
-    auto n = std::polar(1.0, -game.player.camera().yaw);
-    Gyrovector<Real> velocity(game.player.walkSpeed * dir * n);
+    auto n = std::polar(1.0, -player.camera().yaw);
+    Gyrovector<Real> velocity(player.walkSpeed * dir * n);
 
-    bool chunkChanged = move(game.player, velocity, dt);
-    if (chunkChanged) game.atlas.updateMatrix(game.player.camera().position.action());
+    bool chunkChanged = move(player, velocity, dt);
+    if (chunkChanged) atlas.updateMatrix(player.camera().position.action());
 
-    auto origin = game.player.camera().position.domain().inverse();
+    auto origin = player.camera().position.domain().inverse();
 
     if (Mouse::grabbed) {
         glfwGetCursorPos(window, &Mouse::xpos, &Mouse::ypos);
         glfwSetCursorPos(window, Window::width/2, Window::height/2);
 
-        game.player.rotate(
+        player.rotate(
             Mouse::speed * dt * (Window::width/2 - Mouse::xpos),
             Mouse::speed * dt * (Window::height/2 - Mouse::ypos),
             0.0f
         );
     }
 
-    auto direction = game.player.camera().direction(), right = game.player.camera().right(), up = glm::cross(right, direction);
-    auto eye = glm::vec3(0.0f, -game.player.camera().climb - game.player.eye, 0.0f);
+    auto direction = player.camera().direction(), right = player.camera().right(), up = glm::cross(right, direction);
+    auto eye = glm::vec3(0.0f, -player.camera().climb - player.eye, 0.0f);
 
     view = glm::lookAt(glm::vec3(0.0f), direction, up);
     view = glm::scale(view, glm::vec3(1.0f, Fundamentals::meter, 1.0f));
@@ -227,11 +179,11 @@ void display(GLFWwindow * window) {
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    for (auto chunk : game.atlas.get()) {
+    for (auto chunk : atlas.get()) {
         if (chunk->needRefresh())
-            chunk->refresh(game.nodeRegistry, game.player.camera().position.action());
+            chunk->refresh(Registry::node, player.camera().position.action());
 
-        if (chunk->awayness() <= game.graphics.distance)
+        if (chunk->awayness() <= Render::distance)
             chunk->render(voxelShader);
     }
 
@@ -247,15 +199,17 @@ void display(GLFWwindow * window) {
 void setupSheet() {
     glEnable(GL_TEXTURE_2D); glEnable(GL_CULL_FACE);
 
-    game.sheet.pack();
+    Game::Registry::sheet.pack();
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, game.sheet.texture());
+    glBindTexture(GL_TEXTURE_2D, Game::Registry::sheet.texture());
 
     voxelShader->activate();
     voxelShader->uniform("textureSheet", 0);
 }
 
 void grabMouse(GLFWwindow * window) {
+    using namespace Game;
+
     glfwSetCursorPos(window, Window::width/2, Window::height/2);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     if (glfwRawMouseMotionSupported())
@@ -265,6 +219,8 @@ void grabMouse(GLFWwindow * window) {
 }
 
 void freeMouse(GLFWwindow * window) {
+    using namespace Game;
+
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
 
@@ -272,6 +228,8 @@ void freeMouse(GLFWwindow * window) {
 }
 
 void mouseButtonCallback(GLFWwindow * window, int button, int action, int mods) {
+    using namespace Game;
+
     if (Mouse::grabbed) switch (button) {
         case GLFW_MOUSE_BUTTON_LEFT: case GLFW_MOUSE_BUTTON_RIGHT: {
             if (action == GLFW_PRESS)
@@ -284,16 +242,22 @@ void mouseButtonCallback(GLFWwindow * window, int button, int action, int mods) 
 }
 
 void cursorEnterCallback(GLFWwindow * window, int entered) {
+    using namespace Game;
+
     Window::hovered = entered;
     if (!Window::hovered) freeMouse(window);
 }
 
 void windowFocusCallback(GLFWwindow * window, int focused) {
+    using namespace Game;
+
     Window::focused = focused;
     if (!Window::focused) freeMouse(window);
 }
 
 void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, int mods) {
+    using namespace Game;
+
     if (action == GLFW_PRESS) {
         switch (key) {
             case GLFW_KEY_ESCAPE:     glfwSetWindowShouldClose(window, GL_TRUE); break;
@@ -317,6 +281,8 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
 }
 
 void drawAim(Shader<DummyShader>::VAO & vao) {
+    using namespace Game;
+
     vao.clear();
 
     constexpr auto white = glm::vec4(1.0);
@@ -330,6 +296,9 @@ void drawAim(Shader<DummyShader>::VAO & vao) {
 }
 
 void setupWindowSize(GLFWwindow * window, int width, int height) {
+    using namespace Game;
+    using namespace Render;
+
     Window::width  = width;
     Window::height = height;
     Window::aspect = Real(width) / Real(height);
@@ -338,16 +307,15 @@ void setupWindowSize(GLFWwindow * window, int width, int height) {
     glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
     glViewport(0, 0, frameBufferWidth, frameBufferHeight);
 
-    projection = glm::perspective(
-        glm::radians(game.graphics.fov), Window::aspect,
-        game.graphics.near, game.graphics.far
-    );
+    projection = glm::perspective(glm::radians(fov), Game::Window::aspect, near, far);
 
     drawAim(aimVao);
 }
 
 constexpr auto title = "Hypertest";
 GLFWwindow * setupWindow(Config & config) {
+    using namespace Game;
+
     glfwSetErrorCallback(errorCallback);
     if (!glfwInit()) throw std::runtime_error("glfwInit failure");
 
@@ -390,16 +358,16 @@ void setupGL(GLFWwindow * window, Config & config) {
     voxelShader->uniform("fog.far",     config.fog.far);
     voxelShader->uniform("fog.color",   config.fog.color);
 
-    game.graphics.fov  = config.camera.fov;
-    game.graphics.near = config.camera.near;
-    game.graphics.far  = config.camera.far;
+    Game::Render::fov  = config.camera.fov;
+    Game::Render::near = config.camera.near;
+    Game::Render::far  = config.camera.far;
 
     dummyShader = new Shader<DummyShader>("shaders/Dummy/Common.glsl", "shaders/Dummy/Vertex.glsl", "shaders/Dummy/Fragment.glsl");
     dummyShader->activate();
 
     aimVao.initialize();
-    GUI::aimSize = config.gui.aimSize;
-    setupWindowSize(window, Window::width, Window::height);
+    Game::GUI::aimSize = config.gui.aimSize;
+    setupWindowSize(window, Game::Window::width, Game::Window::height);
 
     pbo.initialize();
 }
@@ -459,31 +427,26 @@ Chunk * markChunk(Chunk * chunk) {
 
 void setupGame(Config & config) {
     using namespace Tesselation;
+    using namespace Game;
 
-    auto texture1 = game.sheet.get(game.sheet.attach("texture1.png"));
-    auto texture2 = game.sheet.get(game.sheet.attach("texture2.png"));
+    atlas.onLoad = &buildFloor;
 
-    game.nodeRegistry.attach({"Stuff", {texture1,texture1,texture1,texture1,texture1,texture1}});
-    game.nodeRegistry.attach({"Weird Stuff", {texture2,texture1,texture2,texture2,texture2,texture2}});
+    player.eye = 1.62;
+    player.height = 1.8;
+    player.gravity = 9.8;
+    player.jumpHeight(1.25);
+    player.walkSpeed = 2 * Fundamentals::meter;
 
-    game.atlas.onLoad = &buildFloor;
+    Render::distance = chunkDiameter(config.camera.chunkRenderDistance);
 
-    game.player.eye = 1.62;
-    game.player.height = 1.8;
-    game.player.gravity = 9.8;
-    game.player.jumpHeight(1.25);
-    game.player.walkSpeed = 2 * Fundamentals::meter;
-
-    game.graphics.distance = chunkDiameter(config.camera.chunkRenderDistance);
-
-    buildTestStructure(game.atlas.poll(Tesselation::I, Tesselation::I));
+    buildTestStructure(atlas.poll(Tesselation::I, Tesselation::I));
 
     for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++) {
-        auto C = buildTestStructure(game.atlas.poll(Tesselation::I, Tesselation::neighbours[k]));
+        auto C = buildTestStructure(atlas.poll(Tesselation::I, Tesselation::neighbours[k]));
         if (k == 0) markChunk(C);
     }
 
-    game.player.teleport(Position(), 10);
+    player.teleport(Position(), 10);
 }
 
 void cleanUp(GLFWwindow * window) {
@@ -502,8 +465,9 @@ int main(int argc, char *argv[]) {
 
     Config config(&vm, "config.lua");
 
-    auto window = setupWindow(config);
-    setupGL(window, config);
+    Game::window = setupWindow(config);
+
+    setupGL(Game::window, config);
 
     vm.loadapi();
     for (int i = 1; i < argc; i++)
@@ -512,13 +476,13 @@ int main(int argc, char *argv[]) {
     setupGame(config);
     setupSheet();
 
-    while (!glfwWindowShouldClose(window)) {
-        display(window);
-        glfwSwapBuffers(window);
+    while (!glfwWindowShouldClose(Game::window)) {
+        display(Game::window);
+        glfwSwapBuffers(Game::window);
         glfwPollEvents();
     }
 
-    cleanUp(window);
+    cleanUp(Game::window);
 
     return 0;
 }
