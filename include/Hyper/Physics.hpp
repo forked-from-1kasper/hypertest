@@ -63,7 +63,7 @@ private:
     bool moveVertically(const Real dt);
 
 public:
-    Real eye, height, jumpSpeed;
+    Real eye, height, walkSpeed, jumpSpeed;
 
     Real gravity = 9.8;
 

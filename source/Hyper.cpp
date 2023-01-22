@@ -27,10 +27,20 @@ void errorCallback(int error, const char * description) {
     fprintf(stderr, "Error: %s\n", description);
 }
 
+enum class Action { Remove, Place };
+
 struct Game {
     GLFWwindow * window;
     NodeRegistry nodeRegistry;
     Atlas        atlas;
+    Sheet        sheet;
+
+    struct {
+        Real fov, near, far;
+        Real distance;
+    } graphics;
+
+    Game() : sheet(Fundamentals::textureSize, Fundamentals::sheetSize) {}
 };
 
 namespace Keyboard {
@@ -58,11 +68,6 @@ namespace Mouse {
     Real xpos, ypos, speed = 0.7;
 }
 
-Real fov, near, far;
-Real speed = 2 * Fundamentals::meter;
-
-Real chunkRenderDistance;
-
 Game game; Entity player(&game.atlas);
 
 glm::mat4 view, projection;
@@ -71,8 +76,6 @@ Shader<DummyShader> * dummyShader;
 Shader<VoxelShader> * voxelShader;
 
 Shader<DummyShader>::VAO aimVao;
-
-enum class Action { Remove, Place };
 
 PBO<GLfloat, Action> pbo(GL_DEPTH_COMPONENT, 1, 1);
 
@@ -183,7 +186,7 @@ void display(GLFWwindow * window) {
     if (dir != 0.0) dir /= std::abs(dir);
 
     auto n = std::polar(1.0, -player.camera().yaw);
-    Gyrovector<Real> velocity(speed * dir * n);
+    Gyrovector<Real> velocity(player.walkSpeed * dir * n);
 
     bool chunkChanged = move(player, velocity, dt);
     if (chunkChanged) game.atlas.updateMatrix(player.camera().position.action());
@@ -226,7 +229,7 @@ void display(GLFWwindow * window) {
         if (chunk->needRefresh())
             chunk->refresh(game.nodeRegistry, player.camera().position.action());
 
-        if (chunk->awayness() <= chunkRenderDistance)
+        if (chunk->awayness() <= game.graphics.distance)
             chunk->render(voxelShader);
     }
 
@@ -239,20 +242,15 @@ void display(GLFWwindow * window) {
     aimVao.draw(GL_LINES);
 }
 
-Texture texture1, texture2;
-
-void setupTexture() {
+void setupSheet() {
     glEnable(GL_TEXTURE_2D); glEnable(GL_CULL_FACE);
 
-    auto sheet = Sheet(Fundamentals::textureSize, Fundamentals::sheetSize);
-
-    texture1 = sheet.attach("texture1.png");
-    texture2 = sheet.attach("texture2.png");
-
-    sheet.pack();
-
+    game.sheet.pack();
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, sheet.texture());
+    glBindTexture(GL_TEXTURE_2D, game.sheet.texture());
+
+    voxelShader->activate();
+    voxelShader->uniform("textureSheet", 0);
 }
 
 void grabMouse(GLFWwindow * window) {
@@ -338,7 +336,11 @@ void setupWindowSize(GLFWwindow * window, int width, int height) {
     glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
     glViewport(0, 0, frameBufferWidth, frameBufferHeight);
 
-    projection = glm::perspective(glm::radians(fov), Window::aspect, near, far);
+    projection = glm::perspective(
+        glm::radians(game.graphics.fov), Window::aspect,
+        game.graphics.near, game.graphics.far
+    );
+
     drawAim(aimVao);
 }
 
@@ -386,11 +388,9 @@ void setupGL(GLFWwindow * window, Config & config) {
     voxelShader->uniform("fog.far",     config.fog.far);
     voxelShader->uniform("fog.color",   config.fog.color);
 
-    fov  = config.camera.fov;
-    near = config.camera.near;
-    far  = config.camera.far;
-
-    setupTexture(); voxelShader->uniform("textureSheet", 0);
+    game.graphics.fov  = config.camera.fov;
+    game.graphics.near = config.camera.near;
+    game.graphics.far  = config.camera.far;
 
     dummyShader = new Shader<DummyShader>("shaders/Dummy/Common.glsl", "shaders/Dummy/Vertex.glsl", "shaders/Dummy/Fragment.glsl");
     dummyShader->activate();
@@ -458,12 +458,20 @@ Chunk * markChunk(Chunk * chunk) {
 void setupGame(Config & config) {
     using namespace Tesselation;
 
-    chunkRenderDistance = chunkDiameter(config.camera.chunkRenderDistance);
+    auto texture1 = game.sheet.attach("texture1.png");
+    auto texture2 = game.sheet.attach("texture2.png");
 
     game.nodeRegistry.attach(1UL, {"Stuff", {texture1,texture1,texture1,texture1,texture1,texture1}});
     game.nodeRegistry.attach(2UL, {"Weird Stuff", {texture2,texture1,texture2,texture2,texture2,texture2}});
 
     game.atlas.onLoad = &buildFloor;
+
+    player.eye = 1.62;
+    player.height = 1.8;
+    player.jumpHeight(1.25);
+    player.walkSpeed = 2 * Fundamentals::meter;
+
+    game.graphics.distance = chunkDiameter(config.camera.chunkRenderDistance);
 
     buildTestStructure(game.atlas.poll(Tesselation::I, Tesselation::I));
 
@@ -472,7 +480,6 @@ void setupGame(Config & config) {
         if (k == 0) markChunk(C);
     }
 
-    player.eye = 1.62; player.height = 1.8; player.jumpHeight(1.25);
     player.teleport(Position(), 10);
 }
 
@@ -500,6 +507,7 @@ int main(int argc, char *argv[]) {
         vm.go(argv[i]);
 
     setupGame(config);
+    setupSheet();
 
     while (!glfwWindowShouldClose(window)) {
         display(window);
