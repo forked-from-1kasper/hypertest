@@ -45,7 +45,7 @@ all: $(BUILDDIR) $(BINARY)
 lua:
 	git submodule init
 	git submodule update
-	make -C Fennel
+	make -C Fennel LUA=luajit
 
 $(BINARY): $(OBJS)
 	$(CXX) $(OBJS) $(LDFLAGS) -o $(BINARY)
