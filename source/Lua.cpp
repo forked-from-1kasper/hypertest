@@ -114,10 +114,24 @@ namespace API {
             default:      return 0;
         }
     }
+
+    static int override(lua_State * machine) {
+        using namespace Game;
+        luaL_checktype(machine, 1, LUA_TTABLE);
+
+        lua_getfield(machine, 1, "eye"); player.eye = luaL_checknumber(machine, -1); lua_pop(machine, 1);
+        lua_getfield(machine, 1, "height"); player.height = luaL_checknumber(machine, -1); lua_pop(machine, 1);
+        lua_getfield(machine, 1, "gravity"); player.gravity = luaL_checknumber(machine, -1); lua_pop(machine, 1);
+        lua_getfield(machine, 1, "jump"); player.jumpHeight(luaL_checknumber(machine, -1)); lua_pop(machine, 1);
+        lua_getfield(machine, 1, "walk"); player.walkSpeed = luaL_checknumber(machine, -1) * Fundamentals::meter; lua_pop(machine, 1);
+
+        return 0;
+    }
 }
 
 static const luaL_Reg externs[] = {
     {"register", API::attach},
+    {"override", API::override},
     {NULL,       NULL}
 };
 

@@ -443,13 +443,6 @@ void setupGame(Config & config) {
     using namespace Game;
 
     atlas.onLoad = &buildFloor;
-
-    player.eye = 1.62;
-    player.height = 1.8;
-    player.gravity = 9.8;
-    player.jumpHeight(1.25);
-    player.walkSpeed = 2 * Fundamentals::meter;
-
     Render::distance = chunkDiameter(config.camera.chunkRenderDistance);
 
     buildTestStructure(atlas.poll(Tesselation::I, Tesselation::I));
