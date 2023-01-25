@@ -4,7 +4,7 @@
 #include <complex>
 
 #include <Hyper/EuclideanDomain.hpp>
-#include <Enumerable.hpp>
+#include <Meta/Enumerable.hpp>
 
 template<EuclideanDomain T> struct Gaussian {
     T real, imag;

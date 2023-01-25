@@ -32,7 +32,7 @@ DEPS     = PicoPNG Lua
 MODULES  = Hyper Config Shader Geometry Sheet Physics Game
 HEADERS  = Hyper/Gaussian Hyper/Fuchsian Hyper/Fundamentals
 HEADERS += Hyper/Gyrovector Hyper/Moebius Hyper/AutD Hyper/EuclideanDomain
-HEADERS += Enumerable List Literal Tuple
+HEADERS += Meta/Enumerable Meta/List Meta/Literal Meta/Tuple
 
 add = $(addprefix $(2)/,$(addsuffix $(1),$(3)))
 

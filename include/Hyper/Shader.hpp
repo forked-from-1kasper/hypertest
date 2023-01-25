@@ -6,9 +6,9 @@
 #include <string>
 
 #include <Hyper/Gyrovector.hpp>
-#include <Literal.hpp>
-#include <Tuple.hpp>
-#include <List.hpp>
+#include <Meta/Literal.hpp>
+#include <Meta/Tuple.hpp>
+#include <Meta/List.hpp>
 
 template<Literal lit, typename T, GLenum t, GLint n>
 struct Field {
