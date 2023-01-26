@@ -123,7 +123,7 @@ namespace API {
         lua_getfield(machine, 1, "height"); player.height = luaL_checknumber(machine, -1); lua_pop(machine, 1);
         lua_getfield(machine, 1, "gravity"); player.gravity = luaL_checknumber(machine, -1); lua_pop(machine, 1);
         lua_getfield(machine, 1, "jump"); player.jumpHeight(luaL_checknumber(machine, -1)); lua_pop(machine, 1);
-        lua_getfield(machine, 1, "walk"); player.walkSpeed = luaL_checknumber(machine, -1) * Fundamentals::meter; lua_pop(machine, 1);
+        lua_getfield(machine, 1, "walk"); player.walkSpeed = luaL_checknumber(machine, -1) * Tesselation::meter; lua_pop(machine, 1);
 
         return 0;
     }

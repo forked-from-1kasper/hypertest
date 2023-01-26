@@ -4,6 +4,8 @@ in  float _height;
 out vec2  texCoord;
 out float fogFactor;
 
+uniform Model model;
+
 uniform Moebius origin;
 uniform Moebius relative;
 
@@ -37,7 +39,10 @@ void main() {
 
     apply(relative, _gyrovector, gyrovector);
     apply(origin, gyrovector, gyrovector);
-    Gans(gyrovector);
+
+    if (model == POINCARE) {}
+    if (model == KLEIN) Klein(gyrovector);
+    if (model == GANS) Gans(gyrovector);
 
     vec4 vertex = view * vec4(gyrovector.x, _height, gyrovector.y, 1.0);
 

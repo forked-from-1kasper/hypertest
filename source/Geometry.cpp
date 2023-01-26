@@ -109,6 +109,11 @@ namespace Tesselation {
     }
 
     clangexpr Grid corners = init();
+
+    clangexpr auto distance(Rank i₁, Rank j₁, Rank i₂, Rank j₂)
+    { return (-corners[i₁][j₁] + corners[i₂][j₂]).abs(); }
+
+    clangexpr Real meter = distance(chunkSize / 2, chunkSize / 2, chunkSize / 2, chunkSize / 2 + 1);
 }
 
 NodeRegistry::NodeRegistry() {

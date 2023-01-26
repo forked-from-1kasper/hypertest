@@ -15,8 +15,9 @@ Atlas atlas;
 Entity player(&atlas);
 
 namespace Render {
-    Real fov, near, far;
-    Real distance;
+    Real       fov, near, far;
+    Real       distance;
+    Standard * standard;
 }
 
 namespace GUI {

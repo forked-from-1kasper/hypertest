@@ -22,8 +22,19 @@ namespace Game {
     extern Entity player;
 
     namespace Render {
-        extern Real fov, near, far;
-        extern Real distance;
+        struct Standard {
+            const Real meter;
+            const Model model;
+
+            Standard(const Model m) :
+                meter(Projection::length(m, Tesselation::meter)),
+                model(m)
+            {}
+        };
+
+        extern Real       fov, near, far;
+        extern Real       distance;
+        extern Standard * standard;
     }
 
     namespace GUI {

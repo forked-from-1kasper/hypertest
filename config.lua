@@ -7,6 +7,7 @@ return {
     },
 
     camera = {
+        model = 3,
     },
 
     window = {

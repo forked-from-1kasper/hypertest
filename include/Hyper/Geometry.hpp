@@ -60,6 +60,7 @@ namespace Tesselation {
     extern const Array<Fuchsian<Integer>> neighbours;
     extern const Array<Aut𝔻<Real>>        neighbours⁻¹;
     extern const Grid                     corners;
+    extern const Real                     meter;
 }
 
 template<typename T> struct Parallelogram {

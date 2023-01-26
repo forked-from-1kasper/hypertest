@@ -53,12 +53,14 @@ template<class F, class G> auto compose(F f, G g) {
 }
 
 // Various machinery for projections
-enum class Model { Poincaré, Klein, Gans };
+enum class Model {
+    Poincaré = 1,
+    Klein    = 2,
+    Gans     = 3
+};
 
 namespace Projection {
-    constexpr auto model = Model::Gans;
-
-    constexpr auto apply(Real y₁, Real y₂) {
+    constexpr auto apply(Model model, Real y₁, Real y₂) {
         Real x₁, x₂;
 
         switch (model) {
@@ -78,10 +80,10 @@ namespace Projection {
         return glm::vec2(x₁, x₂);
     }
 
-    constexpr auto apply(const Gyrovector<Real> & v)
-    { return apply(v.x(), v.y()); }
+    constexpr auto apply(Model model, const Gyrovector<Real> & v)
+    { return apply(model, v.x(), v.y()); }
 
-    constexpr auto unapply(const glm::vec3 w) {
+    inline const auto unapply(Model model, const glm::vec3 w) {
         float x, z;
 
         switch (model) {
@@ -100,6 +102,9 @@ namespace Projection {
 
         return glm::vec3(x, w.y, z);
     }
+
+    inline const auto length(Model model, Real value)
+    { return glm::length(Projection::apply(model, Gyrovector<Real>(value, 0))); }
 }
 
 namespace Fundamentals {
@@ -166,7 +171,4 @@ namespace Fundamentals {
                       = √(2/3)                      = D,
         as expected.
     */
-
-    const auto gauge = Gyrovector<Real>(D½, 0);
-    const auto meter = glm::length(Projection::apply(gauge)) / Real(chunkSize);
 }

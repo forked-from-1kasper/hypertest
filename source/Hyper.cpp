@@ -50,12 +50,14 @@ glm::vec3 unproject(const glm::mat4 & view, const glm::mat4 & projection, const 
 }
 
 glm::vec3 trace(const glm::mat4 & view, const glm::mat4 & projection, const GLfloat zbuffer, const GLfloat H, bool forward) {
+    using namespace Game;
+
     auto h = glm::vec3(0.0f, H, 0.0f);
 
-    auto w₀ = Projection::unapply(unproject(view, projection, 2.0f * zbuffer - 1.0f));
+    auto w₀ = Projection::unapply(Render::standard->model, unproject(view, projection, 2.0f * zbuffer - 1.0f));
     auto dist₀ = glm::length(w₀ - h);
 
-    const GLfloat ε = Fundamentals::meter / 3.0f;
+    const GLfloat ε = Render::standard->meter / 3.0f;
     GLfloat dist = dist₀ + (forward ? +ε : -ε);
 
     return (dist / dist₀) * (w₀ - h) + h;
@@ -112,7 +114,7 @@ void setBlock(Chunk * C, Rank i, Real L, Rank k, NodeId id) {
 }
 
 void click(const Aut𝔻<Real> & origin, const GLfloat zbuffer, const Action action) {
-    const auto maxₕ = 3.0 * Fundamentals::meter, maxᵥ = 4.0;
+    const auto maxₕ = 5.0 * Tesselation::meter, maxᵥ = 4.0;
     const auto H = Game::player.camera().climb + Game::player.eye;
 
     auto v = trace(view, projection, zbuffer, H, action == Action::Remove);
@@ -170,10 +172,12 @@ void display(GLFWwindow * window) {
     auto eye = glm::vec3(0.0f, -player.camera().climb - player.eye, 0.0f);
 
     view = glm::lookAt(glm::vec3(0.0f), direction, up);
-    view = glm::scale(view, glm::vec3(1.0f, Fundamentals::meter, 1.0f));
+    view = glm::scale(view, glm::vec3(1.0f, Render::standard->meter, 1.0f));
     view = glm::translate(view, eye);
 
     voxelShader->activate();
+
+    voxelShader->uniform("model", int(Render::standard->model));
 
     voxelShader->uniform("view", view);
     voxelShader->uniform("projection", projection);
@@ -358,6 +362,11 @@ GLFWwindow * setupWindow(Config & config) {
 }
 
 void setupGL(GLFWwindow * window, Config & config) {
+    using namespace Game;
+
+    static Render::Standard standard(config.camera.model);
+    Render::standard = &standard;
+
     glfwMakeContextCurrent(window);
     glewExperimental = GL_TRUE; glewInit();
 
@@ -371,16 +380,16 @@ void setupGL(GLFWwindow * window, Config & config) {
     voxelShader->uniform("fog.far",     config.fog.far);
     voxelShader->uniform("fog.color",   config.fog.color);
 
-    Game::Render::fov  = config.camera.fov;
-    Game::Render::near = config.camera.near;
-    Game::Render::far  = config.camera.far;
+    Render::fov  = config.camera.fov;
+    Render::near = config.camera.near;
+    Render::far  = config.camera.far;
 
     dummyShader = new Shader<DummyShader>("shaders/Dummy/Common.glsl", "shaders/Dummy/Vertex.glsl", "shaders/Dummy/Fragment.glsl");
     dummyShader->activate();
 
     aimVao.initialize();
-    Game::GUI::aimSize = config.gui.aimSize;
-    setupWindowSize(window, Game::Window::width, Game::Window::height);
+    GUI::aimSize = config.gui.aimSize;
+    setupWindowSize(window, Window::width, Window::height);
 
     pbo.initialize();
 }
@@ -472,7 +481,6 @@ int main(int argc, char *argv[]) {
     Config config(&vm, "config.lua");
 
     Game::window = setupWindow(config);
-
     setupGL(Game::window, config);
 
     vm.loadapi();

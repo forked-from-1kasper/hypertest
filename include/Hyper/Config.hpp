@@ -18,6 +18,7 @@ struct Config {
 
     struct {
         Real chunkRenderDistance, fov, near, far;
+        Model model;
     } camera;
 
     struct {

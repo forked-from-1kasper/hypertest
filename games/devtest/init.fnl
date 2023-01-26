@@ -9,4 +9,4 @@
    :height  1.8
    :gravity 9.8
    :jump    1.25
-   :walk    2.0})
+   :walk    3.0})

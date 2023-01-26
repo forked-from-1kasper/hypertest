@@ -13,3 +13,8 @@ struct Fog {
     float near;
     float far;
 };
+
+#define Model    int
+#define POINCARE 1
+#define KLEIN    2
+#define GANS     3

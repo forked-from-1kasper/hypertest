@@ -35,6 +35,10 @@ Config::Config(Lua::VM * vm, const char * filename) {
         camera.far = vm->withfield("far", [&]() {
             return vm->get<std::optional<lua_Number>>();
         }).value_or(150.0);
+
+        camera.model = Model(vm->withfield("model", [&]() {
+            return vm->get<std::optional<lua_Integer>>();
+        }).value_or(1));
     });
 
     vm->withfield("fog", [&]() {
