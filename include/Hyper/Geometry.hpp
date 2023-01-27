@@ -78,8 +78,7 @@ struct Node { NodeId id; };
 
 class NodeRegistry {
 private:
-    NodeDef air; NodeId gidx = 0UL;
-    std::vector<NodeDef> table;
+    NodeDef air; std::vector<NodeDef> table;
 
 public:
     NodeRegistry();
