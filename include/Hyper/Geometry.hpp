@@ -102,8 +102,9 @@ public:
     Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry);
     ~Chunk();
 
-    void refresh(NodeRegistry &, const Fuchsian<Integer> &);
     void updateMatrix(const Fuchsian<Integer> &);
+    void refresh(NodeRegistry &);
+
     void render(Shader<VoxelShader> *);
 
     bool walkable(Rank, Real, Rank);

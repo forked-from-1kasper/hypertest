@@ -194,7 +194,7 @@ void display(GLFWwindow * window) {
 
     for (auto chunk : atlas.get()) {
         if (chunk->needRefresh())
-            chunk->refresh(Registry::node, player.camera().position.action());
+            chunk->refresh(Registry::node);
 
         if (chunk->awayness() <= Render::distance)
             chunk->render(voxelShader);

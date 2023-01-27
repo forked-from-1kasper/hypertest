@@ -227,7 +227,7 @@ void drawNode(VBO & vbo, EBO & ebo, Cube & C, Mask m, Rank x, Level y, Rank z) {
     drawRightParallelogrammicPrism(vbo, ebo, C, m, GLfloat(y), 1.0f, P);
 }
 
-void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
+void Chunk::refresh(NodeRegistry & nodeRegistry) {
     using namespace Fundamentals;
 
     vao.clear();
