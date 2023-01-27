@@ -247,8 +247,10 @@ void Chunk::refresh(NodeRegistry & nodeRegistry, const Fuchsian<Integer> & G) {
                 m.left   = (i == 0)             || (get(i - 1, j + 0, k + 0).id == 0);
                 m.right  = (i == chunkSize - 1) || (get(i + 1, j + 0, k + 0).id == 0);
 
-                nodeDef = nodeRegistry.get(id);
-                drawNode(vao.vertices, vao.indices, nodeDef.cube, m, i, j, k);
+                if (nodeRegistry.has(id)) {
+                    nodeDef = nodeRegistry.get(id);
+                    drawNode(vao.vertices, vao.indices, nodeDef.cube, m, i, j, k);
+                }
             }
         }
 

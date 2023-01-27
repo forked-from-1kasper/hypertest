@@ -3,7 +3,6 @@
 #include <optional>
 #include <string>
 #include <vector>
-#include <map>
 
 #include <GL/glew.h>
 
@@ -80,15 +79,16 @@ struct Node { NodeId id; };
 class NodeRegistry {
 private:
     NodeDef air; NodeId gidx = 0UL;
-    std::map<NodeId, NodeDef> table;
+    std::vector<NodeDef> table;
 
 public:
     NodeRegistry();
 
     inline NodeId attach(const NodeDef & def)
-    { table.insert({gidx, def}); return gidx++; }
+    { table.push_back(def); return table.size() - 1; }
 
-    inline auto get(NodeId id) { return table[id]; }
+    inline NodeDef get(NodeId id) { return table[id]; }
+    inline bool has(NodeId id) { return id < table.size(); }
 };
 
 class Chunk {
