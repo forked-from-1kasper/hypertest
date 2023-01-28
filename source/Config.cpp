@@ -1,7 +1,13 @@
 #include <Hyper/Config.hpp>
 
+const char * memory = ":memory:";
+
 Config::Config(Lua::VM * vm, const char * filename) {
     vm->loadfile(filename, 1);
+
+    world = vm->withfield("world", [&]() {
+        return vm->get<std::optional<const char *>>();
+    }).value_or(memory);
 
     vm->withfield("window", [&]() {
         if (!vm->instanceof<Lua::Type::Table>())

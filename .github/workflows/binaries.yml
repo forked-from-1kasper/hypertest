@@ -25,6 +25,7 @@ jobs:
             mingw-w64-x86_64-glfw
             mingw-w64-x86_64-glm
             mingw-w64-x86_64-gmp
+            mingw-w64-x86_64-sqlite3
 
       - shell: msys2 {0}
         name: Build code

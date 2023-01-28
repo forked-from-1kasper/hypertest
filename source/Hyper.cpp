@@ -135,11 +135,14 @@ void returnToSpawn() {
     Game::atlas.updateMatrix(Game::player.camera().position.action());
 }
 
-double globaltime = 0;
+const double saveInterval = 1.0;
+
+double globaltime = 0, saveTimer = 0;
 void display(GLFWwindow * window) {
     using namespace Game;
 
-    auto dt = glfwGetTime() - globaltime; globaltime += dt;
+    auto dt = glfwGetTime() - globaltime;
+    globaltime += dt; saveTimer += dt;
 
     auto dir = 0i;
     if (Keyboard::forward)  dir += +1i;
@@ -192,12 +195,20 @@ void display(GLFWwindow * window) {
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    for (auto chunk : atlas.get()) {
+    for (auto it = atlas.pool.begin(); it != atlas.pool.end();) {
+        auto chunk = *it;
+
         if (chunk->needRefresh())
             chunk->refresh(Registry::node);
 
         if (chunk->awayness() <= Render::distance)
             chunk->render(voxelShader);
+        else chunk->unload();
+
+        if (chunk->needUnload() && !chunk->dirty()) {
+            chunk->join(); delete chunk;
+            it = atlas.pool.erase(it);
+        } else it++;
     }
 
     if (auto value = pbo.read(Window::width/2 - 1, Window::height/2))
@@ -207,6 +218,9 @@ void display(GLFWwindow * window) {
 
     glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
     aimVao.draw(GL_LINES);
+
+    if (saveTimer >= saveInterval)
+    { atlas.dump(); saveTimer = 0; }
 }
 
 void setupSheet() {
@@ -401,49 +415,6 @@ Chunk * buildFloor(Chunk * chunk) {
         for (size_t j = 0; j < chunkSize; j++)
             chunk->set(i, 0, j, {1});
 
-    chunk->set(1, 1, 1, {2});
-    chunk->set(1, 2, 1, {2});
-
-    chunk->requestRefresh();
-    return chunk;
-}
-
-Chunk * buildTestStructure(Chunk * chunk) {
-    using namespace Fundamentals;
-
-    for (size_t i = 0; i < chunkSize; i++) {
-        for (size_t j = 0; j < chunkSize; j++) {
-            NodeId id = (i + j) % 2 == 0 ? 1 : 2;
-
-            chunk->set(i, 0, j, {id});
-            chunk->set(i, 16, j, {3 - id});
-        }
-    }
-
-    for (size_t i = 0; i < chunkSize; i += chunkSize - 1)
-        for (size_t k = 0; k < chunkSize; k += chunkSize - 1)
-            for (size_t j = 1; j < 16; j++)
-                chunk->set(i, j, k, {2});
-
-    chunk->requestRefresh();
-    return chunk;
-}
-
-Chunk * markChunk(Chunk * chunk) {
-    for (size_t i = 1; i <= 15; i++)
-        for (size_t j = 1; j <= i; j++)
-            chunk->set(i, j, 9, {2});
-
-    chunk->set(12, 16, 9, {0});
-    chunk->set(13, 16, 9, {0});
-    chunk->set(14, 16, 9, {0});
-    chunk->set(15, 16, 9, {0});
-
-    chunk->set(3, 1, 5, {2});
-    chunk->set(4, 2, 5, {2});
-    chunk->set(5, 1, 5, {2});
-
-    chunk->requestRefresh();
     return chunk;
 }
 
@@ -451,15 +422,13 @@ void setupGame(Config & config) {
     using namespace Tesselation;
     using namespace Game;
 
-    atlas.onLoad = &buildFloor;
+    atlas.generator = &buildFloor;
     Render::distance = chunkDiameter(config.camera.chunkRenderDistance);
 
-    buildTestStructure(atlas.poll(Tesselation::I, Tesselation::I));
+    atlas.poll(Tesselation::I, Tesselation::I);
 
-    for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++) {
-        auto C = buildTestStructure(atlas.poll(Tesselation::I, Tesselation::neighbours[k]));
-        if (k == 0) markChunk(C);
-    }
+    for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++)
+        atlas.poll(Tesselation::I, Tesselation::neighbours[k]);
 
     player.teleport(Position(), 10);
 }
@@ -487,8 +456,8 @@ int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++)
         vm.go(argv[i]);
 
-    setupGame(config);
-    setupSheet();
+    Game::atlas.connect(config.world);
+    setupGame(config); setupSheet();
 
     while (!glfwWindowShouldClose(Game::window)) {
         display(Game::window);
@@ -496,6 +465,7 @@ int main(int argc, char *argv[]) {
         glfwPollEvents();
     }
 
+    Game::atlas.disconnect();
     cleanUp(Game::window);
 
     return 0;

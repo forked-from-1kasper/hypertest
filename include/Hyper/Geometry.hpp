@@ -4,7 +4,10 @@
 #include <string>
 #include <vector>
 
+#include <thread>
+
 #include <GL/glew.h>
+#include <sqlite3.h>
 
 #include <Hyper/Fundamentals.hpp>
 #include <Hyper/Fuchsian.hpp>
@@ -90,13 +93,21 @@ public:
     inline bool has(NodeId id) { return id < table.size(); }
 };
 
+struct Blob {
+    Node data[Fundamentals::chunkSize][Fundamentals::worldHeight][Fundamentals::chunkSize];
+
+    Blob() : data{} {}
+};
+
 class Chunk {
 private:
     Fuchsian<Integer> _isometry; Möbius<Real> _relative; Real _awayness; // used for drawing
     Gaussian²<Integer> _pos; // used for indexing, should be equal to `isometry.origin()`
-    Node data[Fundamentals::chunkSize][Fundamentals::worldHeight][Fundamentals::chunkSize];
 
-    bool _needRefresh; Shader<VoxelShader>::VAO vao;
+    bool _dirty = false, _needRefresh = false, _needUnload = false;
+    Blob blob; Shader<VoxelShader>::VAO vao;
+
+    bool working = false; std::thread worker;
 
 public:
     Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry);
@@ -109,10 +120,19 @@ public:
 
     bool walkable(Rank, Real, Rank);
 
-    inline constexpr auto requestRefresh() { _needRefresh = true; }
-    inline constexpr auto needRefresh() { return _needRefresh; }
+    void serialize(sqlite3_stmt *, int, int, int, int, int);
+    void dump(sqlite3 *);
+    bool load(sqlite3 *);
+    void join();
 
-    inline constexpr auto get(Rank i, Level j, Rank k) const { return data[i][j][k]; }
+    inline constexpr bool dirty()       { return _dirty;       }
+    inline constexpr bool needRefresh() { return _needRefresh; }
+    inline constexpr bool needUnload()  { return _needUnload;  }
+
+    inline constexpr void unload()         { _needUnload = true;  }
+    inline constexpr auto requestRefresh() { _needRefresh = true; }
+
+    inline constexpr auto get(Rank i, Level j, Rank k) const { return blob.data[i][j][k]; }
 
     inline constexpr auto awayness() const { return _awayness; }
 
@@ -121,7 +141,7 @@ public:
     inline const auto pos()      const { return _pos;      }
 
     inline void set(size_t i, size_t j, size_t k, const Node & node)
-    { data[i][j][k] = node; }
+    { _dirty = true; blob.data[i][j][k] = node; }
 
     template<typename T> static Parallelogram<T> parallelogram(Rank, Rank);
 
@@ -138,19 +158,32 @@ using ChunkOperator = Chunk*(Chunk*);
 
 class Atlas {
 private:
-    std::vector<Chunk*> container;
+    sqlite3 * engine;
 
 public:
-    ChunkOperator * onLoad;
+    std::vector<Chunk*> pool;
+    ChunkOperator * generator = nullptr;
 
     Atlas();
     ~Atlas();
+
+    void connect(std::string &);
+    void disconnect();
+
+    void dump();
 
     Chunk * poll(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry);
     Chunk * lookup(const Gaussian²<Integer> &) const;
 
     void updateMatrix(const Fuchsian<Integer> &);
-    void unload(const Gaussian²<Integer> &);
+};
 
-    inline const auto get() const { return container; }
+template<typename T> struct Bitfield {
+    T value;
+
+    Bitfield(T value) : value(value) {}
+    inline operator T() { return value; }
+
+    inline void set(size_t n, bool bit) { value = (value | (1 << n)) & ~(T(!bit) << n); }
+    inline bool get(size_t n) const { return (value >> n) & 1; }
 };

@@ -88,7 +88,6 @@ bool Entity::move(const Gyrovector<Real> & v, Real dt)
 { return moveHorizontally(v, dt) | moveVertically(dt); }
 
 void Entity::teleport(const Position & P, const Real climb) {
-    _camera.climb = climb;
-    _camera.position = P;
-    _chunk = _atlas->lookup(P.center());
+    _camera.climb = climb; _camera.position = P;
+    _chunk = _atlas->poll(P.action(), P.action());
 }

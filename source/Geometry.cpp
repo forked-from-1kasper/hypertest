@@ -1,4 +1,5 @@
 #include <Hyper/Geometry.hpp>
+#include <iostream>
 
 namespace Tesselation {
     using ℤi = Gaussian<Integer>;
@@ -123,7 +124,7 @@ NodeRegistry::NodeRegistry() {
     }});
 }
 
-Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry) : _isometry(isometry), data{} {
+Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry) : _isometry(isometry) {
     /*
         Unfortunately, precomposition of `isometry` with (z ↦ z × exp(iπk/2)) for k ∈ ℤ
         will yield matrix able to render this chunk in the same place but rotated about its own center by πk/2 radians.
@@ -327,15 +328,15 @@ std::optional<size_t> Chunk::matchNeighbour(const Gyrovector<Real> & P) {
     return std::nullopt;
 }
 
-Atlas::Atlas() : onLoad(nullptr) {}
+Atlas::Atlas() {}
 
 Atlas::~Atlas() {
-    for (auto chunk : container)
+    for (auto chunk : pool)
         delete chunk;
 }
 
 Chunk * Atlas::lookup(const Gaussian²<Integer> & pos) const {
-    for (auto chunk : container)
+    for (auto chunk : pool)
         if (chunk->pos() == pos)
             return chunk;
 
@@ -345,24 +346,148 @@ Chunk * Atlas::lookup(const Gaussian²<Integer> & pos) const {
 Chunk * Atlas::poll(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry) {
     auto pos = isometry.origin();
 
-    for (auto chunk : container)
+    for (auto chunk : pool)
         if (chunk->pos() == pos)
             return chunk;
 
     auto chunk = new Chunk(origin, isometry);
-    container.push_back(chunk);
+    pool.push_back(chunk);
 
-    if (onLoad) (*onLoad)(chunk);
+    if (!chunk->load(engine)) {
+        if (generator) (*generator)(chunk);
+        chunk->dump(engine);
+    }
+
+    chunk->requestRefresh();
+
     return chunk;
 }
 
-void Atlas::unload(const Gaussian²<Integer> & pos) {
-    for (auto it = container.begin(); it != container.end();)
-        if ((*it)->pos() == pos) { delete *it; it = container.erase(it); }
-        else it++;
+void Atlas::updateMatrix(const Fuchsian<Integer> & origin) {
+    for (auto & chunk : pool)
+        chunk->updateMatrix(origin);
 }
 
-void Atlas::updateMatrix(const Fuchsian<Integer> & origin) {
-    for (auto & chunk : container)
-        chunk->updateMatrix(origin);
+const char * initcmd   = "CREATE TABLE IF NOT EXISTS atlas("
+                         "bitfield INTEGER, real1 BLOB, imag1 BLOB, real2 BLOB, imag2 BLOB,"
+                         "blob BLOB, PRIMARY KEY (bitfield, real1, imag1, real2, imag2));",
+           * loadcmd   = "SELECT blob FROM atlas WHERE bitfield = ? AND real1 = ? AND imag1 = ? AND real2 = ? AND imag2 = ?;",
+           * insertcmd = "INSERT or REPLACE INTO atlas(bitfield, real1, imag1, real2, imag2, blob) VALUES(?, ?, ?, ?, ?, ?);";
+
+inline void warn(sqlite3 * engine)
+{ std::cerr << "SQLITE: " << sqlite3_errmsg(engine) << std::endl; }
+
+void Atlas::connect(std::string & filename) {
+    auto retval = sqlite3_open(filename.c_str(), &engine);
+
+    if (retval != SQLITE_OK) {
+        warn(engine); sqlite3_close(engine);
+        throw std::runtime_error("`sqlite3_open` failed");
+    }
+
+    char * errMsg; retval = sqlite3_exec(engine, initcmd, nullptr, 0, &errMsg);
+
+    if (retval != SQLITE_OK) {
+        std::cerr << "SQLITE: " << errMsg << std::endl; sqlite3_free(errMsg);
+        throw std::runtime_error("sqlite3 initialization failed");
+    }
+}
+
+void Atlas::disconnect() {
+    dump();
+
+    for (auto & chunk : pool)
+        chunk->join();
+
+    sqlite3_close(engine);
+}
+
+inline void dumpBlob(sqlite3_stmt * statement, int index, void * blob, size_t n) {
+    static uint8_t zero = 0;
+
+    if (blob == nullptr || n == 0)
+        sqlite3_bind_blob(statement, index, &zero, 1, SQLITE_STATIC);
+    else
+        sqlite3_bind_blob(statement, index, blob, n, free);
+}
+
+void dumpGaussian(sqlite3_stmt * statement, const Gaussian<Integer> & z, int idx₁, int idx₂) {
+    size_t k₁, k₂;
+
+    auto blob₁ = Math::serialize(z.real, k₁);
+    auto blob₂ = Math::serialize(z.imag, k₂);
+
+    dumpBlob(statement, idx₁, blob₁, k₁);
+    dumpBlob(statement, idx₂, blob₂, k₂);
+}
+
+void Chunk::serialize(sqlite3_stmt * statement, int idx₀, int idx₁, int idx₂, int idx₃, int idx₄) {
+    Bitfield<uint8_t> bitfield(0);
+
+    bitfield.set(0, Math::isNeg(_pos.first.real));
+    bitfield.set(1, Math::isNeg(_pos.first.imag));
+    bitfield.set(2, Math::isNeg(_pos.second.real));
+    bitfield.set(3, Math::isNeg(_pos.second.imag));
+
+    sqlite3_bind_int(statement, idx₀, uint8_t(bitfield));
+    dumpGaussian(statement, _pos.first,  idx₁, idx₂);
+    dumpGaussian(statement, _pos.second, idx₃, idx₄);
+}
+
+bool Chunk::load(sqlite3 * engine) {
+    sqlite3_stmt * statement;
+
+    auto retval = sqlite3_prepare_v2(engine, loadcmd, -1, &statement, nullptr);
+    if (retval != SQLITE_OK) { warn(engine); return false; }
+
+    serialize(statement, 1, 2, 3, 4, 5);
+
+    retval = sqlite3_step(statement);
+
+    bool success = false;
+
+    if (retval == SQLITE_ROW) {
+        memcpy(&blob, sqlite3_column_blob(statement, 0), sizeof(blob));
+        success = true;
+    }
+
+    if (retval == SQLITE_ERROR) warn(engine);
+
+    sqlite3_finalize(statement);
+    return success;
+}
+
+void Chunk::join() {
+    if (worker.joinable())
+        worker.join();
+}
+
+void Chunk::dump(sqlite3 * engine) {
+    sqlite3_stmt * statement = nullptr;
+
+    if (working) return;
+
+    if (worker.joinable())
+        worker.join();
+
+    working = true;
+
+    worker = std::thread{[statement, retval = 0, engine, this]() mutable {
+        retval = sqlite3_prepare_v2(engine, insertcmd, -1, &statement, nullptr);
+        if (retval != SQLITE_OK) { warn(engine); working = false; return; }
+
+        serialize(statement, 1, 2, 3, 4, 5);
+        sqlite3_bind_blob(statement, 6, &blob, sizeof(blob) / Byte, SQLITE_TRANSIENT);
+
+        retval = sqlite3_step(statement);
+
+        if (retval != SQLITE_DONE) warn(engine); else _dirty = false;
+        sqlite3_finalize(statement); working = false;
+    }};
+}
+
+void Atlas::dump() {
+    for (auto & chunk : pool)
+        if (chunk->dirty())
+            chunk->dump(engine);
 }

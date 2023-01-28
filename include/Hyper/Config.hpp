@@ -6,6 +6,8 @@
 #include <Lua.hpp>
 
 struct Config {
+    std::string world;
+
     struct {
         bool enabled;
         GLfloat near, far;

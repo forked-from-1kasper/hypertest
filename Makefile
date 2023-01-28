@@ -13,18 +13,18 @@ override CFLAGS += -Wno-bitwise-instead-of-logical -Wno-unused-private-field -Wn
 
 ifeq ($(OS),Windows_NT)
 	BINARY ?= Hyper.exe
-	override LDFLAGS += -lgmpxx -lgmp -lluajit-5.1 -lglfw3 -lglew32 -lopengl32 -lglu32
+	override LDFLAGS += -lsqlite3 -lgmpxx -lgmp -lluajit-5.1 -lglfw3 -lglew32 -lopengl32 -lglu32
 else
 	BINARY ?= Hyper
 
 	UNAME := $(shell uname -s)
 
 	ifeq ($(UNAME),Linux)
-		override LDFLAGS += -lgmpxx -lgmp -lluajit-5.1 -lglfw -lGLEW -lGL -lGLU
+		override LDFLAGS += -lsqlite3 -lgmpxx -lgmp -lluajit-5.1 -lglfw -lGLEW -lGL -lGLU
 	endif
 
 	ifeq ($(UNAME),Darwin)
-		override LDFLAGS += -lgmpxx -lgmp -lluajit-5.1 -lglfw -lGLEW -framework CoreVideo -framework OpenGL -framework IOKit -framework Cocoa -framework Carbon
+		override LDFLAGS += -lsqlite3 -lgmpxx -lgmp -lluajit-5.1 -lglfw -lGLEW -framework CoreVideo -framework OpenGL -framework IOKit -framework Cocoa -framework Carbon
 	endif
 endif
 

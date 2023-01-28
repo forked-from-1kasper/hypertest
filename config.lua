@@ -1,4 +1,6 @@
 return {
+    world = "world.sqlite3",
+
     fog = {
         enabled = false,
         near    = 1.0,
@@ -8,6 +10,7 @@ return {
 
     camera = {
         model = 3,
+        chunkRenderDistance = 10,
     },
 
     window = {
