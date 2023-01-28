@@ -75,7 +75,7 @@ namespace Math {
     template<> inline double field<int64_t, double>(const int64_t & n) { return double(n); }
 
     template<> inline void * serialize<int64_t>(const int64_t & n, size_t & k)
-    { auto retval = new int64_t; *retval = abs(n); k = sizeof(int64_t) / Byte; return retval; }
+    { auto retval = new int64_t; *retval = std::abs(n); k = sizeof(int64_t) / Byte; return retval; }
 }
 
 namespace Math {
