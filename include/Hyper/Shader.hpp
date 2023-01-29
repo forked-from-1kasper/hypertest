@@ -107,6 +107,7 @@ public:
 
     struct VAO {
         GLuint vao, vbo, ebo;
+        GLsizei count = 0;
         VBO vertices;
         EBO indices;
 
@@ -131,13 +132,15 @@ public:
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(Index), indices.data(), usage);
 
             glBindVertexArray(0);
+
+            count = indices.size();
         }
 
         void draw(const GLenum type) {
             glBindVertexArray(vao);
             glBindBuffer(GL_ARRAY_BUFFER, vbo);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-            glDrawElements(type, indices.size(), indexType, nullptr);
+            glDrawElements(type, count, indexType, nullptr);
         }
 
         inline void push() { indices.push_back(vertices.size()); }

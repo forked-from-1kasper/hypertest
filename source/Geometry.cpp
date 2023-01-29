@@ -167,7 +167,7 @@ Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometr
     vao.initialize();
 }
 
-Chunk::~Chunk() { vao.free(); }
+Chunk::~Chunk() { join(); delete blob; vao.free(); }
 
 bool Chunk::walkable(Rank x, Real L, Rank z) {
     if (x >= Fundamentals::chunkSize || z >= Fundamentals::chunkSize) return true;
@@ -231,35 +231,46 @@ void drawNode(VBO & vbo, EBO & ebo, Cube & C, Mask m, Rank x, Level y, Rank z) {
 void Chunk::refresh(NodeRegistry & nodeRegistry) {
     using namespace Fundamentals;
 
-    vao.clear();
-
-    NodeDef nodeDef; Mask m;
-    for (Level j = 0; true; j++) {
-        for (Rank k = 0; k < chunkSize; k++) {
-            for (Rank i = 0; i < chunkSize; i++) {
-                auto id = get(i, j, k).id;
-
-                if (id == 0) continue; // don’t draw air
-
-                m.top    = (j == worldTop)      || (get(i + 0, j + 1, k + 0).id == 0);
-                m.bottom = (j == 0)             || (get(i + 0, j - 1, k + 0).id == 0);
-                m.back   = (k == 0)             || (get(i + 0, j + 0, k - 1).id == 0);
-                m.front  = (k == chunkSize - 1) || (get(i + 0, j + 0, k + 1).id == 0);
-                m.left   = (i == 0)             || (get(i - 1, j + 0, k + 0).id == 0);
-                m.right  = (i == chunkSize - 1) || (get(i + 1, j + 0, k + 0).id == 0);
-
-                if (nodeRegistry.has(id)) {
-                    nodeDef = nodeRegistry.get(id);
-                    drawNode(vao.vertices, vao.indices, nodeDef.cube, m, i, j, k);
-                }
-            }
-        }
-
-        if (j == worldTop) break;
+    if (needUpdateVAO) {
+        vao.upload(GL_DYNAMIC_DRAW);
+        needUpdateVAO = false;
+        _needRefresh  = false;
+        return;
     }
 
-    vao.upload(GL_DYNAMIC_DRAW);
-    _needRefresh = false;
+    if (working()) return; _working = true;
+
+    Rank i = 0, k = 0; Level j = 0; NodeDef nodeDef; Mask m; NodeId id = 0;
+    worker = std::async(std::launch::async, [&nodeRegistry, i, j, k, nodeDef, m, id, this]() mutable {
+        vao.clear();
+
+        for (j = 0; true; j++) {
+            for (k = 0; k < chunkSize; k++) {
+                for (i = 0; i < chunkSize; i++) {
+                    id = get(i, j, k).id;
+
+                    if (id == 0) continue; // don’t draw air
+
+                    m.top    = (j == worldTop)      || (get(i + 0, j + 1, k + 0).id == 0);
+                    m.bottom = (j == 0)             || (get(i + 0, j - 1, k + 0).id == 0);
+                    m.back   = (k == 0)             || (get(i + 0, j + 0, k - 1).id == 0);
+                    m.front  = (k == chunkSize - 1) || (get(i + 0, j + 0, k + 1).id == 0);
+                    m.left   = (i == 0)             || (get(i - 1, j + 0, k + 0).id == 0);
+                    m.right  = (i == chunkSize - 1) || (get(i + 1, j + 0, k + 0).id == 0);
+
+                    if (nodeRegistry.has(id)) {
+                        nodeDef = nodeRegistry.get(id);
+                        drawNode(vao.vertices, vao.indices, nodeDef.cube, m, i, j, k);
+                    }
+                }
+            }
+
+            if (j == worldTop) break;
+        }
+
+        needUpdateVAO = true;
+        _working = false;
+    });
 }
 
 void Chunk::updateMatrix(const Fuchsian<Integer> & origin) {
@@ -329,13 +340,9 @@ std::optional<size_t> Chunk::matchNeighbour(const Gyrovector<Real> & P) {
 }
 
 Atlas::Atlas() {}
+Atlas::~Atlas() {}
 
-Atlas::~Atlas() {
-    for (auto chunk : pool)
-        delete chunk;
-}
-
-Chunk * Atlas::lookup(const Gaussian²<Integer> & pos) const {
+Chunk * Atlas::lookup(const Gaussian²<Integer> & pos) {
     for (auto chunk : pool)
         if (chunk->pos() == pos)
             return chunk;
@@ -350,21 +357,12 @@ Chunk * Atlas::poll(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & 
         if (chunk->pos() == pos)
             return chunk;
 
-    auto chunk = new Chunk(origin, isometry);
-    pool.push_back(chunk);
-
-    if (!chunk->load(engine)) {
-        if (generator) (*generator)(chunk);
-        chunk->dump(engine);
-    }
-
-    chunk->requestRefresh();
-
-    return chunk;
+    auto chunk = new Chunk(origin, isometry); pool.push_back(chunk);
+    chunk->load(generator, engine); return chunk;
 }
 
 void Atlas::updateMatrix(const Fuchsian<Integer> & origin) {
-    for (auto & chunk : pool)
+    for (auto chunk : pool)
         chunk->updateMatrix(origin);
 }
 
@@ -396,7 +394,7 @@ void Atlas::connect(std::string & filename) {
 void Atlas::disconnect() {
     dump();
 
-    for (auto & chunk : pool)
+    for (auto chunk : pool)
         chunk->join();
 
     sqlite3_close(engine);
@@ -434,60 +432,52 @@ void Chunk::serialize(sqlite3_stmt * statement, int idx₀, int idx₁, int idx�
     dumpGaussian(statement, _pos.second, idx₃, idx₄);
 }
 
-bool Chunk::load(sqlite3 * engine) {
-    sqlite3_stmt * statement;
+void Chunk::load(ChunkOperator * generator, sqlite3 * engine) {
+    sqlite3_stmt * statement = nullptr;
 
-    auto retval = sqlite3_prepare_v2(engine, loadcmd, -1, &statement, nullptr);
-    if (retval != SQLITE_OK) { warn(engine); return false; }
+    if (_ready) return; _working = true;
+    worker = std::async(std::launch::async, [statement, retval = 0, generator, engine, this]() mutable {
+        blob = new Blob();
 
-    serialize(statement, 1, 2, 3, 4, 5);
+        retval = sqlite3_prepare_v2(engine, loadcmd, -1, &statement, nullptr);
+        if (retval != SQLITE_OK) { warn(engine); _needUnload = true; goto fin; }
 
-    retval = sqlite3_step(statement);
+        serialize(statement, 1, 2, 3, 4, 5);
+        retval = sqlite3_step(statement);
 
-    bool success = false;
+        if (retval == SQLITE_ROW)
+            memcpy(blob, sqlite3_column_blob(statement, 0), sizeof(Blob));
+        else { if (generator != nullptr) (*generator)(this); _dirty = true; }
 
-    if (retval == SQLITE_ROW) {
-        memcpy(&blob, sqlite3_column_blob(statement, 0), sizeof(blob));
-        success = true;
-    }
+        if (retval == SQLITE_ERROR) warn(engine);
+        sqlite3_finalize(statement); requestRefresh();
 
-    if (retval == SQLITE_ERROR) warn(engine);
-
-    sqlite3_finalize(statement);
-    return success;
+        fin: _ready = true; _working = false;
+    });
 }
 
-void Chunk::join() {
-    if (worker.joinable())
-        worker.join();
-}
+void Chunk::join() { worker.wait(); }
 
 void Chunk::dump(sqlite3 * engine) {
     sqlite3_stmt * statement = nullptr;
 
-    if (working) return;
-
-    if (worker.joinable())
-        worker.join();
-
-    working = true;
-
-    worker = std::thread{[statement, retval = 0, engine, this]() mutable {
+    if (working()) return; _working = true;
+    worker = std::async(std::launch::async, [statement, retval = 0, engine, this]() mutable {
         retval = sqlite3_prepare_v2(engine, insertcmd, -1, &statement, nullptr);
-        if (retval != SQLITE_OK) { warn(engine); working = false; return; }
+        if (retval != SQLITE_OK) { warn(engine); _working = false; return; }
 
         serialize(statement, 1, 2, 3, 4, 5);
-        sqlite3_bind_blob(statement, 6, &blob, sizeof(blob) / Byte, SQLITE_TRANSIENT);
+        sqlite3_bind_blob(statement, 6, blob, sizeof(Blob), SQLITE_TRANSIENT);
 
         retval = sqlite3_step(statement);
 
         if (retval != SQLITE_DONE) warn(engine); else _dirty = false;
-        sqlite3_finalize(statement); working = false;
-    }};
+        sqlite3_finalize(statement); _working = false;
+    });
 }
 
 void Atlas::dump() {
-    for (auto & chunk : pool)
+    for (auto chunk : pool)
         if (chunk->dirty())
             chunk->dump(engine);
 }

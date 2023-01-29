@@ -38,7 +38,7 @@ namespace Math {
 
 using Real    = double;
 using Integer = mpz_class;
-using NodeId  = uint64_t;
+using NodeId  = uint16_t;
 
 using Rank  = uint8_t;
 using Level = uint8_t;

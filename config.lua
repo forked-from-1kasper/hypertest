@@ -10,7 +10,7 @@ return {
 
     camera = {
         model = 3,
-        chunkRenderDistance = 10,
+        chunkRenderDistance = 5,
     },
 
     window = {

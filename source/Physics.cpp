@@ -48,7 +48,7 @@ glm::vec3 Object::right() const {
 }
 
 bool Entity::stuck(Chunk * C, Rank x, Real y, Rank z) {
-    if (C == nullptr) return false;
+    if (C == nullptr || !C->ready()) return false;
 
     for (Level L = std::floor(y); L <= std::floor(y + height); L++)
         if (!Chunk::outside(L) && !C->walkable(x, L, z))
@@ -64,6 +64,8 @@ bool Entity::moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
     auto C = chunkChanged ? atlas()->poll(_camera.position.action(), P.action()) : chunk();
 
     if (C != nullptr) {
+        if (!C->ready()) return false;
+
         auto [i, j] = P.round(C);
         if (stuck(C, i, _camera.climb, j)) return false;
         _i = i; _j = j;

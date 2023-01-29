@@ -94,7 +94,7 @@ void pressSpace() {
 void releaseSpace() { if (Game::player.noclip) Game::player.roc(0); }
 
 void setBlock(Chunk * C, Rank i, Real L, Rank k, NodeId id) {
-    if (C == nullptr || Chunk::outside(L))
+    if (C == nullptr || !C->ready() || Chunk::outside(L))
         return;
 
     if (i >= Fundamentals::chunkSize || k >= Fundamentals::chunkSize)
@@ -156,7 +156,15 @@ void display(GLFWwindow * window) {
     Gyrovector<Real> velocity(player.walkSpeed * dir * n);
 
     bool chunkChanged = move(player, velocity, dt);
-    if (chunkChanged) atlas.updateMatrix(player.camera().position.action());
+
+    if (chunkChanged) {
+        atlas.updateMatrix(player.camera().position.action());
+
+        for (size_t k = 0; k < Tesselation::neighbours.size(); k++) {
+            auto G = Game::player.chunk()->isometry() * Tesselation::neighbours[k];
+            Game::atlas.poll(player.camera().position.action(), G);
+        }
+    }
 
     auto origin = player.camera().position.domain().inverse();
 
@@ -198,6 +206,8 @@ void display(GLFWwindow * window) {
     for (auto it = atlas.pool.begin(); it != atlas.pool.end();) {
         auto chunk = *it;
 
+        if (!chunk->ready()) { it++; continue; }
+
         if (chunk->needRefresh())
             chunk->refresh(Registry::node);
 
@@ -206,8 +216,7 @@ void display(GLFWwindow * window) {
         else chunk->unload();
 
         if (chunk->needUnload() && !chunk->dirty()) {
-            chunk->join(); delete chunk;
-            it = atlas.pool.erase(it);
+            delete chunk; it = atlas.pool.erase(it);
         } else it++;
     }
 
@@ -430,7 +439,7 @@ void setupGame(Config & config) {
     for (std::size_t k = 0; k < Tesselation::neighbours.size(); k++)
         atlas.poll(Tesselation::I, Tesselation::neighbours[k]);
 
-    player.teleport(Position(), 10);
+    player.teleport(Position(), 5);
 }
 
 void cleanUp(GLFWwindow * window) {
