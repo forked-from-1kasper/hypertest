@@ -130,9 +130,20 @@ void click(const Aut𝔻<Real> & origin, const GLfloat zbuffer, const Action act
     }
 }
 
+void pollNeighbours() {
+    using namespace Game;
+
+    atlas.updateMatrix(player.camera().position.action());
+
+    for (size_t k = 0; k < Tesselation::neighbours.size(); k++) {
+        auto G = Game::player.chunk()->isometry() * Tesselation::neighbours[k];
+        Game::atlas.poll(player.camera().position.action(), G);
+    }
+}
+
 void returnToSpawn() {
-    Game::player.teleport(Position(), 5); Game::player.roc(0);
-    Game::atlas.updateMatrix(Game::player.camera().position.action());
+    Game::player.teleport(Position(), 5);
+    Game::player.roc(0); pollNeighbours();
 }
 
 const double saveInterval = 1.0;
@@ -156,15 +167,7 @@ void display(GLFWwindow * window) {
     Gyrovector<Real> velocity(player.walkSpeed * dir * n);
 
     bool chunkChanged = move(player, velocity, dt);
-
-    if (chunkChanged) {
-        atlas.updateMatrix(player.camera().position.action());
-
-        for (size_t k = 0; k < Tesselation::neighbours.size(); k++) {
-            auto G = Game::player.chunk()->isometry() * Tesselation::neighbours[k];
-            Game::atlas.poll(player.camera().position.action(), G);
-        }
-    }
+    if (chunkChanged) pollNeighbours();
 
     auto origin = player.camera().position.domain().inverse();
 
