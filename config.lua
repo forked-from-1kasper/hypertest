@@ -9,8 +9,11 @@ return {
     },
 
     camera = {
-        model = 3,
         chunkRenderDistance = 5,
+        fov                 = 80,
+        near                = 1e-3,
+        far                 = 150,
+        model               = 3,
     },
 
     window = {
@@ -19,5 +22,6 @@ return {
     },
 
     gui = {
+        aimSize = 0.015,
     },
 }
