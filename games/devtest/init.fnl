@@ -12,3 +12,7 @@
    :gravity 9.8
    :jump    1.25
    :walk    3.0})
+
+(hypertest.setHotbar 0 node₂)
+(hypertest.setHotbar 1 node₃)
+(hypertest.setHotbar 8 node₁)

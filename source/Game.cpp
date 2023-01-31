@@ -14,6 +14,9 @@ namespace Registry {
 Atlas atlas;
 Entity player(&atlas);
 
+NodeId hotbar[hotbarSize] = {0};
+size_t activeSlot = 0;
+
 namespace Render {
     Real       fov, near, far;
     Real       distance;

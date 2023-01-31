@@ -21,6 +21,10 @@ namespace Game {
     extern Atlas atlas;
     extern Entity player;
 
+    constexpr size_t hotbarSize = 9;
+    extern NodeId hotbar[hotbarSize];
+    extern size_t activeSlot;
+
     namespace Render {
         struct Standard {
             const Real meter;

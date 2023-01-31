@@ -26,9 +26,68 @@ glm::mat4 view, projection;
 Shader<DummyShader> * dummyShader;
 Shader<VoxelShader> * voxelShader;
 
-Shader<DummyShader>::VAO aimVao;
+Shader<DummyShader>::VAO aimVao, hotbarVao;
 
 PBO<GLfloat, Action> pbo(GL_DEPTH_COMPONENT, 1, 1);
+
+inline auto vec2(GLfloat x, GLfloat y) { return glm::vec3(x / Game::Window::aspect, y, 0); }
+
+const auto origin = glm::vec2(0.0f);
+
+const auto white  = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+const auto black  = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+void drawAim(Shader<DummyShader>::VAO & vao) {
+    using namespace Game;
+
+    vao.clear();
+
+    vao.push(); vao.emit(vec2(-GUI::aimSize, 0), white, origin, 1.0f);
+    vao.push(); vao.emit(vec2(+GUI::aimSize, 0), white, origin, 1.0f);
+    vao.push(); vao.emit(vec2(0, -GUI::aimSize), white, origin, 1.0f);
+    vao.push(); vao.emit(vec2(0, +GUI::aimSize), white, origin, 1.0f);
+
+    vao.upload(GL_STATIC_DRAW);
+}
+
+void drawRectangle(Shader<DummyShader>::VAO & vao, GLfloat x₀, GLfloat y₀, GLfloat Δx, GLfloat Δy, Texture & T, glm::vec4 color, GLfloat mix) {
+    auto index = vao.index();
+
+    vao.emit(vec2(x₀ + 0,  y₀ + 0),  color, glm::vec2(T.left(),  T.up()),   mix);
+    vao.emit(vec2(x₀ + Δx, y₀ + 0),  color, glm::vec2(T.right(), T.up()),   mix);
+    vao.emit(vec2(x₀ + Δx, y₀ + Δy), color, glm::vec2(T.right(), T.down()), mix);
+    vao.emit(vec2(x₀ + 0,  y₀ + Δy), color, glm::vec2(T.left(),  T.down()), mix);
+
+    vao.push(index); vao.push(index + 1); vao.push(index + 2);
+    vao.push(index); vao.push(index + 2); vao.push(index + 3);
+}
+
+void drawHotbar(Shader<DummyShader>::VAO & vao) {
+    using namespace Game;
+
+    const GLfloat size = 0.1f, gap = 0.01f;
+    const auto gray = glm::vec4(0.5f);
+
+    auto hotbarLength = hotbarSize * (size + gap);
+    auto x₀ = -hotbarLength / 2, y₀ = gap - 1;
+    auto T₀ = Game::Registry::sheet.get(0);
+
+    vao.clear();
+
+    for (size_t i = 0; i < hotbarSize; i++) {
+        auto id = hotbar[i]; auto x = x₀ + i * (size + gap), y = y₀, side = size;
+        if (i == activeSlot) { x -= gap/2; y -= gap/2; side += gap; }
+
+        if (id != 0 && Registry::node.has(id)) {
+            auto nodeDef = Registry::node.get(id);
+            drawRectangle(vao, x, y, side, side, nodeDef.cube.front, black, 0.0f);
+        } else drawRectangle(vao, x, y, side, side, T₀, gray, 1.0f);
+    }
+
+    vao.upload(GL_STATIC_DRAW);
+}
+
+void updateHotbar() { drawHotbar(hotbarVao); }
 
 Real chunkDiameter(const Real n) {
     static const auto i = Gyrovector<Real>(Fundamentals::D½, 0);
@@ -124,7 +183,11 @@ void click(const Aut𝔻<Real> & origin, const GLfloat zbuffer, const Action act
         if (auto ret = getNeighbour(origin.inverse().apply(P))) {
             auto [C, Q] = *ret; auto [i, k] = Chunk::round(Q);
 
-            if (action == Action::Place)  setBlock(C, i, v.y, k, 2);
+            if (action == Action::Place && Game::activeSlot < Game::hotbarSize) {
+                auto id = Game::hotbar[Game::activeSlot];
+                if (id != 0 && Game::Registry::node.has(id))
+                    setBlock(C, i, v.y, k, id);
+            }
             if (action == Action::Remove) setBlock(C, i, v.y, k, 0);
         }
     }
@@ -228,6 +291,9 @@ void display(GLFWwindow * window) {
 
     dummyShader->activate();
 
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    hotbarVao.draw(GL_TRIANGLES);
+
     glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
     aimVao.draw(GL_LINES);
 
@@ -236,14 +302,19 @@ void display(GLFWwindow * window) {
 }
 
 void setupSheet() {
+    using namespace Game;
+
     glEnable(GL_TEXTURE_2D); glEnable(GL_CULL_FACE);
 
-    Game::Registry::sheet.pack();
+    Registry::sheet.pack();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, Game::Registry::sheet.texture());
 
     voxelShader->activate();
     voxelShader->uniform("textureSheet", 0);
+
+    dummyShader->activate();
+    dummyShader->uniform("textureSheet", 0);
 }
 
 void grabMouse(GLFWwindow * window) {
@@ -308,6 +379,15 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
             case GLFW_KEY_K:          player.roc(0); player.noclip = !player.noclip; break;
             case GLFW_KEY_SPACE:      Keyboard::space = true; pressSpace();          break;
             case GLFW_KEY_LEFT_SHIFT: Keyboard::lshift = true; pressLShift();        break;
+            case GLFW_KEY_1:          activeSlot = 0; updateHotbar();                break;
+            case GLFW_KEY_2:          activeSlot = 1; updateHotbar();                break;
+            case GLFW_KEY_3:          activeSlot = 2; updateHotbar();                break;
+            case GLFW_KEY_4:          activeSlot = 3; updateHotbar();                break;
+            case GLFW_KEY_5:          activeSlot = 4; updateHotbar();                break;
+            case GLFW_KEY_6:          activeSlot = 5; updateHotbar();                break;
+            case GLFW_KEY_7:          activeSlot = 6; updateHotbar();                break;
+            case GLFW_KEY_8:          activeSlot = 7; updateHotbar();                break;
+            case GLFW_KEY_9:          activeSlot = 8; updateHotbar();                break;
         }
     }
 
@@ -321,21 +401,6 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
             case GLFW_KEY_LEFT_SHIFT: Keyboard::lshift   = false; releaseLShift(); break;
         }
     }
-}
-
-void drawAim(Shader<DummyShader>::VAO & vao) {
-    using namespace Game;
-
-    vao.clear();
-
-    constexpr auto white = glm::vec4(1.0);
-    vao.push(); vao.emit(glm::vec3(-GUI::aimSize / Window::aspect, 0, 0), white);
-    vao.push(); vao.emit(glm::vec3(+GUI::aimSize / Window::aspect, 0, 0), white);
-
-    vao.push(); vao.emit(glm::vec3(0, -GUI::aimSize, 0), white);
-    vao.push(); vao.emit(glm::vec3(0, +GUI::aimSize, 0), white);
-
-    vao.upload(GL_STATIC_DRAW);
 }
 
 void setupWindowSize(GLFWwindow * window, int width, int height) {
@@ -352,6 +417,7 @@ void setupWindowSize(GLFWwindow * window, int width, int height) {
 
     projection = glm::perspective(glm::radians(fov), Game::Window::aspect, near, far);
 
+    updateHotbar();
     drawAim(aimVao);
 }
 
@@ -414,6 +480,8 @@ void setupGL(GLFWwindow * window, Config & config) {
     dummyShader->activate();
 
     aimVao.initialize();
+    hotbarVao.initialize();
+
     GUI::aimSize = config.gui.aimSize;
     setupWindowSize(window, Window::width, Window::height);
 
@@ -448,6 +516,7 @@ void setupGame(Config & config) {
 void cleanUp(GLFWwindow * window) {
     pbo.free();
     aimVao.free();
+    hotbarVao.free();
 
     delete dummyShader;
     delete voxelShader;

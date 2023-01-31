@@ -75,6 +75,14 @@ namespace API {
         Node
     };
 
+    int setHotbar(lua_State * machine) {
+        auto index = luaL_checkinteger(machine, 1);
+        auto id = size_t(luaL_checkinteger(machine, 2));
+
+        if (id < Game::hotbarSize) Game::hotbar[index] = id;
+        return 0;
+    }
+
     int attachTexture(lua_State * machine) {
         auto filename = luaL_checkstring(machine, 2);
         auto retval = Game::Registry::sheet.attach(filename);
@@ -130,9 +138,10 @@ namespace API {
 }
 
 static const luaL_Reg externs[] = {
-    {"register", API::attach},
-    {"override", API::override},
-    {NULL,       NULL}
+    {"register",  API::attach},
+    {"override",  API::override},
+    {"setHotbar", API::setHotbar},
+    {NULL,        NULL}
 };
 
 void VM::loadapi() {
