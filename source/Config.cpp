@@ -74,6 +74,6 @@ Config::Config(Lua::VM * vm, const char * filename) {
 
         gui.aimSize = vm->withfield("aimSize", [&]() {
             return vm->get<std::optional<lua_Number>>();
-        }).value_or(0.015);
+        }).value_or(15);
     });
 }

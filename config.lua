@@ -22,6 +22,6 @@ return {
     },
 
     gui = {
-        aimSize = 0.015,
+        aimSize = 15,
     },
 }

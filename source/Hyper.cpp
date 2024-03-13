@@ -42,10 +42,13 @@ void drawAim(Shader<DummyShader>::VAO & vao) {
 
     vao.clear();
 
-    vao.push(); vao.emit(vec2(-GUI::aimSize, 0), white, origin, 1.0f);
-    vao.push(); vao.emit(vec2(+GUI::aimSize, 0), white, origin, 1.0f);
-    vao.push(); vao.emit(vec2(0, -GUI::aimSize), white, origin, 1.0f);
-    vao.push(); vao.emit(vec2(0, +GUI::aimSize), white, origin, 1.0f);
+    auto wpixel = 1.0 / GLfloat(Game::Window::width);
+    auto hpixel = 1.0 / GLfloat(Game::Window::height);
+
+    vao.push(); vao.emit(glm::vec3(-GLfloat(GUI::aimSize) * wpixel, 0, 0), white, origin, 1.0f);
+    vao.push(); vao.emit(glm::vec3(+GLfloat(GUI::aimSize) * wpixel, 0, 0), white, origin, 1.0f);
+    vao.push(); vao.emit(glm::vec3(0, -GLfloat(GUI::aimSize) * hpixel, 0), white, origin, 1.0f);
+    vao.push(); vao.emit(glm::vec3(0, +GLfloat(GUI::aimSize) * hpixel, 0), white, origin, 1.0f);
 
     vao.upload(GL_STATIC_DRAW);
 }

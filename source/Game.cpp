@@ -24,7 +24,7 @@ namespace Render {
 }
 
 namespace GUI {
-    GLfloat aimSize;
+    int aimSize;
 }
 
 namespace Keyboard {

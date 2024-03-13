@@ -42,7 +42,7 @@ namespace Game {
     }
 
     namespace GUI {
-        extern GLfloat aimSize;
+        extern int aimSize;
     }
 
     namespace Keyboard {
