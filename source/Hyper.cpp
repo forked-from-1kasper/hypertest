@@ -205,6 +205,12 @@ void pollNeighbours() {
         auto G = Game::player.chunk()->isometry() * Tesselation::neighbours[k];
         Game::atlas.poll(player.camera().position.action(), G);
     }
+
+    //for (size_t i = 0; i < Tesselation::neighbours.size(); i++)
+    //    for (size_t j = 0; j < Tesselation::neighbours.size(); j++) {
+    //        auto G = Game::player.chunk()->isometry() * Tesselation::neighbours[i] * Tesselation::neighbours[j];
+    //        Game::atlas.poll(player.camera().position.action(), G);
+    //}
 }
 
 void returnToSpawn() {
@@ -368,6 +374,46 @@ void windowFocusCallback(GLFWwindow * window, int focused) {
     if (!Window::focused) freeMouse(window);
 }
 
+Blob blobBuffer;
+
+void copyBlob() {
+    using namespace Game;
+
+    const auto & src = *player.chunk();
+    if (src.blob() == nullptr) return;
+
+    memcpy(&blobBuffer, src.blob(), sizeof(Blob));
+}
+
+void pasteBlob() {
+    using namespace Game;
+
+    auto dest = player.chunk()->blob();
+    if (dest == nullptr) return;
+
+    memcpy(dest, &blobBuffer, sizeof(Blob));
+    player.chunk()->requestRefresh();
+}
+
+void rotateBlob() {
+    using namespace Game;
+    using namespace Fundamentals;
+
+    auto src = player.chunk()->blob();
+    if (src == nullptr) return;
+
+    auto buf = new Blob; memcpy(buf, src, sizeof(Blob));
+
+    for (size_t i = 0; i < chunkSize; i++)
+        for (size_t j = 0; j < worldHeight; j++)
+            for (size_t k = 0; k < chunkSize; k++)
+                src->data[i][j][k] = buf->data[k][j][chunkSize - 1 - i];
+
+    delete buf;
+
+    player.chunk()->requestRefresh();
+}
+
 void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, int mods) {
     using namespace Game;
 
@@ -391,6 +437,9 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
             case GLFW_KEY_7:          activeSlot = 6; updateHotbar();                break;
             case GLFW_KEY_8:          activeSlot = 7; updateHotbar();                break;
             case GLFW_KEY_9:          activeSlot = 8; updateHotbar();                break;
+            case GLFW_KEY_X:          rotateBlob();                                  break;
+            case GLFW_KEY_C:          copyBlob();                                    break;
+            case GLFW_KEY_V:          pasteBlob();                                   break;
         }
     }
 
@@ -420,7 +469,6 @@ void setupWindowSize(GLFWwindow * window, int width, int height) {
 
     projection = glm::perspective(glm::radians(fov), Game::Window::aspect, near, far);
 
-    updateHotbar();
     drawAim(aimVao);
 }
 
@@ -542,6 +590,8 @@ int main(int argc, char *argv[]) {
 
     Game::atlas.connect(config.world);
     setupGame(config); setupSheet();
+
+    updateHotbar(); // TODO: where it should be placed?
 
     while (!glfwWindowShouldClose(Game::window)) {
         display(Game::window);

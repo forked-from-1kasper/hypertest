@@ -167,7 +167,7 @@ Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometr
     vao.initialize();
 }
 
-Chunk::~Chunk() { join(); delete blob; vao.free(); }
+Chunk::~Chunk() { join(); delete _blob; vao.free(); }
 
 bool Chunk::walkable(Rank x, Real L, Rank z) {
     if (x >= Fundamentals::chunkSize || z >= Fundamentals::chunkSize) return true;
@@ -437,7 +437,7 @@ void Chunk::load(ChunkOperator * generator, sqlite3 * engine) {
 
     if (_ready) return; _working = true;
     worker = std::async(std::launch::async, [statement, retval = 0, generator, engine, this]() mutable {
-        blob = new Blob();
+        _blob = new Blob();
 
         retval = sqlite3_prepare_v2(engine, loadcmd, -1, &statement, nullptr);
         if (retval != SQLITE_OK) { warn(engine); _needUnload = true; goto fin; }
@@ -446,7 +446,7 @@ void Chunk::load(ChunkOperator * generator, sqlite3 * engine) {
         retval = sqlite3_step(statement);
 
         if (retval == SQLITE_ROW)
-            memcpy(blob, sqlite3_column_blob(statement, 0), sizeof(Blob));
+            memcpy(_blob, sqlite3_column_blob(statement, 0), sizeof(Blob));
         else { if (generator != nullptr) (*generator)(this); _dirty = true; }
 
         if (retval == SQLITE_ERROR) warn(engine);
@@ -467,7 +467,7 @@ void Chunk::dump(sqlite3 * engine) {
         if (retval != SQLITE_OK) { warn(engine); _working = false; return; }
 
         serialize(statement, 1, 2, 3, 4, 5);
-        sqlite3_bind_blob(statement, 6, blob, sizeof(Blob), SQLITE_TRANSIENT);
+        sqlite3_bind_blob(statement, 6, _blob, sizeof(Blob), SQLITE_TRANSIENT);
 
         retval = sqlite3_step(statement);
 

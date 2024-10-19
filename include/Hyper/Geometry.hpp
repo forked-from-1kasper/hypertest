@@ -107,12 +107,13 @@ private:
     Fuchsian<Integer> _isometry; Möbius<Real> _relative; Real _awayness; // used for drawing
     Gaussian²<Integer> _pos; // used for indexing, should be equal to `isometry.origin()`
 
-    bool _working = false; std::future<void> worker;
-    Blob * blob = nullptr; Shader<VoxelShader>::VAO vao;
+    bool _working = false; std::future<void> worker; Shader<VoxelShader>::VAO vao;
 
     bool _ready = false, _dirty = false, _needRefresh = false, _needUnload = false, needUpdateVAO = false;
 
+    Blob * _blob = nullptr;
 public:
+
     Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometry);
 
     ~Chunk();
@@ -145,11 +146,14 @@ public:
     inline const auto relative() const { return _relative; }
     inline const auto pos()      const { return _pos;      }
 
+    inline Blob * blob() { if (_blob != nullptr) _dirty = true; return _blob; }
+    inline const Blob * blob() const { return _blob; }
+
     inline auto get(Rank i, Level j, Rank k) const
-    { return blob->data[i][j][k]; }
+    { return _blob->data[i][j][k]; }
 
     inline void set(size_t i, size_t j, size_t k, const Node & node)
-    { _dirty = true; blob->data[i][j][k] = node; }
+    { _dirty = true; _blob->data[i][j][k] = node; }
 
     template<typename T> static Parallelogram<T> parallelogram(Rank, Rank);
 
