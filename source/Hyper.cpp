@@ -469,6 +469,7 @@ void setupWindowSize(GLFWwindow * window, int width, int height) {
 
     projection = glm::perspective(glm::radians(fov), Game::Window::aspect, near, far);
 
+    updateHotbar();
     drawAim(aimVao);
 }
 
