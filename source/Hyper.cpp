@@ -206,11 +206,11 @@ void pollNeighbours() {
         Game::atlas.poll(player.camera().position.action(), G);
     }
 
-    //for (size_t i = 0; i < Tesselation::neighbours.size(); i++)
-    //    for (size_t j = 0; j < Tesselation::neighbours.size(); j++) {
-    //        auto G = Game::player.chunk()->isometry() * Tesselation::neighbours[i] * Tesselation::neighbours[j];
-    //        Game::atlas.poll(player.camera().position.action(), G);
-    //}
+    /*for (size_t i = 0; i < Tesselation::neighbours.size(); i++)
+        for (size_t j = 0; j < Tesselation::neighbours.size(); j++) {
+            auto G = Game::player.chunk()->isometry() * Tesselation::neighbours[i] * Tesselation::neighbours[j];
+            Game::atlas.poll(player.camera().position.action(), G);
+    }*/
 }
 
 void returnToSpawn() {

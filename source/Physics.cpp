@@ -75,6 +75,8 @@ bool Entity::moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
 }
 
 bool Entity::moveVertically(const Real dt) {
+    if (!_chunk->ready()) return false;
+
     auto roc = noclip ? _camera.roc : _camera.roc - dt * gravity;
     if (jumped) { roc += jumpSpeed; jumped = false; }
 
