@@ -1,9 +1,10 @@
 #pragma once
 
 #include <concepts>
-#include <gmpxx.h>
 #include <cstdint>
 #include <cmath>
+
+#include <gmpxx.h>
 
 constexpr size_t Byte  = sizeof(uint8_t);
 constexpr size_t Word  = sizeof(uint16_t);

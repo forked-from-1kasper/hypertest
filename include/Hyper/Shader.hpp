@@ -1,9 +1,10 @@
 #pragma once
 
-#include <GL/glew.h>
 #include <optional>
 #include <vector>
 #include <string>
+
+#include <GL/glew.h>
 
 #include <Hyper/Gyrovector.hpp>
 #include <Meta/Literal.hpp>

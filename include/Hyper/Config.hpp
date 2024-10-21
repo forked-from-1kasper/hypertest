@@ -1,8 +1,9 @@
 #pragma once
 
-#include <Hyper/Fundamentals.hpp>
 #include <glm/vec4.hpp>
 #include <GL/glew.h>
+
+#include <Hyper/Fundamentals.hpp>
 #include <Lua.hpp>
 
 struct Config {

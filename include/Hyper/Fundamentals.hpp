@@ -46,12 +46,6 @@ using Level = uint8_t;
 // Some helpful definitions
 template<typename T, int N> using Array² = std::array<std::array<T, N>, N>;
 
-template<class F, class G> auto compose(F f, G g) {
-    return [f, g](auto &&... args) {
-        return f(g(std::forward<decltype(args)>(args)...));
-    };
-}
-
 // Various machinery for projections
 enum class Model {
     Poincaré = 1,
@@ -80,7 +74,7 @@ namespace Projection {
         return glm::vec2(x₁, x₂);
     }
 
-    constexpr auto apply(Model model, const Gyrovector<Real> & v)
+    inline constexpr auto apply(Model model, const Gyrovector<Real> & v)
     { return apply(model, v.x(), v.y()); }
 
     inline const auto unapply(Model model, const glm::vec3 w) {
