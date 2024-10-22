@@ -17,6 +17,8 @@
 #include <Hyper/AutD.hpp>
 #include <Meta/List.hpp>
 
+using ℤi = Gaussian<Integer>;
+
 namespace Tesselation {
     using namespace Fundamentals;
 

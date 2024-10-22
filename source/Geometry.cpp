@@ -2,8 +2,6 @@
 #include <iostream>
 
 namespace Tesselation {
-    using ℤi = Gaussian<Integer>;
-
     // Chunk’s neighbours in tesselation
     const Fuchsian<Integer> I { ℤi(+1, +0), ℤi(+0, +0), ℤi(+0, +0), ℤi(+1, +0) };
     const Fuchsian<Integer> U { ℤi(+6, +0), ℤi(+6, +6), ℤi(+1, -1), ℤi(+6, +0) };

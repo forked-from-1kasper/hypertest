@@ -136,5 +136,4 @@ template<EuclideanDomain T> struct Gaussian {
     { return stream << z.real << " + " << z.imag << "i"; }
 };
 
-template<EuclideanDomain T>
-using Gaussian² = std::pair<Gaussian<T>, Gaussian<T>>;
+template<EuclideanDomain T> using Gaussian² = std::pair<Gaussian<T>, Gaussian<T>>;
