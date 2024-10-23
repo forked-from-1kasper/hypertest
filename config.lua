@@ -2,9 +2,9 @@ return {
     world = "world.sqlite3",
 
     fog = {
-        enabled = false,
+        enabled = true,
         near    = 1.0,
-        far     = 10.0,
+        far     = 5.0,
         color   = {1.0, 1.0, 1.0, 1.0}
     },
 
