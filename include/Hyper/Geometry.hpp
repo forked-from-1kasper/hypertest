@@ -28,23 +28,23 @@ namespace Tesselation {
     template<typename T> T interpret(Direction);
 
     template<Direction... ds> struct Compose {
-        template<typename T> static T eval()
+        template<typename T> static constexpr inline T eval()
         { return (interpret<T>(ds) * ...); }
     };
 
     template<typename, typename> struct Eval;
 
     template<typename T> struct Eval<T, List<>>
-    { static inline void insert(size_t, auto &) {} };
+    { static constexpr inline void insert(size_t, auto &) {} };
 
     template<typename T, typename U, typename... Us> struct Eval<T, List<U, Us...>> {
-        static inline void insert(size_t i, auto & ret) {
+        static constexpr inline void insert(size_t i, auto & ret) {
             ret[i] = U::template eval<T>(); ret[i].normalize();
             Eval<T, List<Us...>>::insert(i + 1, ret);
         }
     };
 
-    template<typename T, typename Us> std::array<T, Length<Us>> eval()
+    template<typename T, typename Us> constexpr inline std::array<T, Length<Us>> eval()
     { std::array<T, Length<Us>> retval; Eval<T, Us>::insert(0, retval); return retval; }
 
     using Grid = Array²<Gyrovector<Real>, chunkSize + 1>;

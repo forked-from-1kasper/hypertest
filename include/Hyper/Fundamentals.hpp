@@ -34,6 +34,24 @@ namespace Math {
 
     template<typename... Ts> inline bool equal(Ts... ts) { return EqualM<Ts...>::apply(ts...); }
     template<typename... Ts> inline bool samesign(Ts... ts) { return equal((ts < 0)...); }
+
+    template<typename T> constexpr T NewtonRaphson(const T x, const T curr, const T prev)
+    { return curr == prev ? curr : NewtonRaphson<T>(x, 0.5 * (curr + x / curr), curr); }
+
+    // https://en.cppreference.com/w/cpp/numeric/math/sqrt (constexpr since C++26)
+    template<typename T> constexpr T sqrt(const T x) {
+        if (std::is_constant_evaluated())
+            return 0 <= x && x < std::numeric_limits<double>::infinity()
+                 ? NewtonRaphson<T>(x, x, 0) : std::numeric_limits<double>::quiet_NaN();
+        else return std::sqrt(x);
+    }
+
+    // https://en.cppreference.com/w/cpp/numeric/math/hypot (constexpr since C++26)
+    template<typename T> constexpr T hypot(const T x, const T y) {
+        if (std::is_constant_evaluated())
+            return Math::sqrt(x * x + y * y);
+        else return std::hypot(x, y);
+    }
 }
 
 using Real    = double;
@@ -77,19 +95,19 @@ namespace Projection {
     inline constexpr auto apply(Model model, const Gyrovector<Real> & v)
     { return apply(model, v.x(), v.y()); }
 
-    inline const auto unapply(Model model, const glm::vec3 w) {
+    inline constexpr auto unapply(Model model, const glm::vec3 w) {
         float x, z;
 
         switch (model) {
             case Model::Poincaré: x = w.x; z = w.z; break;
 
             case Model::Klein: {
-                auto σ = 1.0f + sqrt(1.0f - w.x * w.x - w.z * w.z);
+                auto σ = 1.0f + Math::sqrt(1.0f - w.x * w.x - w.z * w.z);
                 x = w.x / σ; z = w.z / σ; break;
             }
 
             case Model::Gans: {
-                auto σ = 1.0f + sqrt(w.x * w.x + w.z * w.z + 1.0f);
+                auto σ = 1.0f + Math::sqrt(w.x * w.x + w.z * w.z + 1.0f);
                 x = w.x / σ; z = w.z / σ; break;
             }
         }
@@ -117,7 +135,7 @@ namespace Fundamentals {
     // https://www.amazon.com/Analytic-Hyperbolic-Geometry-Einsteins-Relativity/dp/9811244103, “Analytic Hyperbolic Geometry and Albert Einstein’s Special Theory of Relativity”
 
 #ifdef __clang__
-    constexpr Real k  = 1.0471975511965976;
+    constexpr Real k  = 1.04719755119659760;
     constexpr Real D½ = 0.51763809020504159;
     constexpr Real L  = 0.70710678118654757;
 #else

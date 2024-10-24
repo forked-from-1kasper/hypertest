@@ -27,11 +27,7 @@ struct Fuchsian {
 
     template<typename U> constexpr inline Möbius<U> field() const {
         // See `source/Geometry.cpp` for “s” meaning.
-        #ifdef __clang__
-            constexpr U s = 2.449489742783178;
-        #else
-            constexpr U s = sqrt(6.0);
-        #endif
+        constexpr auto s = Math::sqrt<U>(6.0);
 
         return { a.template field<U>(),     b.template field<U>() / s,
                  c.template field<U>() * s, d.template field<U>() };

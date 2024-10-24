@@ -577,7 +577,7 @@ void cleanUp(GLFWwindow * window) {
     glfwTerminate();
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char * argv[]) {
     Lua::VM vm;
 
     Config config(&vm, "config.lua");
