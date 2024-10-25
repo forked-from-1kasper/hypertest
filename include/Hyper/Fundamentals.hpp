@@ -15,7 +15,9 @@
     #define clangexpr constexpr
 #endif
 
-constexpr double τ = 2 * 3.141592653589793238462643383279502884197169399375105820974944;
+template<typename T> constexpr T tau = 2.0 * std::numbers::pi_v<T>;
+
+constexpr auto τ = tau<double>;
 
 namespace Math {
     template<typename T> constexpr T sqr(T x) { return x * x; }
@@ -52,6 +54,60 @@ namespace Math {
             return Math::sqrt(x * x + y * y);
         else return std::hypot(x, y);
     }
+
+    template<typename T> constexpr T modulo(const T x, const T y) {
+        if constexpr(std::is_floating_point<T>()) {
+            if (std::is_constant_evaluated())
+                return x - static_cast<long long>(x / y) * y;
+            else
+                return std::fmod(x, y);
+        } else return x % y;
+    }
+
+    template<typename T> constexpr T sin(const T x) {
+        using namespace std::numbers;
+
+        if (std::is_constant_evaluated()) {
+            T φ = modulo<T>(x, 2.0 * pi_v<T>);
+
+            T y = φ <= 0.5 * pi_v<T> ? φ                 :
+                  φ <= 1.5 * pi_v<T> ? 1.0 * pi_v<T> - φ :
+                                       φ - 2.0 * pi_v<T>;
+
+            T f = 0.0, Y = y, y² = y * y;
+
+            Y  = y;                f += Y;
+            Y *= y²; Y /=  2 *  3; f -= Y;
+            Y *= y²; Y /=  4 *  5; f += Y;
+            Y *= y²; Y /=  6 *  7; f -= Y;
+            Y *= y²; Y /=  8 *  9; f += Y;
+            Y *= y²; Y /= 10 * 11; f -= Y;
+            Y *= y²; Y /= 12 * 13; f += Y;
+
+            return f;
+        } else return std::sin(x);
+    }
+
+    template<typename T> constexpr T cos(const T x) {
+        if (std::is_constant_evaluated())
+            return Math::sin<T>(tau<T> / 4.0 - x);
+        else
+            return std::cos(x);
+    }
+
+    template<typename T> constexpr T tan(const T x) {
+        if (std::is_constant_evaluated())
+            return Math::sin<T>(x) / Math::cos<T>(x);
+        else
+            return std::tan(x);
+    }
+
+    template<typename T> constexpr T cot(const T x) {
+        if (std::is_constant_evaluated())
+            return Math::cos<T>(x) / Math::sin<T>(x);
+        else
+            return 1.0 / std::tan(x);
+    }
 }
 
 using Real    = double;
@@ -72,7 +128,8 @@ enum class Model {
 };
 
 namespace Projection {
-    constexpr auto apply(Model model, Real y₁, Real y₂) {
+    // Poincaré model → The specified model
+    constexpr auto apply(Model model, const Real y₁, const Real y₂) {
         Real x₁, x₂;
 
         switch (model) {
@@ -80,40 +137,48 @@ namespace Projection {
 
             case Model::Klein: {
                 auto σ = 1 + y₁ * y₁ + y₂ * y₂;
-                x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ; break;
+                x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ;
+                break;
             }
 
             case Model::Gans: {
                 auto σ = 1 - y₁ * y₁ - y₂ * y₂;
-                x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ; break;
+                x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ;
+                break;
             }
         }
 
-        return glm::vec2(x₁, x₂);
+        return std::pair(x₁, x₂);
     }
 
-    inline constexpr auto apply(Model model, const Gyrovector<Real> & v)
-    { return apply(model, v.x(), v.y()); }
-
-    inline constexpr auto unapply(Model model, const glm::vec3 w) {
-        float x, z;
+    // The specified model → Poincaré model
+    inline constexpr auto unapply(Model model, const Real x₁, const Real x₂) {
+        float y₁, y₂;
 
         switch (model) {
-            case Model::Poincaré: x = w.x; z = w.z; break;
+            case Model::Poincaré: y₁ = x₁; y₂ = x₂; break;
 
             case Model::Klein: {
-                auto σ = 1.0f + Math::sqrt(1.0f - w.x * w.x - w.z * w.z);
-                x = w.x / σ; z = w.z / σ; break;
+                auto σ = 1.0 + Math::sqrt(1.0 - x₁ * x₁ - x₂ * x₂);
+                y₁ = x₁ / σ; y₂ = x₂ / σ;
+                break;
             }
 
             case Model::Gans: {
-                auto σ = 1.0f + Math::sqrt(w.x * w.x + w.z * w.z + 1.0f);
-                x = w.x / σ; z = w.z / σ; break;
+                auto σ = 1.0 + Math::sqrt(x₁ * x₁ + x₂ * x₂ + 1.0);
+                y₁ = x₁ / σ; y₂ = x₂ / σ;
+                break;
             }
         }
 
-        return glm::vec3(x, w.y, z);
+        return std::pair(y₁, y₂);
     }
+
+    inline constexpr auto apply(Model model, const Gyrovector<Real> & v)
+    { auto [x₁, x₂] = apply(model, v.x(), v.y()); return glm::vec2(x₁, x₂); }
+
+    inline constexpr auto unapply(Model model, const glm::vec3 w)
+    { auto [x, z] = unapply(model, w.x, w.z); return glm::vec3(x, w.y, z); }
 
     inline const auto length(Model model, Real value)
     { return glm::length(Projection::apply(model, Gyrovector<Real>(value, 0))); }
@@ -134,15 +199,9 @@ namespace Fundamentals {
     // https://link.springer.com/book/10.1007/978-3-031-02396-5, “A Gyrovector Space Approach to Hyperbolic Geometry”
     // https://www.amazon.com/Analytic-Hyperbolic-Geometry-Einsteins-Relativity/dp/9811244103, “Analytic Hyperbolic Geometry and Albert Einstein’s Special Theory of Relativity”
 
-#ifdef __clang__
-    constexpr Real k  = 1.04719755119659760;
-    constexpr Real D½ = 0.51763809020504159;
-    constexpr Real L  = 0.70710678118654757;
-#else
-    constexpr Real k  = τ / 6;                      // π/3, angle of chunk’s square
-    constexpr Real D½ = sqrt(2/(tan(k/2) + 1) - 1); // √(2 − √3), gyrodiagonal “half gyrolength” of chunk’s gyrosquare
-    constexpr Real L  = sqrt(cos(k));               // 1/√2, chunk’s side (gyro)length
-#endif
+    constexpr Real k  = τ / 6;                                  // π/3, angle of chunk’s square
+    constexpr Real D½ = Math::sqrt(2/(Math::tan(k/2) + 1) - 1); // √(2 − √3), gyrodiagonal “half gyrolength” of chunk’s gyrosquare
+    constexpr Real L  = Math::sqrt(Math::cos(k));               // 1/√2, chunk’s side (gyro)length
 
     /*
         “k = τ/6” is used because corresponding tesselation (https://en.wikipedia.org/wiki/Order-6_square_tiling)
