@@ -15,9 +15,11 @@
     #define clangexpr constexpr
 #endif
 
-template<typename T> constexpr T tau = 2.0 * std::numbers::pi_v<T>;
+template<typename T> constexpr T pi = 3.141592653589793238462643383279502884197169399375105820974944;
 
-constexpr auto τ = tau<double>;
+template<typename T> constexpr T tau = 2.0 * pi<T>;
+
+constexpr auto π = pi<double>, τ = tau<double>;
 
 namespace Math {
     template<typename T> constexpr T sqr(T x) { return x * x; }
@@ -65,14 +67,12 @@ namespace Math {
     }
 
     template<typename T> constexpr T sin(const T x) {
-        using namespace std::numbers;
-
         if (std::is_constant_evaluated()) {
-            T φ = modulo<T>(x, 2.0 * pi_v<T>);
+            T φ = modulo<T>(x, tau<T>);
 
-            T y = φ <= 0.5 * pi_v<T> ? φ                 :
-                  φ <= 1.5 * pi_v<T> ? 1.0 * pi_v<T> - φ :
-                                       φ - 2.0 * pi_v<T>;
+            T y = φ <= 0.5 * pi<T> ? φ               :
+                  φ <= 1.5 * pi<T> ? 1.0 * pi<T> - φ :
+                                     φ - 2.0 * pi<T>;
 
             T f = 0.0, Y = y, y² = y * y;
 
