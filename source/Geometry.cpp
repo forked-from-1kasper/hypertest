@@ -71,7 +71,8 @@ namespace Tesselation {
     const Array<Aut𝔻<Real>> neighbours⁻¹ = inverse(eval<Aut𝔻<Real>, Neighbours>());
 
     // Generation of chunk’s grid
-    clangexpr auto Φ(Real x, Real y) {
+
+    /*clangexpr auto Φ(Real x, Real y) {
         using namespace Fundamentals;
 
         if (x == 0 && y == 0) return Gyrovector<Real>(0, 0);
@@ -85,6 +86,22 @@ namespace Tesselation {
     clangexpr auto Ψ(Real x, Real y) {
         auto u = (x + y) / 2, v = (x - y) / 2;
         return Φ(u * D½, v * D½);
+    }*/
+
+    clangexpr auto Ψ(Real t₁, Real t₂) {
+        auto d = D½ / Math::sqrt<Real>(2.0);
+
+        auto [d₁, d₂] = Projection::apply(Model::Klein, d, d);
+
+        auto k₁ = std::tanh(t₁ * std::atanh(d₁));
+        auto k₂ = std::tanh(t₂ * std::atanh(d₂));
+
+        auto [x, y] = Projection::unapply(Model::Klein, k₁, k₂);
+
+        auto u = (x + y) / Math::sqrt<Real>(2.0);
+        auto v = (x - y) / Math::sqrt<Real>(2.0);
+
+        return Gyrovector<Real>(u, v);
     }
 
     clangexpr auto yield(int i, int j) {
