@@ -72,43 +72,36 @@ namespace Tesselation {
 
     // Generation of chunk’s grid
 
-    /*clangexpr auto Φ(Real x, Real y) {
-        using namespace Fundamentals;
+    constexpr Real d = D½ / sqrt2;
 
-        if (x == 0 && y == 0) return Gyrovector<Real>(0, 0);
-
-        auto L = fabs(x) + fabs(y);
-
-        Gyrovector<Real> u(Math::sign(x) * L, 0), v(0, Math::sign(y) * L);
-        return u + fabs(y / L) * (-u + v);
-    }
-
-    clangexpr auto Ψ(Real x, Real y) {
-        auto u = (x + y) / 2, v = (x - y) / 2;
-        return Φ(u * D½, v * D½);
-    }*/
+    constexpr auto d₁₂ = Projection::apply(Model::Klein, d, d);
+    constexpr auto d₁ = d₁₂.first, d₂ = d₁₂.second;
 
     clangexpr auto Ψ(Real t₁, Real t₂) {
-        auto d = D½ / Math::sqrt<Real>(2.0);
-
-        auto [d₁, d₂] = Projection::apply(Model::Klein, d, d);
-
         auto k₁ = std::tanh(t₁ * std::atanh(d₁));
         auto k₂ = std::tanh(t₂ * std::atanh(d₂));
 
         auto [x, y] = Projection::unapply(Model::Klein, k₁, k₂);
-
-        auto u = (x + y) / Math::sqrt<Real>(2.0);
-        auto v = (x - y) / Math::sqrt<Real>(2.0);
+        auto u = (x + y) / sqrt2, v = (x - y) / sqrt2;
 
         return Gyrovector<Real>(u, v);
+    }
+
+    auto Ψ⁻¹(Real u, Real v) {
+        auto x = (u + v) / sqrt2, y = (u - v) / sqrt2;
+        auto [k₁, k₂] = Projection::apply(Model::Klein, x, y);
+
+        return std::pair(
+            std::atanh(k₁) / std::atanh(d₁),
+            std::atanh(k₂) / std::atanh(d₂)
+        );
     }
 
     clangexpr auto yield(int i, int j) {
         using namespace Fundamentals;
 
-        auto x = Real(2 * i - chunkSize) / Real(chunkSize);
-        auto y = Real(2 * j - chunkSize) / Real(chunkSize);
+        auto x = 2 * Real(i) / chunkSize - 1;
+        auto y = 2 * Real(j) / chunkSize - 1;
         return Ψ(x, y);
     }
 

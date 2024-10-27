@@ -15,11 +15,11 @@
     #define clangexpr constexpr
 #endif
 
-template<typename T> constexpr T pi = 3.141592653589793238462643383279502884197169399375105820974944;
+template<typename T> inline constexpr T Sqrt2 = 1.414213562373095048801688724209698078569671875376948073176680;
+template<typename T> inline constexpr T Pi    = 3.141592653589793238462643383279502884197169399375105820974944;
+template<typename T> inline constexpr T Tau   = 2.0 * Pi<T>;
 
-template<typename T> constexpr T tau = 2.0 * pi<T>;
-
-constexpr auto π = pi<double>, τ = tau<double>;
+inline constexpr auto sqrt2 = Sqrt2<double>, π = Pi<double>, τ = Tau<double>;
 
 namespace Math {
     template<typename T> constexpr T sqr(T x) { return x * x; }
@@ -68,11 +68,11 @@ namespace Math {
 
     template<typename T> constexpr T sin(const T x) {
         if (std::is_constant_evaluated()) {
-            T φ = modulo<T>(x, tau<T>);
+            T φ = modulo<T>(x, Tau<T>);
 
-            T y = φ <= 0.5 * pi<T> ? φ               :
-                  φ <= 1.5 * pi<T> ? 1.0 * pi<T> - φ :
-                                     φ - 2.0 * pi<T>;
+            T y = φ <= 0.5 * Pi<T> ? φ               :
+                  φ <= 1.5 * Pi<T> ? 1.0 * Pi<T> - φ :
+                                     φ - 2.0 * Pi<T>;
 
             T f = 0.0, Y = y, y² = y * y;
 
@@ -90,7 +90,7 @@ namespace Math {
 
     template<typename T> constexpr T cos(const T x) {
         if (std::is_constant_evaluated())
-            return Math::sin<T>(tau<T> / 4.0 - x);
+            return Math::sin<T>(Tau<T> / 4.0 - x);
         else
             return std::cos(x);
     }
