@@ -97,12 +97,24 @@ namespace Tesselation {
         );
     }
 
-    clangexpr auto yield(int i, int j) {
+    clangexpr auto apply(int i, int j) {
         using namespace Fundamentals;
 
         auto x = 2 * Real(i) / chunkSize - 1;
         auto y = 2 * Real(j) / chunkSize - 1;
         return Ψ(x, y);
+    }
+
+    auto unapply(Real u, Real v) {
+        auto [x, y] = Ψ⁻¹(u, v);
+
+        x = std::clamp<Real>(x, -1, 1);
+        y = std::clamp<Real>(y, -1, 1);
+
+        auto i = (x + 1) / 2 * chunkSize;
+        auto j = (y + 1) / 2 * chunkSize;
+
+        return std::pair(Rank(i), Rank(j));
     }
 
     clangexpr auto init() {
@@ -112,7 +124,7 @@ namespace Tesselation {
 
         for (int i = 0; i <= chunkSize; i++)
             for (int j = 0; j <= chunkSize; j++)
-                retval[i][j] = yield(i, j);
+                retval[i][j] = apply(i, j);
 
         return retval;
     }
@@ -309,16 +321,8 @@ bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {
     );
 }
 
-std::pair<Rank, Rank> Chunk::round(const Gyrovector<Real> & w) {
-    using namespace Fundamentals;
-
-    for (Rank i = 0; i < chunkSize; i++)
-        for (Rank j = 0; j < chunkSize; j++)
-            if (Chunk::touch(w, i, j))
-                return std::pair(i, j);
-
-    return std::pair(exterior, exterior);
-}
+std::pair<Rank, Rank> Chunk::round(const Gyrovector<Real> & w)
+{ return Tesselation::unapply(w.x(), w.y()); }
 
 bool Chunk::isInsideOfDomain(const Gyrovector<Real> & w₀) {
     using namespace Fundamentals;
