@@ -108,8 +108,13 @@ namespace Tesselation {
     auto unapply(Real u, Real v) {
         auto [x, y] = Ψ⁻¹(u, v);
 
-        x = std::clamp<Real>(x, -1, 1);
-        y = std::clamp<Real>(y, -1, 1);
+        /* Chunk’s border is not exactly a hyperbolic line (i.e. circular arc on the Poincaré disk),
+           but its piecewise linear approximation; so there are parts of the outer blocks that extend
+           slightly beyond the boundary of the ideal hyperbolic square.
+           That’s why we need to “std::clamp” here.
+        */
+        x = std::clamp<Real>(x, -1.0, 0.9999); // x ≤ 0.9999 < 1 so that Rank(i) < chunkSize
+        y = std::clamp<Real>(y, -1.0, 0.9999);
 
         auto i = (x + 1) / 2 * chunkSize;
         auto j = (y + 1) / 2 * chunkSize;
