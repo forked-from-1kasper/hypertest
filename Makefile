@@ -1,7 +1,7 @@
-CXX       ?= g++
+CXX        = g++
 SRCDIR     = source
 INCLUDEDIR = include
-BUILDDIR  ?= build
+BUILDDIR   = build
 
 ifeq ($(BARBARIZED),true)
 	SRCDIR     := barbarized/$(SRCDIR)
@@ -12,10 +12,10 @@ override CFLAGS += -Wall -std=c++20 -I$(INCLUDEDIR)
 override CFLAGS += -Wno-bitwise-instead-of-logical -Wno-unused-private-field -Wno-misleading-indentation -Wno-unused-but-set-variable
 
 ifeq ($(OS),Windows_NT)
-	BINARY ?= Hyper.exe
+	BINARY = Hyper.exe
 	override LDFLAGS += -lsqlite3 -lgmpxx -lgmp -lluajit-5.1 -lglfw3 -lglew32 -lopengl32 -lglu32
 else
-	BINARY ?= Hyper
+	BINARY = Hyper
 
 	UNAME := $(shell uname -s)
 
@@ -28,11 +28,11 @@ else
 	endif
 endif
 
-DEPS     = PicoPNG Lua
-MODULES  = Hyper Config Shader Geometry Sheet Physics Game
-HEADERS  = Hyper/Gaussian Hyper/Fuchsian Hyper/Fundamentals
-HEADERS += Hyper/Gyrovector Hyper/Moebius Hyper/AutD Hyper/EuclideanDomain
-HEADERS += Meta/Enumerable Meta/List Meta/Literal Meta/Tuple
+DEPS    = PicoPNG Lua
+MODULES = Hyper Config Shader Geometry Sheet Physics Game
+HEADERS = Hyper/Gaussian Hyper/Fuchsian Hyper/Fundamentals \
+          Hyper/Gyrovector Hyper/Moebius Hyper/AutD Hyper/EuclideanDomain \
+          Meta/Enumerable Meta/List Meta/Literal Meta/Tuple
 
 add = $(addprefix $(2)/,$(addsuffix $(1),$(3)))
 
