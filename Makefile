@@ -42,11 +42,6 @@ OBJS = $(call add,.o,$(BUILDDIR),$(DEPS) $(MODULES))
 
 all: $(BUILDDIR) $(BINARY)
 
-lua:
-	git submodule init
-	git submodule update
-	make -C Fennel LUA=luajit
-
 $(BINARY): $(OBJS)
 	$(CXX) $(OBJS) $(LDFLAGS) -o $(BINARY)
 
