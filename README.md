@@ -1,4 +1,4 @@
-On Ubuntu 22.04 LTS:
+On Ubuntu 24.04 LTS:
 
 ```bash
 $ sudo apt install make g++ libglfw3-dev libglew-dev libglm-dev libluajit-5.1-dev libgmp-dev libsqlite3-dev

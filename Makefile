@@ -8,8 +8,7 @@ ifeq ($(BARBARIZED),true)
 	INCLUDEDIR := barbarized/$(INCLUDEDIR)
 endif
 
-override CFLAGS += -Wall -std=c++20 -I$(INCLUDEDIR)
-override CFLAGS += -Wno-bitwise-instead-of-logical -Wno-unused-private-field -Wno-misleading-indentation -Wno-unused-but-set-variable
+override CFLAGS += -Wall -std=c++20 -I$(INCLUDEDIR) -Wno-bitwise-instead-of-logical -Wno-unused-private-field -Wno-misleading-indentation -Wno-unused-but-set-variable
 
 ifeq ($(OS),Windows_NT)
 	BINARY = Hyper.exe
