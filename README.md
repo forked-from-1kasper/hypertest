@@ -12,3 +12,8 @@ $ make barbarize
 $ make all BARBARIZED=true CXX=clang++
 $ make run
 ```
+
+Don’t forget to copy the configuration file:
+```bash
+$ cp config.lua.example config.lua
+```

@@ -3,3 +3,4 @@ build/
 barbarized/
 *.o
 *.sqlite3
+config.lua
