@@ -578,16 +578,17 @@ void cleanUp(GLFWwindow * window) {
 }
 
 int main(int argc, char * argv[]) {
-    Lua::VM vm;
+    LuaJIT luajit;
 
-    Config config(&vm, "config.lua");
+    Config config(&luajit, "config.lua");
 
     Game::window = setupWindow(config);
     setupGL(Game::window, config);
 
-    vm.loadapi();
+    luajit.loadapi();
+
     for (int i = 1; i < argc; i++)
-        vm.go(argv[i]);
+        luajit.go(argv[i]);
 
     Game::atlas.connect(config.world);
     setupGame(config); setupSheet();
