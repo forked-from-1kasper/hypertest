@@ -1,79 +1,52 @@
 #include <Hyper/Config.hpp>
 
-const char * memory = ":memory:";
+Config::Config(LuaJIT * luajit, const char * filename) {
+    if (LuaTable config = luajit->loadfile(filename)) {
+        if (LuaVal<const char *> world_v = config.getitem("world"))
+            world = world_v.decode();
 
-Config::Config(Lua::VM * vm, const char * filename) {
-    vm->loadfile(filename, 1);
+        if (LuaTable window_v = config.getitem("window")) {
+            if (LuaVal<lua_Integer> width_v = window_v.getitem("width"))
+                window.width = width_v.decode();
 
-    world = vm->withfield("world", [&]() {
-        return vm->get<std::optional<const char *>>();
-    }).value_or(memory);
+            if (LuaVal<lua_Integer> height_v = window_v.getitem("height"))
+                window.height = height_v.decode();
+        }
 
-    vm->withfield("window", [&]() {
-        if (!vm->instanceof<Lua::Type::Table>())
-            throw std::runtime_error("`window` expected to be a table");
+        if (LuaTable camera_v = config.getitem("camera")) {
+            if (LuaVal<lua_Number> crd_v = camera_v.getitem("chunkRenderDistance"))
+                camera.chunkRenderDistance = crd_v.decode();
 
-        window.width = vm->withfield("width", [&]() {
-            return vm->get<std::optional<lua_Integer>>();
-        }).value_or(900);
+            if (LuaVal<lua_Number> fov_v = camera_v.getitem("fov"))
+                camera.fov = fov_v.decode();
 
-        window.height = vm->withfield("height", [&]() {
-            return vm->get<std::optional<lua_Integer>>();
-        }).value_or(900);
-    });
+            if (LuaVal<lua_Number> near_v = camera_v.getitem("near"))
+                camera.near = near_v.decode();
 
-    vm->withfield("camera", [&]() {
-        if (!vm->instanceof<Lua::Type::Table>())
-            throw std::runtime_error("`camera` expected to be a table");
+            if (LuaVal<lua_Number> far_v = camera_v.getitem("far"))
+                camera.far = far_v.decode();
 
-        camera.chunkRenderDistance = vm->withfield("chunkRenderDistance", [&]() {
-            return vm->get<std::optional<lua_Number>>();
-        }).value_or(10.0);
+            if (LuaVal<lua_Integer> model_v = camera_v.getitem("model"))
+                camera.model = Model(model_v.decode());
+        }
 
-        camera.fov = vm->withfield("fov", [&]() {
-            return vm->get<std::optional<lua_Number>>();
-        }).value_or(80.0);
+        if (LuaTable fog_v = config.getitem("fog")) {
+            if (LuaVal<bool> enabled_v = fog_v.getitem("enabled"))
+                fog.enabled = enabled_v.decode();
 
-        camera.near = vm->withfield("near", [&]() {
-            return vm->get<std::optional<lua_Number>>();
-        }).value_or(1e-3);
+            if (LuaVal<lua_Number> near_v = fog_v.getitem("near"))
+                fog.near = near_v.decode();
 
-        camera.far = vm->withfield("far", [&]() {
-            return vm->get<std::optional<lua_Number>>();
-        }).value_or(150.0);
+            if (LuaVal<lua_Number> far_v = fog_v.getitem("far"))
+                fog.far = far_v.decode();
 
-        camera.model = Model(vm->withfield("model", [&]() {
-            return vm->get<std::optional<lua_Integer>>();
-        }).value_or(1));
-    });
+            if (LuaVal<glm::vec4> color_v = fog_v.getitem("color"))
+                fog.color = color_v.decode();
+        }
 
-    vm->withfield("fog", [&]() {
-        if (!vm->instanceof<Lua::Type::Table>())
-            throw std::runtime_error("`fog` expected to be a table");
-
-        fog.enabled = vm->withfield("enabled", [&]() {
-            return vm->get<std::optional<bool>>();
-        }).value_or(false);
-
-        fog.near = vm->withfield("near", [&]() {
-            return vm->get<std::optional<lua_Number>>();
-        }).value_or(1.0);
-
-        fog.far = vm->withfield("far", [&]() {
-            return vm->get<std::optional<lua_Number>>();
-        }).value_or(10.0);
-
-        fog.color = vm->withfield("color", [&]() {
-            return vm->get<std::optional<glm::vec4>>();
-        }).value_or(glm::vec4(1.0f));
-    });
-
-    vm->withfield("gui", [&]() {
-        if (!vm->instanceof<Lua::Type::Table>())
-            throw std::runtime_error("`gui` expected to be a table");
-
-        gui.aimSize = vm->withfield("aimSize", [&]() {
-            return vm->get<std::optional<lua_Number>>();
-        }).value_or(15);
-    });
+        if (LuaTable gui_v = config.getitem("gui")) {
+            if (LuaVal<lua_Number> aim_v = gui_v.getitem("aimSize"))
+                gui.aimSize = aim_v.decode();
+        }
+    }
 }

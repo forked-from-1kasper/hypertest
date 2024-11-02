@@ -1,153 +1,151 @@
 #pragma once
 
-#include <luajit-2.1/lua.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
 #include <functional>
 #include <exception>
 #include <optional>
 #include <iostream>
 
-template<typename T> concept Optional = requires()
-{ typename T::value_type; requires std::same_as<T, std::optional<typename T::value_type>>; };
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
-template<typename F> using Retval = decltype((std::declval<F>())());
+#include <luajit-2.1/lua.hpp>
 
-namespace Lua {
+#include <Meta/List.hpp>
 
-enum class Type {
-    None          = LUA_TNONE,
-    Nil           = LUA_TNIL,
-    Boolean       = LUA_TBOOLEAN,
-    LightUserData = LUA_TLIGHTUSERDATA,
-    Number        = LUA_TNUMBER,
-    String        = LUA_TSTRING,
-    Table         = LUA_TTABLE,
-    Function      = LUA_TFUNCTION,
-    UserData      = LUA_TUSERDATA,
-    Thread        = LUA_TTHREAD
+template<typename T> inline constexpr bool falsehood = false;
+
+template<typename T> inline T decode(lua_State * vm, const int index) {
+    if constexpr(std::same_as<T, bool>)
+        return lua_toboolean(vm, index);
+    else if constexpr(std::same_as<T, lua_Integer>)
+        return lua_tointeger(vm, index);
+    else if constexpr(std::same_as<T, lua_Number>)
+        return lua_tonumber(vm, index);
+    else if constexpr(std::same_as<T, const char *>)
+        return lua_tostring(vm, index);
+    else
+        static_assert(falsehood<T>);
+}
+
+template<typename T> inline bool valid(lua_State * vm, const int index) {
+    if constexpr(std::same_as<T, void>)
+        return lua_isnil(vm, index);
+    else if constexpr(std::same_as<T, bool>)
+        return lua_isboolean(vm, index);
+    else if constexpr(std::same_as<T, lua_Integer>)
+        return lua_isnumber(vm, index);
+    else if constexpr(std::same_as<T, lua_Number>)
+        return lua_isnumber(vm, index);
+    else if constexpr(std::same_as<T, const char *>)
+        return lua_isstring(vm, index);
+    else
+        static_assert(falsehood<T>);
+}
+
+class LuaRef {
+protected:
+    lua_State * vm; int index;
+public:
+    inline LuaRef(lua_State * vm) : vm(vm), index(lua_gettop(vm)) {}
+    inline ~LuaRef() { if (index > 0) lua_pop(vm, 1); }
+
+    inline LuaRef(LuaRef && rvalue) {
+        vm = rvalue.vm;
+        index = rvalue.index;
+
+        rvalue.vm = nullptr;
+        rvalue.index = 0;
+    };
+
+    LuaRef(const LuaRef &) = delete;
+    LuaRef & operator=(const LuaRef &) = delete;
+    LuaRef & operator=(LuaRef && rvalue) = delete;
+
+    inline operator bool() const { return !lua_isnil(vm, index); }
+
+    inline void invalidate() { lua_pushnil(vm); lua_replace(vm, index - 1); }
 };
 
-class VM {
+template<typename T> class LuaVal : public LuaRef {
+public:
+    LuaVal(lua_State *) = delete;
+
+    inline LuaVal(LuaRef && rvalue) : LuaRef(std::move(rvalue))
+    { if (!valid<T>(vm, index)) invalidate(); };
+
+    inline T decode() const { return ::decode<T>(vm, index); }
+};
+
+class LuaTable : public LuaRef {
+public:
+    LuaTable(lua_State *) = delete;
+
+    inline LuaTable(LuaRef && rvalue) : LuaRef(std::move(rvalue))
+    { if (!lua_istable(vm, index)) invalidate(); };
+
+    inline LuaRef getitem(const char * key)
+    { lua_getfield(vm, index, key); return LuaRef(vm); }
+
+    inline LuaRef getitem(const lua_Integer key)
+    { lua_rawgeti(vm, index, key); return LuaRef(vm); }
+};
+
+class LuaJIT {
 private:
-    lua_State * machine;
+    lua_State * vm;
 
 public:
-    VM(); ~VM();
+    LuaJIT();
+    ~LuaJIT();
+
+    LuaRef loadfile(const char *);
+
+    LuaRef go(const char *);
+
     void loadapi();
-    int go(const char*);
-    int loadfile(const char *, int);
-
-    inline Type type(const int index) { return static_cast<Type>(lua_type(machine, index)); }
-
-    inline void pop() { lua_pop(machine, 1); }
-    inline void pop(const int n) { lua_pop(machine, n); }
-
-    template<typename T> T get(const int);
-
-    template<Optional T> inline T get(const int index)
-    { return instanceof<typename T::value_type>(index)
-           ? std::optional(get<typename T::value_type>(index))
-           : std::nullopt; }
-
-    template<typename T> bool instanceof(const int);
-
-    template<Type T> inline bool instanceof(const int index)
-    { return type(index) == T; }
-
-    inline bool instanceof(const int index, const Type T)
-    { return type(index) == T; }
-
-    template<typename T> inline T get() { return get<T>(-1); }
-    template<typename T> inline bool instanceof() { return instanceof<T>(-1); }
-    template<Type T> inline bool instanceof() { return instanceof<T>(-1); }
-
-    template<typename F> inline Retval<F> withfield(const int index, const char * key, const F f) {
-        lua_getfield(machine, index, key);
-
-        if constexpr(std::same_as<Retval<F>, void>) { f(); pop(); }
-        else { auto retval = f(); pop(); return retval; }
-    }
-
-    template<typename F> inline Retval<F> withfield(const int index, const int k, const F f) {
-        lua_rawgeti(machine, index, k);
-
-        if constexpr(std::same_as<Retval<F>, void>) { f(); pop(); }
-        else { auto retval = f(); pop(); return retval; }
-    }
-
-    template<typename F, typename Ix> inline Retval<F> withfield(Ix k, const F f)
-    { return withfield<F>(-1, k, f); }
 };
 
-template<> inline bool VM::instanceof<void>(const int index)
-{ return lua_isnil(machine, index); }
+template<typename... Is> struct LuaTupleM {
+    static inline bool valid(lua_State * vm, const int index) {
+        if (!lua_istable(vm, index)) return false;
 
-template<> inline bool VM::instanceof<bool>(const int index)
-{ return lua_isboolean(machine, index); }
+        int table = lua_gettop(vm); (lua_rawgeti(vm, table, sizeof...(Is) - Is::index), ...);
 
-template<> inline bool VM::get<bool>(const int index)
-{ return lua_toboolean(machine, index); }
+        auto retval = (::valid<typename Is::typeval>(vm, -Is::index - 1) && ...);
+        lua_pop(vm, int(sizeof...(Is))); return retval;
+    }
 
-template<> inline bool VM::instanceof<lua_Number>(const int index)
-{ return lua_isnumber(machine, index); }
+    template<typename Tuple> static inline Tuple decode(lua_State * vm, const int index) {
+        int table = lua_gettop(vm); (lua_rawgeti(vm, table, sizeof...(Is) - Is::index), ...);
 
-template<> inline lua_Number VM::get<lua_Number>(const int index)
-{ return lua_tonumber(machine, index); }
+        Tuple retval{::decode<typename Is::typeval>(vm, -Is::index - 1)...};
+        lua_pop(vm, int(sizeof...(Is))); return retval;
+    }
+};
 
-template<> inline bool VM::instanceof<lua_Integer>(const int index)
-{ return lua_isnumber(machine, index); }
+template<typename... Ts> using LuaTuple = Apply<LuaTupleM, Enumerate<Ts...>>;
 
-template<> inline lua_Integer VM::get<lua_Integer>(const int index)
-{ return lua_tointeger(machine, index); }
+using LuaVec2 = LuaTuple<lua_Number, lua_Number>;
 
-template<> inline bool VM::instanceof<const char*>(const int index)
-{ return lua_isstring(machine, index); }
+template<> inline bool valid<glm::vec2>(lua_State * vm, const int index)
+{ return LuaVec2::valid(vm, index); }
 
-template<> inline const char * VM::get<const char *>(const int index)
-{ return lua_tostring(machine, index); }
+template<> inline glm::vec2 decode<glm::vec2>(lua_State * vm, const int index)
+{ return LuaVec2::decode<glm::vec2>(vm, index); }
 
-template<> inline bool VM::instanceof<glm::vec2>(const int index) {
-    if (!lua_istable(machine, index)) return false;
+using LuaVec3 = LuaTuple<lua_Number, lua_Number, lua_Number>;
 
-    auto φ = [this, index]() { return this->instanceof<lua_Number>(index); };
-    return withfield(1, φ) && withfield(2, φ);
-}
+template<> inline bool valid<glm::vec3>(lua_State * vm, const int index)
+{ return LuaVec3::valid(vm, index); }
 
-template<> inline glm::vec2 VM::get<glm::vec2>(const int index) {
-    if (!lua_istable(machine, index)) throw std::runtime_error("VM::get expected glm::vec2");
+template<> inline glm::vec3 decode<glm::vec3>(lua_State * vm, const int index)
+{ return LuaVec3::decode<glm::vec3>(vm, index); }
 
-    auto φ = [this, index]() { return this->get<lua_Number>(index); };
-    return glm::vec2(withfield(1, φ), withfield(2, φ));
-}
+using LuaVec4 = LuaTuple<lua_Number, lua_Number, lua_Number, lua_Number>;
 
-template<> inline bool VM::instanceof<glm::vec3>(const int index) {
-    if (!lua_istable(machine, index)) return false;
+template<> inline bool valid<glm::vec4>(lua_State * vm, const int index)
+{ return LuaVec4::valid(vm, index); }
 
-    auto φ = [this, index]() { return this->instanceof<lua_Number>(index); };
-    return withfield(1, φ) && withfield(2, φ) && withfield(3, φ);
-}
-
-template<> inline glm::vec3 VM::get<glm::vec3>(const int index) {
-    if (!lua_istable(machine, index)) throw std::runtime_error("VM::get expected glm::vec3");
-
-    auto φ = [this, index]() { return this->get<lua_Number>(index); };
-    return glm::vec3(withfield(1, φ), withfield(2, φ), withfield(3, φ));
-}
-
-template<> inline bool VM::instanceof<glm::vec4>(const int index) {
-    if (!lua_istable(machine, index)) return false;
-
-    auto φ = [this, index]() { return this->instanceof<lua_Number>(index); };
-    return withfield(1, φ) && withfield(2, φ) && withfield(3, φ) && withfield(4, φ);
-}
-
-template<> inline glm::vec4 VM::get<glm::vec4>(const int index) {
-    if (!lua_istable(machine, index)) throw std::runtime_error("VM::get expected glm::vec4");
-
-    auto φ = [this, index]() { return this->get<lua_Number>(index); };
-    return glm::vec4(withfield(1, φ), withfield(2, φ), withfield(3, φ), withfield(4, φ));
-}
-
-}
+template<> inline glm::vec4 decode<glm::vec4>(lua_State * vm, const int index)
+{ return LuaVec4::decode<glm::vec4>(vm, index); }
