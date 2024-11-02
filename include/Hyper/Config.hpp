@@ -17,8 +17,8 @@ struct Config {
     } fog;
 
     struct {
-        int width  = 900;
-        int height = 900;
+        int width  = 800;
+        int height = 600;
     } window;
 
     struct {
