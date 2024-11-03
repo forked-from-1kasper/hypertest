@@ -34,11 +34,11 @@ namespace Math {
 
 template<typename T> concept EuclideanDomain =
 requires(T a, T b, T c, size_t k) {
-    {            -a             } -> std::convertible_to<T>;
-    {           a + b           } -> std::convertible_to<T>;
-    {           a - b           } -> std::convertible_to<T>;
-    {           a * b           } -> std::convertible_to<T>;
-    {           a / b           } -> std::convertible_to<T>;
+    { -a                        } -> std::convertible_to<T>;
+    { a + b                     } -> std::convertible_to<T>;
+    { a - b                     } -> std::convertible_to<T>;
+    { a * b                     } -> std::convertible_to<T>;
+    { a / b                     } -> std::convertible_to<T>;
     { Math::zero<T>             } -> std::convertible_to<T>;
     { Math::one<T>              } -> std::convertible_to<T>;
     { Math::divexact(a, b, c)   } -> std::same_as<void>;
@@ -51,7 +51,7 @@ requires(T a, T b, T c, size_t k) {
     { Math::equal(a, b)         } -> std::same_as<bool>;
     { Math::field<T, float>(a)  } -> std::same_as<float>;
     { Math::field<T, double>(a) } -> std::same_as<double>;
-    { Math::serialize(a, k)     } -> std::same_as<void*>;
+    { Math::serialize(a, k)     } -> std::same_as<void *>;
 };
 
 namespace Math {

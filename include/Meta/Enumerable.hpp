@@ -4,7 +4,7 @@ template<typename T> struct Enumerator {};
 
 template<typename T> concept Enumerable =
 requires(T t) {
-    {  Enumerator<T>::cardinal  } -> std::convertible_to<size_t>;
+    { Enumerator<T>::cardinal   } -> std::convertible_to<size_t>;
     { Enumerator<T>::ordinal(t) } -> std::convertible_to<size_t>;
 };
 

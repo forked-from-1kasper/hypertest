@@ -111,8 +111,8 @@ template<EuclideanDomain T> struct Gaussian {
     // by ±1/±i so that both of α components become non-negative
     template<std::same_as<Gaussian<T>>... Ts> constexpr void normalize(Ts &... ts) {
         switch (Ord²(0 <= real, 0 <= imag)) {
-            /* −1 */ case Ord²(false, false): negate(); (ts.negate(), ...); break;
-            /* +i */ case Ord²(true,  false): muli(); (ts.muli(), ...); break;
+            /* −1 */ case Ord²(false, false): negate();  (ts.negate(),  ...); break;
+            /* +i */ case Ord²(true,  false): muli();    (ts.muli(),    ...); break;
             /* −i */ case Ord²(false, true):  mulnegi(); (ts.mulnegi(), ...); break;
             /* +1 */ case Ord²(true,  true):  break;
         }

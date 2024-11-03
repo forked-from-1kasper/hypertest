@@ -58,7 +58,7 @@ namespace Tesselation {
     { return Aut𝔻<Real>(interpret<Fuchsian<Integer>>(d).field<Real>().origin()); }
 
     template<std::size_t N, typename T>
-    clangexpr auto inverse(const std::array<T, N> & xs) {
+    auto inverse(const std::array<T, N> & xs) {
         std::array<T, N> retval;
 
         for (size_t i = 0; i < N; i++)
@@ -75,11 +75,11 @@ namespace Tesselation {
     constexpr Real d = D½ / sqrt2;
 
     constexpr auto d₁₂ = Projection::apply(Model::Klein, d, d);
-    constexpr auto d₁ = d₁₂.first, d₂ = d₁₂.second;
+    constexpr auto hd₁ = Math::atanh(d₁₂.first), hd₂ = Math::atanh(d₁₂.second);
 
-    clangexpr auto Ψ(Real t₁, Real t₂) {
-        auto k₁ = std::tanh(t₁ * std::atanh(d₁));
-        auto k₂ = std::tanh(t₂ * std::atanh(d₂));
+    constexpr auto Ψ(Real t₁, Real t₂) {
+        auto k₁ = Math::tanh(t₁ * hd₁);
+        auto k₂ = Math::tanh(t₂ * hd₂);
 
         auto [x, y] = Projection::unapply(Model::Klein, k₁, k₂);
         auto u = (x + y) / sqrt2, v = (x - y) / sqrt2;
@@ -91,13 +91,10 @@ namespace Tesselation {
         auto x = (u + v) / sqrt2, y = (u - v) / sqrt2;
         auto [k₁, k₂] = Projection::apply(Model::Klein, x, y);
 
-        return std::pair(
-            std::atanh(k₁) / std::atanh(d₁),
-            std::atanh(k₂) / std::atanh(d₂)
-        );
+        return std::pair(std::atanh(k₁) / hd₁, std::atanh(k₂) / hd₂);
     }
 
-    clangexpr auto apply(int i, int j) {
+    constexpr auto apply(int i, int j) {
         using namespace Fundamentals;
 
         auto x = 2 * Real(i) / chunkSize - 1;
@@ -122,7 +119,7 @@ namespace Tesselation {
         return std::pair(Rank(i), Rank(j));
     }
 
-    clangexpr auto init() {
+    constexpr auto init() {
         using namespace Fundamentals;
 
         Array²<Gyrovector<Real>, chunkSize + 1> retval;
@@ -134,12 +131,12 @@ namespace Tesselation {
         return retval;
     }
 
-    clangexpr Grid corners = init();
+    constexpr Grid corners = init();
 
-    clangexpr auto distance(Rank i₁, Rank j₁, Rank i₂, Rank j₂)
+    constexpr auto distance(Rank i₁, Rank j₁, Rank i₂, Rank j₂)
     { return (-corners[i₁][j₁] + corners[i₂][j₂]).abs(); }
 
-    clangexpr Real meter = distance(chunkSize / 2, chunkSize / 2, chunkSize / 2, chunkSize / 2 + 1);
+    constexpr Real meter = distance(chunkSize / 2, chunkSize / 2, chunkSize / 2, chunkSize / 2 + 1);
 }
 
 NodeRegistry::NodeRegistry() {

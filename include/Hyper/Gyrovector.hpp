@@ -2,8 +2,8 @@
 
 #include <type_traits>
 #include <functional>
-#include <numeric>
-#include <complex>
+
+#include <Math.hpp>
 
 template<typename T>
 struct Gyrovector {
@@ -12,14 +12,7 @@ struct Gyrovector {
     constexpr inline T x() const { return val.real(); }
     constexpr inline T y() const { return val.imag(); }
 
-    constexpr inline T norm() const { return std::norm(val); }
     constexpr inline bool isZero() const { return val.real() == 0.0 && val.imag() == 0.0; }
-
-    constexpr T abs() const {
-        if (std::is_constant_evaluated())
-            return std::hypot(x(), y());
-        else return std::abs(val);
-    }
 
     constexpr Gyrovector() : val(0) {}
     constexpr Gyrovector(const T k) : val(std::complex(k, 0.0)) {}
@@ -33,29 +26,32 @@ struct Gyrovector {
 
     constexpr inline T cross(const Gyrovector<T> & N) const { return x() * N.y() - y() * N.x(); }
 
-    constexpr inline auto add(const Gyrovector<T> & N) const { return Gyrovector<T>(val + N.val); }
-    constexpr inline auto sub(const Gyrovector<T> & N) const { return Gyrovector<T>(val - N.val); }
+    constexpr inline T abs()  const { return Math::absc(val); }
+    constexpr inline T norm() const { return Math::normc(val); }
+
+    constexpr inline auto add(const Gyrovector<T> & N) const { return Gyrovector<T>(Math::addc(val, N.val)); }
+    constexpr inline auto sub(const Gyrovector<T> & N) const { return Gyrovector<T>(Math::subc(val, N.val)); }
+    constexpr inline auto mul(const Gyrovector<T> & N) const { return Gyrovector<T>(Math::mulc(val, N.val)); }
+    constexpr inline auto div(const Gyrovector<T> & N) const { return Gyrovector<T>(Math::divc(val, N.val)); }
 
     constexpr inline auto conj() const { return Gyrovector<T>(std::conj(val)); }
     constexpr inline auto scale(const T k) const { return Gyrovector<T>(k * val); }
-    constexpr inline auto mult(const Gyrovector<T> & N) const { return Gyrovector<T>(val * N.val); }
     constexpr inline auto inv() const { return Gyrovector<T>(1.0 / val); }
-    constexpr inline auto div(const Gyrovector<T> & N) const { return Gyrovector<T>(val / N.val); }
 
     constexpr inline auto operator-() const { return Gyrovector<T>(-val); }
     constexpr inline auto operator+() const { return *this; }
 };
 
 template<typename T> constexpr auto operator+(const Gyrovector<T> & A, const Gyrovector<T> & B)
-{ return A.add(B).div(A.conj().mult(B).add(1)); }
+{ return A.add(B).div(A.conj().mul(B).add(1)); }
 
 template<typename T> constexpr auto operator*(const T k, const Gyrovector<T> & A)
 { auto a = A.abs(); return A.isZero() ? A : A.scale(tanh(k * atanh(a)) / a); }
 
 template<typename T> constexpr Gyrovector<T> gyr(const Gyrovector<T> & A, const Gyrovector<T> & B, const Gyrovector<T> & C) {
-    auto P = A.mult(B.conj()).add(1);
-    auto Q = A.conj().mult(B).add(1);
-    return P.div(Q).mult(C);
+    auto P = A.mul(B.conj()).add(1);
+    auto Q = A.conj().mul(B).add(1);
+    return P.div(Q).mul(C);
 }
 
 template<typename T> constexpr Gyrovector<T> Coadd(const Gyrovector<T> & A, const Gyrovector<T> & B) {
