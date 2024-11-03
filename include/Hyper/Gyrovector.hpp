@@ -38,7 +38,7 @@ struct Gyrovector {
     constexpr inline auto scale(const T k) const { return Gyrovector<T>(k * val); }
     constexpr inline auto inv() const { return Gyrovector<T>(1.0 / val); }
 
-    constexpr inline auto operator-() const { return Gyrovector<T>(-val); }
+    constexpr inline auto operator-() const { return Gyrovector<T>(Math::negc(val)); }
     constexpr inline auto operator+() const { return *this; }
 };
 

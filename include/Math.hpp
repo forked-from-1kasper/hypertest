@@ -196,4 +196,10 @@ namespace Math {
             return {x / N, y / N};
         } else return v / w;
     }
+
+    template<typename T> inline constexpr ℂ<T> negc(ℂ<T> v) {
+        if (std::is_constant_evaluated())
+            return {-v.real(), -v.imag()};
+        else return -v;
+    }
 }
