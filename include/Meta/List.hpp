@@ -51,7 +51,7 @@ template<int k, typename T> struct EnumerateItem
 { static constexpr int index = k; using typeval = T; };
 
 template<int, typename...> struct EnumerateM;
-template<typename... Ts> using Enumerate = EnumerateM<0, Ts...>::value;
+template<typename... Ts> using Enumerate = typename EnumerateM<0, Ts...>::value;
 
 template<int k> struct EnumerateM<k>
 { using value = List<>; };
