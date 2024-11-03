@@ -36,6 +36,7 @@ namespace Math {
     // https://en.cppreference.com/w/cpp/numeric/math/sqrt (constexpr since C++26)
     template<typename T> inline constexpr T sqrt(T x) {
         if (std::is_constant_evaluated())
+            // https://en.wikipedia.org/wiki/Newton%27s_method
             return 0 <= x && x < std::numeric_limits<double>::infinity()
                  ? NewtonRaphson<T>(x, x, 0) : std::numeric_limits<double>::quiet_NaN();
         else return std::sqrt(x);
@@ -68,6 +69,7 @@ namespace Math {
 
             const T x² = x * x; T y = x;
 
+            // Maclaurin series: sin(x) = Σₙ (−1)ⁿx²ⁿ⁺¹/(2n + 1)!
             for (size_t i = 1; epsilon<T> <= Math::abs(x); i++)
             { x *= -x²; x /= 2 * i; x /= 2 * i + 1; y += x; }
 
@@ -109,6 +111,7 @@ namespace Math {
 
             T x = 1, y = 0;
 
+            // Maclaurin series: exp(x) = Σₙ xⁿ/n!
             for (size_t i = 1; epsilon<T> <= Math::abs(x); i++)
             { y += x; x *= r; x /= i; }
 
@@ -120,6 +123,7 @@ namespace Math {
         if (std::is_constant_evaluated()) {
             const T x² = x * x; T y = x;
 
+            // Maclaurin series: atanh(x) = Σₙ x²ⁿ⁺¹/(2n + 1)
             for (size_t i = 1; epsilon<T> <= Math::abs(x); i++)
             { x *= x²; y += x / (2 * i + 1); }
 
