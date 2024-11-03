@@ -34,9 +34,9 @@ struct Gyrovector {
     constexpr inline auto mul(const Gyrovector<T> & N) const { return Gyrovector<T>(Math::mulc(val, N.val)); }
     constexpr inline auto div(const Gyrovector<T> & N) const { return Gyrovector<T>(Math::divc(val, N.val)); }
 
-    constexpr inline auto conj() const { return Gyrovector<T>(std::conj(val)); }
-    constexpr inline auto scale(const T k) const { return Gyrovector<T>(k * val); }
-    constexpr inline auto inv() const { return Gyrovector<T>(1.0 / val); }
+    constexpr inline auto conj() const { return Gyrovector<T>(Math::conjc(val)); }
+    constexpr inline auto scale(const T k) const { return Gyrovector<T>(Math::mulc(k, val)); }
+    constexpr inline auto inv() const { return Gyrovector<T>(Math::invc(val)); }
 
     constexpr inline auto operator-() const { return Gyrovector<T>(Math::negc(val)); }
     constexpr inline auto operator+() const { return *this; }

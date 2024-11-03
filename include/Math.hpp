@@ -165,6 +165,12 @@ namespace Math {
         else return v - w;
     }
 
+    template<typename T> inline constexpr ℂ<T> mulc(T k, ℂ<T> w) {
+        if (std::is_constant_evaluated())
+            return {k * w.real(), k * w.imag()};
+        else return k * w;
+    }
+
     template<typename T> inline constexpr ℂ<T> mulc(ℂ<T> v, ℂ<T> w) {
         if (std::is_constant_evaluated())
             return {
@@ -186,6 +192,14 @@ namespace Math {
         else return std::norm(v);
     }
 
+    template<typename T> inline constexpr ℂ<T> invc(ℂ<T> w) {
+        if (std::is_constant_evaluated()) {
+            auto N = Math::normc<T>(w);
+
+            return {w.real() / N, -w.imag() / N};
+        } else return 1.0 / w;
+    }
+
     template<typename T> inline constexpr ℂ<T> divc(ℂ<T> v, ℂ<T> w) {
         if (std::is_constant_evaluated()) {
             auto N = Math::normc<T>(w);
@@ -201,5 +215,11 @@ namespace Math {
         if (std::is_constant_evaluated())
             return {-v.real(), -v.imag()};
         else return -v;
+    }
+
+    template<typename T> inline constexpr ℂ<T> conjc(ℂ<T> v) {
+        if (std::is_constant_evaluated())
+            return {v.real(), -v.imag()};
+        else return std::conj(v);
     }
 }
