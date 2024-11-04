@@ -7,7 +7,7 @@
 #include <complex>
 #include <string>
 
-#include <Hyper/Shader.hpp>
+#include <Hyper/Shader.hxx>
 
 #define lengthof(array) (sizeof(array) / sizeof(array[0]))
 

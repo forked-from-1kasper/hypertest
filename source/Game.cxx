@@ -1,4 +1,4 @@
-#include <Hyper/Game.hpp>
+#include <Hyper/Game.hxx>
 
 namespace Game {
 

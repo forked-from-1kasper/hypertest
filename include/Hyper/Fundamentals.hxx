@@ -7,7 +7,7 @@
 #include <glm/glm.hpp>
 #include <gmpxx.h>
 
-#include <Hyper/Gyrovector.hpp>
+#include <Hyper/Gyrovector.hxx>
 
 using Real    = double;
 using Integer = mpz_class;
@@ -104,7 +104,7 @@ namespace Fundamentals {
 
     /*
         “k = τ/6” is used because corresponding tesselation (https://en.wikipedia.org/wiki/Order-6_square_tiling)
-        has nice representation using integer-valued matrices (see `source/Geometry.cpp`).
+        has nice representation using integer-valued matrices (see `source/Geometry.cxx`).
         (See also https://proceedings.neurips.cc/paper/2019/file/82c2559140b95ccda9c6ca4a8b981f1e-Paper.pdf,
          “Numerically Accurate Hyperbolic Embeddings Using Tiling-Based Models”.)
 

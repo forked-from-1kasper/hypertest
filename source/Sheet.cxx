@@ -1,8 +1,8 @@
 #include <iostream>
 #include <GL/glew.h>
 
-#include <Hyper/Sheet.hpp>
-#include <PicoPNG.hpp>
+#include <Hyper/Sheet.hxx>
+#include <PicoPNG.hxx>
 
 const char placeholder[] = "placeholder.png";
 

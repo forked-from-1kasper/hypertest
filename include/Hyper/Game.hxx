@@ -1,10 +1,10 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-#include <Hyper/Sheet.hpp>
-#include <Hyper/Physics.hpp>
-#include <Hyper/Geometry.hpp>
-#include <Hyper/Fundamentals.hpp>
+#include <Hyper/Sheet.hxx>
+#include <Hyper/Physics.hxx>
+#include <Hyper/Geometry.hxx>
+#include <Hyper/Fundamentals.hxx>
 
 #pragma once
 

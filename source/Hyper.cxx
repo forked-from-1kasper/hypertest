@@ -6,14 +6,14 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/mat4x4.hpp>
 
-#include <PicoPNG.hpp>
-#include <Lua.hpp>
+#include <PicoPNG.hxx>
+#include <Lua.hxx>
 
-#include <Hyper/Gyrovector.hpp>
-#include <Hyper/Fuchsian.hpp>
-#include <Hyper/Config.hpp>
-#include <Hyper/Shader.hpp>
-#include <Hyper/Game.hpp>
+#include <Hyper/Gyrovector.hxx>
+#include <Hyper/Fuchsian.hxx>
+#include <Hyper/Config.hxx>
+#include <Hyper/Shader.hxx>
+#include <Hyper/Game.hxx>
 
 using namespace std::complex_literals;
 

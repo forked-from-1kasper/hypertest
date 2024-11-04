@@ -10,12 +10,13 @@
 #include <GL/glew.h>
 #include <sqlite3.h>
 
-#include <Hyper/Fundamentals.hpp>
-#include <Hyper/Fuchsian.hpp>
-#include <Hyper/Shader.hpp>
-#include <Hyper/Sheet.hpp>
-#include <Hyper/AutD.hpp>
-#include <Meta/List.hpp>
+#include <Hyper/Fundamentals.hxx>
+#include <Hyper/Fuchsian.hxx>
+#include <Hyper/Shader.hxx>
+#include <Hyper/Sheet.hxx>
+#include <Hyper/AutD.hxx>
+
+#include <Meta/List.hxx>
 
 using ℤi = Gaussian<Integer>;
 

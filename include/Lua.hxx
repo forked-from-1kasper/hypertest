@@ -11,7 +11,7 @@
 
 #include <luajit-2.1/lua.hpp>
 
-#include <Meta/List.hpp>
+#include <Meta/List.hxx>
 
 template<typename T> inline constexpr bool falsehood = false;
 

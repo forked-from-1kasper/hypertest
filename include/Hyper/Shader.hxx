@@ -6,10 +6,11 @@
 
 #include <GL/glew.h>
 
-#include <Hyper/Gyrovector.hpp>
-#include <Meta/Literal.hpp>
-#include <Meta/Tuple.hpp>
-#include <Meta/List.hpp>
+#include <Hyper/Gyrovector.hxx>
+
+#include <Meta/Literal.hxx>
+#include <Meta/Tuple.hxx>
+#include <Meta/List.hxx>
 
 template<Literal lit, typename T, GLenum t, GLint n>
 struct Field {

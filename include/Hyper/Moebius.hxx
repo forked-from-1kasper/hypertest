@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Hyper/Fundamentals.hpp>
-#include <Hyper/Gyrovector.hpp>
+#include <Hyper/Fundamentals.hxx>
+#include <Hyper/Gyrovector.hxx>
 
 // M = (az + b) / (cz + d)
 template<typename T> struct Möbius {

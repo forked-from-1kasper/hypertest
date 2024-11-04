@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <Hyper/Game.hpp>
-#include <Lua.hpp>
+#include <Hyper/Game.hxx>
+#include <Lua.hxx>
 
 LuaJIT::LuaJIT() {
     vm = luaL_newstate();

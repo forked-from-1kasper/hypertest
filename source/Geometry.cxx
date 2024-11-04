@@ -1,4 +1,5 @@
-#include <Hyper/Geometry.hpp>
+#include <Hyper/Geometry.hxx>
+
 #include <iostream>
 
 namespace Tesselation {
@@ -19,7 +20,7 @@ namespace Tesselation {
             Φ = [1, b; b*, 1], so φ(z) = (z + b) / (zb* + 1).
         (https://en.wikipedia.org/wiki/M%C3%B6bius_transformation#Subgroups_of_the_M%C3%B6bius_group)
 
-        Knowing that D½ = √(2 − √3) (see `include/Hyper/Fundamentals.hpp`),
+        Knowing that D½ = √(2 − √3) (see `include/Hyper/Fundamentals.hxx`),
         we have direction vectors: a = D½ and b = iD½.
 
         Result of their coaddition is a required translation vector:

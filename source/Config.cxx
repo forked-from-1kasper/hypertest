@@ -1,4 +1,4 @@
-#include <Hyper/Config.hpp>
+#include <Hyper/Config.hxx>
 
 Config::Config(LuaJIT * luajit, const char * filename) {
     if (LuaTable config = luajit->loadfile(filename)) {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Hyper/Moebius.hpp>
-#include <Hyper/Gaussian.hpp>
+#include <Hyper/Moebius.hxx>
+#include <Hyper/Gaussian.hxx>
 
 template<EuclideanDomain T>
 struct Fuchsian {
@@ -26,7 +26,7 @@ struct Fuchsian {
     }
 
     template<typename U> constexpr inline Möbius<U> field() const {
-        // See `source/Geometry.cpp` for “s” meaning.
+        // See `source/Geometry.cxx` for “s” meaning.
         constexpr auto s = Math::sqrt<U>(6.0);
 
         return { a.template field<U>(),     b.template field<U>() / s,

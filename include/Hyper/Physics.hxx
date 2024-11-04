@@ -2,9 +2,9 @@
 
 #include <glm/vec3.hpp>
 
-#include <Hyper/Geometry.hpp>
-#include <Hyper/Fuchsian.hpp>
-#include <Hyper/AutD.hpp>
+#include <Hyper/Geometry.hxx>
+#include <Hyper/Fuchsian.hxx>
+#include <Hyper/AutD.hxx>
 
 class Position {
 private:

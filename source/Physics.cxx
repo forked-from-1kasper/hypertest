@@ -1,4 +1,4 @@
-#include <Hyper/Physics.hpp>
+#include <Hyper/Physics.hxx>
 
 std::pair<Position, bool> Position::move(const Gyrovector<Real> & v) const {
     auto P = _domain * Aut𝔻<Real>(v); P.normalize();

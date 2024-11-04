@@ -1,4 +1,4 @@
-#include <PicoPNG.hpp>
+#include <PicoPNG.hxx>
 
 namespace PNG {
 

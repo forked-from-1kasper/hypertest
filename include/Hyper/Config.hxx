@@ -3,8 +3,8 @@
 #include <glm/vec4.hpp>
 #include <GL/glew.h>
 
-#include <Hyper/Fundamentals.hpp>
-#include <Lua.hpp>
+#include <Hyper/Fundamentals.hxx>
+#include <Lua.hxx>
 
 struct Config {
     std::string world = "world.sqlite3";

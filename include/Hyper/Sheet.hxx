@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include <Hyper/Fundamentals.hpp>
+#include <Hyper/Fundamentals.hxx>
 
 class Texture; class Sheet;
 
