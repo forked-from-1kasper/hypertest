@@ -6,7 +6,7 @@
 
 #include <GL/glew.h>
 
-#include <Hyper/Gyrovector.hxx>
+#include <Math/Gyrovector.hxx>
 
 #include <Meta/Literal.hxx>
 #include <Meta/Tuple.hxx>

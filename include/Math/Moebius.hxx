@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Hyper/Fundamentals.hxx>
-#include <Hyper/Gyrovector.hxx>
+#include <Math/Gyrovector.hxx>
 
 // M = (az + b) / (cz + d)
 template<typename T> struct Möbius {
@@ -27,7 +27,7 @@ template<typename T> struct Möbius {
     constexpr static inline Möbius<T> identity() { return Möbius<T>(1, 0, 0, 1); }
 
     constexpr static Möbius<T> translate(const Gyrovector<T> & N)
-    { return Möbius<T>(1, N.val, std::conj(N.val), 1); }
+    { return Möbius<T>(1, N.val, Math::conjc(N.val), 1); }
 
     friend std::ostream & operator<< (std::ostream & stream, const Möbius<T> & M)
     { return stream << "(" << M.a << ", " << M.b << ", " << M.c << ", " << M.d << ")"; }

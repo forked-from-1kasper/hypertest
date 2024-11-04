@@ -3,8 +3,8 @@
 #include <ostream>
 #include <complex>
 
-#include <Hyper/EuclideanDomain.hxx>
 #include <Meta/Enumerable.hxx>
+#include <Math/Euclidean.hxx>
 
 template<EuclideanDomain T> struct Gaussian {
     T real, imag;

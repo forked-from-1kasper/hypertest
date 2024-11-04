@@ -11,10 +11,11 @@
 #include <sqlite3.h>
 
 #include <Hyper/Fundamentals.hxx>
-#include <Hyper/Fuchsian.hxx>
 #include <Hyper/Shader.hxx>
 #include <Hyper/Sheet.hxx>
-#include <Hyper/AutD.hxx>
+
+#include <Math/Fuchsian.hxx>
+#include <Math/AutD.hxx>
 
 #include <Meta/List.hxx>
 

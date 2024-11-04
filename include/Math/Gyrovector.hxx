@@ -3,7 +3,7 @@
 #include <type_traits>
 #include <functional>
 
-#include <Math.hxx>
+#include <Math/Basic.hxx>
 
 template<typename T>
 struct Gyrovector {

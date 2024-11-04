@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Hyper/Moebius.hxx>
+#include <Math/Moebius.hxx>
 
 /*
     Matrix of Möbius transformation degrades drastically after successive multiplications

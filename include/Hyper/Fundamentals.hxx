@@ -7,7 +7,7 @@
 #include <glm/glm.hpp>
 #include <gmpxx.h>
 
-#include <Hyper/Gyrovector.hxx>
+#include <Math/Gyrovector.hxx>
 
 using Real    = double;
 using Integer = mpz_class;

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Hyper/Moebius.hxx>
-#include <Hyper/Gaussian.hxx>
+#include <Math/Gaussian.hxx>
+#include <Math/Moebius.hxx>
 
 template<EuclideanDomain T>
 struct Fuchsian {

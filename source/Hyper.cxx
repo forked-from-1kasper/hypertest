@@ -9,8 +9,9 @@
 #include <PicoPNG.hxx>
 #include <Lua.hxx>
 
-#include <Hyper/Gyrovector.hxx>
-#include <Hyper/Fuchsian.hxx>
+#include <Math/Gyrovector.hxx>
+#include <Math/Fuchsian.hxx>
+
 #include <Hyper/Config.hxx>
 #include <Hyper/Shader.hxx>
 #include <Hyper/Game.hxx>
