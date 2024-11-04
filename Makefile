@@ -35,8 +35,8 @@ HEADERS = Hyper/Gaussian Hyper/Fuchsian Hyper/Fundamentals \
 
 add = $(addprefix $(2)/,$(addsuffix $(1),$(3)))
 
-CPPS = $(call add,.cpp,$(SRCDIR),$(DEPS) $(MODULES))
-HPPS = $(call add,.hpp,$(INCLUDEDIR),$(HEADERS) $(DEPS)) $(call add,.hpp,$(INCLUDEDIR)/Hyper,$(MODULES))
+CXXS = $(call add,.cxx,$(SRCDIR),$(DEPS) $(MODULES))
+HXXS = $(call add,.hxx,$(INCLUDEDIR),$(HEADERS) $(DEPS)) $(call add,.hxx,$(INCLUDEDIR)/Hyper,$(MODULES))
 OBJS = $(call add,.o,$(BUILDDIR),$(DEPS) $(MODULES))
 
 all: $(BUILDDIR) $(BINARY)
@@ -44,10 +44,10 @@ all: $(BUILDDIR) $(BINARY)
 $(BINARY): $(OBJS)
 	$(CXX) $(OBJS) $(LDFLAGS) -o $(BINARY)
 
-$(call add,.o,$(BUILDDIR),$(MODULES)): $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp $(HPPS)
+$(call add,.o,$(BUILDDIR),$(MODULES)): $(BUILDDIR)/%.o: $(SRCDIR)/%.cxx $(HXXS)
 	$(CXX) -c $(CFLAGS) $< -o $@
 
-$(call add,.o,$(BUILDDIR),$(DEPS)): $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp $(HPPS)
+$(call add,.o,$(BUILDDIR),$(DEPS)): $(BUILDDIR)/%.o: $(SRCDIR)/%.cxx $(HXXS)
 	$(CXX) -c $(CFLAGS) $< -o $@
 
 run: $(BINARY)
@@ -61,4 +61,4 @@ clean:
 	rm -rf barbarized
 
 barbarize:
-	python3 barbarize.py $(CPPS) $(HPPS)
+	python3 barbarize.py $(CXXS) $(HXXS)
