@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Hyper/Fundamentals.hxx>
 #include <Math/Gyrovector.hxx>
 
 // M = (az + b) / (cz + d)
