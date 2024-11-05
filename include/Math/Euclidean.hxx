@@ -6,11 +6,6 @@
 
 #include <gmpxx.h>
 
-constexpr size_t Byte  = sizeof(uint8_t);
-constexpr size_t Word  = sizeof(uint16_t);
-constexpr size_t Dword = sizeof(uint32_t);
-constexpr size_t Qword = sizeof(uint64_t);
-
 namespace Math {
     template<typename T> extern const T zero;
     template<typename T> extern const T one;

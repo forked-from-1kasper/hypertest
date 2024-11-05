@@ -9,6 +9,11 @@
 
 #include <Math/Gyrovector.hxx>
 
+inline constexpr size_t Hword = sizeof(uint8_t);
+inline constexpr size_t Word  = sizeof(uint16_t);
+inline constexpr size_t Dword = sizeof(uint32_t);
+inline constexpr size_t Qword = sizeof(uint64_t);
+
 using Real    = double;
 using Integer = mpz_class;
 using NodeId  = uint16_t;
