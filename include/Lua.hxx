@@ -11,9 +11,8 @@
 
 #include <luajit-2.1/lua.hpp>
 
+#include <Meta/Basic.hxx>
 #include <Meta/List.hxx>
-
-template<typename T> inline constexpr bool falsehood = false;
 
 template<typename T> inline T decode(lua_State * vm, const int index) {
     if constexpr(std::same_as<T, bool>)

@@ -9,47 +9,28 @@
 #include <Math/Gyrovector.hxx>
 
 #include <Meta/Literal.hxx>
+#include <Meta/Basic.hxx>
 #include <Meta/Tuple.hxx>
 #include <Meta/List.hxx>
 
-template<Literal lit, typename T, GLenum t, GLint n>
-struct Field {
-    constexpr static auto param = lit.unquote;
-    constexpr static auto type  = t;
-    constexpr static auto dim   = n;
-    using value = T;
-};
-
-template<typename T> using Value = typename T::value;
-
-namespace GVA {
-    template<size_t stride, Empty U> inline void attrib(size_t, size_t) {}
-
-    template<size_t stride, Inhabited U> inline void attrib(size_t index, size_t pointer) {
-        glVertexAttribPointer(index, Head<U>::dim, Head<U>::type, GL_FALSE, stride, (void *) pointer);
-        glEnableVertexAttribArray(index);
-
-        attrib<stride, Tail<U>>(index + 1, pointer + sizeof(Value<Head<U>>));
+namespace GL {
+    inline constexpr size_t size(GLenum index) {
+        switch (index) {
+            case GL_BYTE:           return sizeof(GLbyte);
+            case GL_UNSIGNED_BYTE:  return sizeof(GLubyte);
+            case GL_SHORT:          return sizeof(GLshort);
+            case GL_UNSIGNED_SHORT: return sizeof(GLushort);
+            case GL_INT:            return sizeof(GLint);
+            case GL_UNSIGNED_INT:   return sizeof(GLuint);
+            case GL_FIXED:          return sizeof(GLfixed);
+            case GL_HALF_FLOAT:     return sizeof(GLhalf);
+            case GL_FLOAT:          return sizeof(GLfloat);
+            case GL_DOUBLE:         return sizeof(GLdouble);
+            default:                return 0;
+        }
     }
 
-    template<size_t stride, typename U> inline void attrib()
-    { attrib<stride, U>(0, 0); }
-
-    template<size_t stride, Empty U> inline void bind(GLuint, size_t) {}
-
-    template<size_t stride, Inhabited U> inline void bind(GLuint program, size_t index) {
-        glBindAttribLocation(program, index, Head<U>::param);
-        bind<stride, Tail<U>>(program, index + 1);
-    };
-
-    template<size_t stride, typename U> inline void bind(GLuint program)
-    { bind<stride, U>(program, 0); }
-}
-
-template<typename> constexpr bool alwaysFalse = false;
-
-namespace GL {
-    template<typename T> constexpr GLenum GetType() {
+    template<typename T> constexpr GLenum EncodeM() {
         if constexpr(std::same_as<T, GLbyte>)
             return GL_BYTE;
         else if constexpr(std::same_as<T, GLubyte>)
@@ -71,15 +52,64 @@ namespace GL {
         else if constexpr(std::same_as<T, GLdouble>)
             return GL_DOUBLE;
         else
-            static_assert(alwaysFalse<T>, "Unexpected OpenGL type");
+            static_assert(falsehood<T>, "Unexpected OpenGL type");
     }
 
-    template<typename T> constexpr GLenum type = GetType<T>();
+    template<typename T> constexpr GLenum encode = EncodeM<T>();
 
     template<typename T> void uniform(GLuint, const char *, const T &);
 }
 
-template<typename Spec> class Shader {
+template<Literal literal, typename T, GLenum t, GLint n>
+struct Attrib {
+    using value = T;
+
+    constexpr static auto param = literal.unquote;
+    constexpr static auto type  = t;
+    constexpr static auto dim   = n;
+
+    constexpr static size_t size = GL::size(t) * n;
+
+    static_assert(std::is_standard_layout_v<T>);
+    static_assert(sizeof(T) == size);
+};
+
+template<typename T> using Value = typename T::value;
+
+namespace GVA {
+    template<size_t stride, EmptyList T> inline void attrib(size_t, size_t) {}
+
+    template<size_t stride, NonEmptyList T> inline void attrib(size_t index, size_t pointer) {
+        glVertexAttribPointer(index, Head<T>::dim, Head<T>::type, GL_FALSE, stride, reinterpret_cast<void *>(pointer));
+        glEnableVertexAttribArray(index);
+
+        attrib<stride, Tail<T>>(index + 1, pointer + Head<T>::size);
+    }
+
+    template<size_t stride, AnyList T> inline void attrib()
+    { attrib<stride, T>(0, 0); }
+
+    template<size_t stride, EmptyList T> inline void bind(GLuint, size_t) {}
+
+    template<size_t stride, NonEmptyList T> inline void bind(GLuint program, size_t index) {
+        glBindAttribLocation(program, index, Head<T>::param);
+        bind<stride, Tail<T>>(program, index + 1);
+    };
+
+    template<size_t stride, AnyList T> inline void bind(GLuint program)
+    { bind<stride, T>(program, 0); }
+
+    template<typename... Ts> struct SizeM
+    { static inline constexpr size_t value = (Ts::size + ...); };
+
+    template<AnyList T> inline constexpr auto size = Apply<SizeM, T>::value;
+}
+
+template<typename T> concept ShaderSpec =
+   requires() { typename T::Index; typename T::Params; }
+&& requires() { { T::infoBufferSize } -> std::same_as<const size_t &>; };
+
+template<ShaderSpec Spec> class Shader {
 private:
     GLuint _index;
 
@@ -89,7 +119,10 @@ public:
 
     using Data = Apply<Tuple, Map<Value, Params>>;
 
-    constexpr static GLenum indexType = GL::type<Index>;
+    static_assert(std::is_standard_layout_v<Data>);
+    static_assert(sizeof(Data) == GVA::size<Params>);
+
+    constexpr static GLenum indexType = GL::encode<Index>;
     constexpr static size_t stride = sizeof(Data);
 
     using VBO = std::vector<Data>;
@@ -199,7 +232,7 @@ public:
             case Issued: {
                 glBindBuffer(GL_PIXEL_PACK_BUFFER, buffer);
 
-                glReadPixels(x, y, width, height, format, GL::type<T>, nullptr);
+                glReadPixels(x, y, width, height, format, GL::encode<T>, nullptr);
                 sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
                 glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
@@ -215,7 +248,7 @@ public:
                     status = Inactive;
 
                     glBindBuffer(GL_PIXEL_PACK_BUFFER, buffer);
-                    auto value = (T*) glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+                    auto value = static_cast<T *>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY));
 
                     if (value != nullptr) {
                         retval = std::optional(std::pair(*value, message));
@@ -242,9 +275,9 @@ struct VoxelShader {
     using Index = GLuint;
 
     using Params =
-    List<Field<"_texCoord",   Tuple<GLfloat, GLfloat>, GL_FLOAT, 2>,
-         Field<"_gyrovector", Gyrovector<GLfloat>,     GL_FLOAT, 2>,
-         Field<"_height",     GLfloat,                 GL_FLOAT, 1>>;
+    List<Attrib<"_texCoord",   Tuple<GLfloat, GLfloat>, GL_FLOAT, 2>,
+         Attrib<"_gyrovector", Gyrovector<GLfloat>,     GL_FLOAT, 2>,
+         Attrib<"_height",     GLfloat,                 GL_FLOAT, 1>>;
 
     constexpr static size_t infoBufferSize = 2048;
 };
@@ -253,13 +286,13 @@ struct DummyShader {
     using Index = GLuint;
 
     using Params =
-    List<Field<"_vertex",       glm::vec3, GL_FLOAT, 3>,
-         Field<"_color",        glm::vec4, GL_FLOAT, 4>,
-         Field<"_texCoord",     glm::vec2, GL_FLOAT, 2>,
-         Field<"_mixFactor",    GLfloat,   GL_FLOAT, 1>>;
+    List<Attrib<"_vertex",    glm::vec3, GL_FLOAT, 3>,
+         Attrib<"_color",     glm::vec4, GL_FLOAT, 4>,
+         Attrib<"_texCoord",  glm::vec2, GL_FLOAT, 2>,
+         Attrib<"_mixFactor", GLfloat,   GL_FLOAT, 1>>;
 
     constexpr static size_t infoBufferSize = 2048;
 };
 
-template<typename T, typename... Ts> inline void emit(std::vector<T> & vbo, const Ts&... ts)
+template<typename T, typename... Ts> inline void emit(std::vector<T> & vbo, const Ts &... ts)
 { vbo.push_back(Tuple(ts...)); }

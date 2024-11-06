@@ -30,8 +30,8 @@ endif
 DEPS    = PicoPNG Lua
 MODULES = Hyper Config Shader Geometry Sheet Physics Game
 HEADERS = Math/Gaussian Math/Fuchsian Hyper/Fundamentals \
-          Math/Gyrovector Math/Moebius Math/AutD Math/Euclidean \
-          Meta/Enumerable Meta/List Meta/Literal Meta/Tuple Math/Basic
+          Math/Basic Math/Gyrovector Math/Moebius Math/AutD Math/Euclidean \
+          Meta/Basic Meta/Enumerable Meta/List Meta/Literal Meta/Tuple
 
 add = $(addprefix $(2)/,$(addsuffix $(1),$(3)))
 

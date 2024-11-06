@@ -11,7 +11,7 @@
 
 #define lengthof(array) (sizeof(array) / sizeof(array[0]))
 
-template<typename Spec> Shader<Spec>::Shader(const char * comfile, const char * vsfile, const char * fsfile) {
+template<ShaderSpec Spec> Shader<Spec>::Shader(const char * comfile, const char * vsfile, const char * fsfile) {
     std::ifstream cvs, ivs, ifs;
 
     cvs.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -68,9 +68,9 @@ template<typename Spec> Shader<Spec>::Shader(const char * comfile, const char * 
     glDeleteShader(fragment);
 }
 
-template<typename Spec> Shader<Spec>::~Shader() { glDeleteProgram(_index); }
+template<ShaderSpec Spec> Shader<Spec>::~Shader() { glDeleteProgram(_index); }
 
-template<typename Spec> void Shader<Spec>::activate() { glUseProgram(_index); }
+template<ShaderSpec Spec> void Shader<Spec>::activate() { glUseProgram(_index); }
 
 namespace GL {
     template<> void uniform<bool>(GLuint index, const char * name, const bool & value)
