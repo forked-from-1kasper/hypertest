@@ -77,7 +77,33 @@ bool Entity::moveHorizontally(const Gyrovector<Real> & v, const Real dt) {
 bool Entity::moveVertically(const Real dt) {
     if (!_chunk->ready()) return false;
 
-    auto roc = noclip ? _camera.roc : _camera.roc - dt * gravity;
+    /*
+        Lorentz factor: γ(v) = 1/√(1 − v²/c²).
+        Kinetic energy: T = γ(v)mc².
+        Potential energy for the (newtonian) uniform gravitational field: U = mgh.
+
+        Assume that energy is locally conserved:
+          T₁ + U₁ = T₂ + U₂
+        ↔ γ(v₁)mc² + mgh₁ = γ(v₂)mc² + mgh₂
+        ↔ [γ(v₁) − γ(v₂)]mc² = mg(h₂ − h₁)
+        ↔ g(h₂ − h₁)/c² = γ(v₁) − γ(v₂).
+
+        Let v₁ = v, v₂ = v + dt, h₂ − h₁ = dh = vdt.
+
+        Then:
+          −gvdt/c² = γ(v + dv) − γ(v) = γ′(v)dv
+                   = (v/c²) × (1 − v²/c²)^(−3/2) × dv
+        ↔ −gdt = (1 − v²/c²)^(−3/2) × dv
+        ↔ dv/dt = −g(1 − v²/c²)^(3/2)
+
+        In particular, (1 − v²/c²)^(3/2) = 1 − 3v²/2c² + o(x⁴),
+        so if v/c ≈ 0, then dv/dt ≈ −g.
+    */
+    constexpr Real vmax = 32.0;
+
+    auto γ⁻² = std::clamp<Real>(1 - Math::sqr(_camera.roc / vmax), 0, 1);
+    auto roc = noclip ? _camera.roc : _camera.roc - dt * gravity * std::pow(γ⁻², 1.5);
+
     if (jumped) { roc += jumpSpeed; jumped = false; }
 
     auto L = _camera.climb + dt * roc;
