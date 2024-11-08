@@ -79,25 +79,32 @@ bool Entity::moveVertically(const Real dt) {
 
     /*
         Lorentz factor: γ(v) = 1/√(1 − v²/c²).
-        Kinetic energy: T = γ(v)mc².
+        Relativistic kinetic energy: T = γ(v)mc².
         Potential energy for the (newtonian) uniform gravitational field: U = mgh.
 
-        Assume that energy is locally conserved:
-          T₁ + U₁ = T₂ + U₂
-        ↔ γ(v₁)mc² + mgh₁ = γ(v₂)mc² + mgh₂
-        ↔ [γ(v₁) − γ(v₂)]mc² = mg(h₂ − h₁)
-        ↔ g(h₂ − h₁)/c² = γ(v₁) − γ(v₂).
-
-        Let v₁ = v, v₂ = v + dt, h₂ − h₁ = dh = vdt.
-
         Then:
-          −gvdt/c² = γ(v + dv) − γ(v) = γ′(v)dv
-                   = (v/c²) × (1 − v²/c²)^(−3/2) × dv
-        ↔ −gdt = (1 − v²/c²)^(−3/2) × dv
-        ↔ dv/dt = −g(1 − v²/c²)^(3/2)
+          dT = γ′(v)mc²dv,
+          δU = mgdh = mgvdt,
+          δE = dT + δU,
+        where
+          γ′(v) = (v/c²) × (1 − v²/c²)^(−3/2).
 
-        In particular, (1 − v²/c²)^(3/2) = 1 − 3v²/2c² + o(x⁴),
+        Assume that energy is locally conserved:
+          δE = 0
+        ↔ dT = −δU
+        ↔ γ′(v)mc²dv = −mgvdt
+        ↔ γ′(v)dv = −(v/c²)gdt
+        ↔ dv = −g(1 − v²/c²)^(3/2) × dt.
+
+        In particular, (1 − v²/c²)^(3/2) = 1 − 3v²/2c² + o(v⁴/c⁴),
         so if v/c ≈ 0, then dv/dt ≈ −g.
+
+        For the non-trivial topology δE may be not exact, so that it
+        makes no sense to define potential energy globally.
+        Therefore energy will not be conserved.
+
+        In particular, “dh” is known to be a generator
+        of de Rham cohomology group H¹(S¹) ≅ ℝ.
     */
     constexpr Real vmax = 32.0;
 
