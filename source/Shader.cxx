@@ -9,69 +9,6 @@
 
 #include <Hyper/Shader.hxx>
 
-#define lengthof(array) (sizeof(array) / sizeof(array[0]))
-
-template<ShaderSpec Spec> Shader<Spec>::Shader(const char * comfile, const char * vsfile, const char * fsfile) {
-    std::ifstream cvs, ivs, ifs;
-
-    cvs.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    ivs.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    ifs.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
-    cvs.open(comfile); ivs.open(vsfile); ifs.open(fsfile);
-
-    std::stringstream csbuf, vsbuf, fsbuf;
-    csbuf << cvs.rdbuf(); vsbuf << ivs.rdbuf(); fsbuf << ifs.rdbuf();
-
-    cvs.close(); ivs.close(); ifs.close();
-
-    GLint success; char info[Spec::infoBufferSize];
-
-    auto cs₁ = csbuf.str(), vs₁ = vsbuf.str(), fs₁ = fsbuf.str();
-    auto cs₂ = cs₁.c_str(), vs₂ = vs₁.c_str(), fs₂ = fs₁.c_str();
-
-    const char * vertexText[] = {cs₂, vs₂}, * fragmentText[] = {cs₂, fs₂};
-
-    auto vertex = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex, lengthof(vertexText), vertexText, 0);
-    glCompileShader(vertex);
-
-    glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderInfoLog(vertex, Spec::infoBufferSize, 0, info);
-        std::cout << "Vertex shader compilation error:\n" << info << std::endl;
-    }
-
-    auto fragment = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment, lengthof(fragmentText), fragmentText, 0);
-    glCompileShader(fragment);
-
-    glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderInfoLog(fragment, Spec::infoBufferSize, 0, info);
-        std::cout << "Fragment shader compilation error:\n" << info << std::endl;
-    }
-
-    _index = glCreateProgram();
-    glAttachShader(_index, vertex);
-    glAttachShader(_index, fragment);
-    GVA::bind<stride, Params>(_index);
-    glLinkProgram(_index);
-
-    glGetProgramiv(_index, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(_index, Spec::infoBufferSize, 0, info);
-        std::cout << "Shader program linking failure:\n" << info << std::endl;
-    }
-
-    glDeleteShader(vertex);
-    glDeleteShader(fragment);
-}
-
-template<ShaderSpec Spec> Shader<Spec>::~Shader() { glDeleteProgram(_index); }
-
-template<ShaderSpec Spec> void Shader<Spec>::activate() { glUseProgram(_index); }
-
 namespace GL {
     template<> void uniform<bool>(GLuint index, const char * name, const bool & value)
     { glUniform1i(glGetUniformLocation(index, name), int(value)); }

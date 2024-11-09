@@ -30,10 +30,7 @@ namespace Game {
             const Real meter;
             const Model model;
 
-            Standard(const Model m) :
-                meter(Projection::length(m, Tesselation::meter)),
-                model(m)
-            {}
+            Standard(const Model m) : meter(m.length(Tesselation::meter)), model(m) {}
         };
 
         extern Real       fov, near, far;

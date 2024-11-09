@@ -114,13 +114,14 @@ glm::vec3 unproject(const glm::mat4 & view, const glm::mat4 & projection, const 
 
 glm::vec3 trace(const glm::mat4 & view, const glm::mat4 & projection, const GLfloat zbuffer, const GLfloat H, bool forward) {
     using namespace Game;
+    using namespace Render;
 
     auto h = glm::vec3(0.0f, H, 0.0f);
 
-    auto w₀ = Projection::unapply(Render::standard->model, unproject(view, projection, 2.0f * zbuffer - 1.0f));
+    auto w₀ = standard->model.unapply(unproject(view, projection, 2.0f * zbuffer - 1.0f));
     auto dist₀ = glm::length(w₀ - h);
 
-    const GLfloat ε = Render::standard->meter / 3.0f;
+    const GLfloat ε = standard->meter / 3.0f;
     GLfloat dist = dist₀ + (forward ? +ε : -ε);
 
     return (dist / dist₀) * (w₀ - h) + h;
@@ -263,8 +264,6 @@ void display(GLFWwindow * window) {
     view = glm::translate(view, eye);
 
     voxelShader->activate();
-
-    voxelShader->uniform("model", int(Render::standard->model));
 
     voxelShader->uniform("view", view);
     voxelShader->uniform("projection", projection);
@@ -506,6 +505,33 @@ GLFWwindow * setupWindow(Config & config) {
     return window;
 }
 
+auto fsread(const char * filepath) {
+    std::ifstream fin; std::stringstream buf;
+
+    fin.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
+    try {
+        fin.open(filepath);
+        buf << fin.rdbuf();
+        fin.close();
+
+        return buf.str();
+    } catch (const std::system_error & e) {
+        std::cout << "Unable to read file:" << filepath << std::endl;
+
+        return std::string();
+    }
+}
+
+auto modelShader(Model model) {
+    switch (model) {
+        case Poincaré: return fsread("shaders/Model/Poincare.glsl");
+        case Klein:    return fsread("shaders/Model/Klein.glsl");
+        case Gans:     return fsread("shaders/Model/Gans.glsl");
+        default:       return std::string();
+    }
+}
+
 void setupGL(GLFWwindow * window, Config & config) {
     using namespace Game;
 
@@ -517,7 +543,12 @@ void setupGL(GLFWwindow * window, Config & config) {
 
     glEnable(GL_BLEND); glEnable(GL_DEPTH_TEST);
 
-    voxelShader = new Shader<VoxelShader>("shaders/Voxel/Common.glsl", "shaders/Voxel/Vertex.glsl", "shaders/Voxel/Fragment.glsl");
+    auto common₁ = fsread("shaders/Voxel/Common.glsl");
+
+    FragmentShader fragment₁(common₁, fsread("shaders/Voxel/Fragment.glsl"));
+    VertexShader vertex₁(common₁, fsread("shaders/Voxel/Vertex.glsl"), modelShader(standard.model));
+
+    voxelShader = new Shader<VoxelShader>(fragment₁, vertex₁);
     voxelShader->activate();
 
     voxelShader->uniform("fog.enabled", config.fog.enabled);
@@ -529,7 +560,12 @@ void setupGL(GLFWwindow * window, Config & config) {
     Render::near = config.camera.near;
     Render::far  = config.camera.far;
 
-    dummyShader = new Shader<DummyShader>("shaders/Dummy/Common.glsl", "shaders/Dummy/Vertex.glsl", "shaders/Dummy/Fragment.glsl");
+    auto common₂ = fsread("shaders/Dummy/Common.glsl");
+
+    FragmentShader fragment₂(common₂, fsread("shaders/Dummy/Fragment.glsl"));
+    VertexShader vertex₂(common₂, fsread("shaders/Dummy/Vertex.glsl"));
+
+    dummyShader = new Shader<DummyShader>(fragment₂, vertex₂);
     dummyShader->activate();
 
     aimVao.initialize();

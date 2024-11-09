@@ -24,7 +24,7 @@ struct Config {
     struct {
         Real chunkRenderDistance = 10.0;
         Real fov = 80.0, near = 1e-3, far = 150.0;
-        Model model = Model::Gans;
+        Model model = {Gans};
     } camera;
 
     struct {

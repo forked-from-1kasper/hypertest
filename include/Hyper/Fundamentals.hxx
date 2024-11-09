@@ -14,7 +14,10 @@ inline constexpr size_t Word  = sizeof(uint16_t);
 inline constexpr size_t Dword = sizeof(uint32_t);
 inline constexpr size_t Qword = sizeof(uint64_t);
 
-using Real    = double;
+using Real  = double;
+using Real² = std::pair<Real, Real>;
+using Real³ = std::tuple<Real, Real, Real>;
+
 using Integer = mpz_class;
 using NodeId  = uint16_t;
 
@@ -25,68 +28,65 @@ using Level = uint8_t;
 template<typename T, int N> using Array² = std::array<std::array<T, N>, N>;
 
 // Various machinery for projections
-enum class Model {
+enum {
     Poincaré = 1,
     Klein    = 2,
     Gans     = 3
 };
 
-namespace Projection {
+struct Model {
+    int value;
+
+    inline constexpr Model(int value) : value(value) {}
+    inline constexpr operator int() const { return value; }
+
     // Poincaré model → The specified model
-    constexpr auto apply(Model model, const Real y₁, const Real y₂) {
-        Real x₁, x₂;
+    inline constexpr Real² apply(const Real y₁, const Real y₂) const {
+        switch (value) {
+            case Poincaré: return {y₁, y₂};
 
-        switch (model) {
-            case Model::Poincaré: x₁ = y₁; x₂ = y₂; break;
-
-            case Model::Klein: {
+            case Klein: {
                 auto σ = 1 + y₁ * y₁ + y₂ * y₂;
-                x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ;
-                break;
+                return {2 * y₁ / σ, 2 * y₂ / σ};
             }
 
-            case Model::Gans: {
+            case Gans: {
                 auto σ = 1 - y₁ * y₁ - y₂ * y₂;
-                x₁ = 2 * y₁ / σ; x₂ = 2 * y₂ / σ;
-                break;
+                return {2 * y₁ / σ, 2 * y₂ / σ};
             }
-        }
 
-        return std::pair(x₁, x₂);
+            default: return {};
+        }
     }
 
     // The specified model → Poincaré model
-    inline constexpr auto unapply(Model model, const Real x₁, const Real x₂) {
-        float y₁, y₂;
+    inline constexpr Real² unapply(const Real x₁, const Real x₂) const {
+        switch (value) {
+            case Poincaré: return {x₁, x₂};
 
-        switch (model) {
-            case Model::Poincaré: y₁ = x₁; y₂ = x₂; break;
-
-            case Model::Klein: {
+            case Klein: {
                 auto σ = 1.0 + Math::sqrt(1.0 - x₁ * x₁ - x₂ * x₂);
-                y₁ = x₁ / σ; y₂ = x₂ / σ;
-                break;
+                return {x₁ / σ, x₂ / σ};
             }
 
-            case Model::Gans: {
+            case Gans: {
                 auto σ = 1.0 + Math::sqrt(x₁ * x₁ + x₂ * x₂ + 1.0);
-                y₁ = x₁ / σ; y₂ = x₂ / σ;
-                break;
+                return {x₁ / σ, x₂ / σ};
             }
-        }
 
-        return std::pair(y₁, y₂);
+            default: return {};
+        }
     }
 
-    inline constexpr auto apply(Model model, const Gyrovector<Real> & v)
-    { auto [x₁, x₂] = apply(model, v.x(), v.y()); return glm::vec2(x₁, x₂); }
+    inline constexpr auto apply(const Gyrovector<Real> & v) const
+    { auto [x₁, x₂] = apply(v.x(), v.y()); return glm::vec2(x₁, x₂); }
 
-    inline constexpr auto unapply(Model model, const glm::vec3 w)
-    { auto [x, z] = unapply(model, w.x, w.z); return glm::vec3(x, w.y, z); }
+    inline constexpr auto unapply(const glm::vec3 w) const
+    { auto [x, z] = unapply(w.x, w.z); return glm::vec3(x, w.y, z); }
 
-    inline const auto length(Model model, Real value)
-    { return glm::length(Projection::apply(model, Gyrovector<Real>(value, 0))); }
-}
+    inline constexpr auto length(Real value) const
+    { auto [x₁, x₂] = apply(value, 0); return Math::hypot(x₁, x₂); }
+};
 
 namespace Fundamentals {
     constexpr unsigned long textureSize = 16;

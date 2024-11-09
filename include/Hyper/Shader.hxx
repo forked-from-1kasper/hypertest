@@ -1,5 +1,7 @@
 #pragma once
 
+#include <initializer_list>
+#include <iostream>
 #include <optional>
 #include <vector>
 #include <string>
@@ -74,6 +76,48 @@ struct Attrib {
     static_assert(sizeof(T) == size);
 };
 
+template<GLenum type> class AbstractShader {
+public:
+    GLuint ref;
+
+    template<std::same_as<std::string>... Ts> inline AbstractShader(Ts... ts) {
+        ref = glCreateShader(type);
+
+        const char * bufarr[] = {ts.c_str()...};
+        glShaderSource(ref, sizeof...(Ts), bufarr, 0);
+
+        glCompileShader(ref);
+
+        GLint status; glGetShaderiv(ref, GL_COMPILE_STATUS, &status);
+        if (status != GL_TRUE) {
+            GLint loglen; glGetShaderiv(ref, GL_INFO_LOG_LENGTH, &loglen);
+
+            auto logbuf = new char[loglen];
+
+            glGetShaderInfoLog(ref, loglen, 0, logbuf);
+            std::cout << "Shader compilation error:\n" << logbuf << std::endl;
+
+            delete[] logbuf;
+        }
+    }
+
+    inline ~AbstractShader() { glDeleteShader(ref); }
+
+    inline void attach(GLuint program) { glAttachShader(program, ref); }
+    inline void compile() { glCompileShader(ref); }
+};
+
+using FragmentShader = AbstractShader<GL_FRAGMENT_SHADER>;
+using VertexShader   = AbstractShader<GL_VERTEX_SHADER>;
+
+template<typename T> struct AnyShaderM
+{ static constexpr bool value = false; };
+
+template<GLenum type> struct AnyShaderM<AbstractShader<type>>
+{ static constexpr bool value = true; };
+
+template<typename T> concept AnyShader = AnyShaderM<T>::value;
+
 template<typename T> using Value = typename T::value;
 
 namespace GVA {
@@ -106,12 +150,11 @@ namespace GVA {
 }
 
 template<typename T> concept ShaderSpec =
-   requires() { typename T::Index; typename T::Params; }
-&& requires() { { T::infoBufferSize } -> std::same_as<const size_t &>; };
+requires() { typename T::Index; typename T::Params; };
 
 template<ShaderSpec Spec> class Shader {
 private:
-    GLuint _index;
+    GLuint ref;
 
 public:
     using Index  = typename Spec::Index;
@@ -128,17 +171,37 @@ public:
     using VBO = std::vector<Data>;
     using EBO = std::vector<Index>;
 
-    Shader(const char *, const char * vertex, const char * fragment);
-    ~Shader();
+    template<AnyShader... Ts> inline Shader(Ts & ... shaders) {
+        ref = glCreateProgram();
 
-    inline constexpr auto index() const { return _index; }
+        (shaders.attach(ref), ...);
+
+        GVA::bind<stride, Params>(ref);
+        glLinkProgram(ref);
+
+        GLint status; glGetProgramiv(ref, GL_LINK_STATUS, &status);
+        if (status != GL_TRUE) {
+            GLint loglen; glGetProgramiv(ref, GL_INFO_LOG_LENGTH, &loglen);
+
+            auto logbuf = new char[loglen];
+
+            glGetProgramInfoLog(ref, loglen, 0, logbuf);
+            std::cout << "Shader program linking failure:\n" << logbuf << std::endl;
+
+            delete[] logbuf;
+        }
+    }
+
+    inline ~Shader() { glDeleteProgram(ref); }
+
+    inline constexpr auto index() const { return ref; }
 
     inline static void attrib() { GVA::attrib<stride, Params>(); }
 
     template<typename T> void uniform(const char * loc, const T & value)
-    { GL::uniform<T>(_index, loc, value); };
+    { GL::uniform<T>(ref, loc, value); };
 
-    void activate();
+    inline void activate() { glUseProgram(ref); }
 
     struct VAO {
         GLuint vao, vbo, ebo;
@@ -278,8 +341,6 @@ struct VoxelShader {
     List<Attrib<"_texCoord",   Tuple<GLfloat, GLfloat>, GL_FLOAT, 2>,
          Attrib<"_gyrovector", Gyrovector<GLfloat>,     GL_FLOAT, 2>,
          Attrib<"_height",     GLfloat,                 GL_FLOAT, 1>>;
-
-    constexpr static size_t infoBufferSize = 2048;
 };
 
 struct DummyShader {
@@ -290,8 +351,6 @@ struct DummyShader {
          Attrib<"_color",     glm::vec4, GL_FLOAT, 4>,
          Attrib<"_texCoord",  glm::vec2, GL_FLOAT, 2>,
          Attrib<"_mixFactor", GLfloat,   GL_FLOAT, 1>>;
-
-    constexpr static size_t infoBufferSize = 2048;
 };
 
 template<typename T, typename... Ts> inline void emit(std::vector<T> & vbo, const Ts &... ts)

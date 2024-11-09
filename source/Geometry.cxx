@@ -75,14 +75,14 @@ namespace Tesselation {
 
     constexpr Real d = D½ / sqrt2;
 
-    constexpr auto d₁₂ = Projection::apply(Model::Klein, d, d);
+    constexpr auto d₁₂ = Model(Klein).apply(d, d);
     constexpr auto hd₁ = Math::atanh(d₁₂.first), hd₂ = Math::atanh(d₁₂.second);
 
     constexpr auto Ψ(Real t₁, Real t₂) {
         auto k₁ = Math::tanh(t₁ * hd₁);
         auto k₂ = Math::tanh(t₂ * hd₂);
 
-        auto [x, y] = Projection::unapply(Model::Klein, k₁, k₂);
+        auto [x, y] = Model(Klein).unapply(k₁, k₂);
         auto u = (x + y) / sqrt2, v = (x - y) / sqrt2;
 
         return Gyrovector<Real>(u, v);
@@ -90,7 +90,7 @@ namespace Tesselation {
 
     auto Ψ⁻¹(Real u, Real v) {
         auto x = (u + v) / sqrt2, y = (u - v) / sqrt2;
-        auto [k₁, k₂] = Projection::apply(Model::Klein, x, y);
+        auto [k₁, k₂] = Model(Klein).apply(x, y);
 
         return std::pair(std::atanh(k₁) / hd₁, std::atanh(k₂) / hd₂);
     }
