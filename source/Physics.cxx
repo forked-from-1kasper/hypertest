@@ -50,7 +50,9 @@ glm::vec3 Object::right() const {
 bool Entity::stuck(Chunk * C, Rank x, Real y, Rank z) {
     if (C == nullptr || !C->ready()) return false;
 
-    for (Level L = std::floor(y); L <= std::floor(y + height); L++)
+    auto y₁ = std::floor(y), y₂ = std::floor(y + height);
+
+    for (int L = y₁; L <= y₂; L++)
         if (!Chunk::outside(L) && !C->walkable(x, L, z))
             return true;
 
