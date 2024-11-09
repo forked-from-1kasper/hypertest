@@ -24,10 +24,10 @@ void errorCallback(int error, const char * description) {
 
 glm::mat4 view, projection;
 
-Shader<DummyShader> * dummyShader;
-Shader<VoxelShader> * voxelShader;
+ShaderProgram<DummyShader> * dummyShader = nullptr;
+ShaderProgram<VoxelShader> * voxelShader = nullptr;
 
-Shader<DummyShader>::VAO aimVao, hotbarVao;
+ShaderProgram<DummyShader>::VAO aimVao, hotbarVao;
 
 PBO<GLfloat, Action> pbo(GL_DEPTH_COMPONENT, 1, 1);
 
@@ -38,7 +38,7 @@ const auto origin = glm::vec2(0.0f);
 const auto white  = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 const auto black  = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-void drawAim(Shader<DummyShader>::VAO & vao) {
+void drawAim(ShaderProgram<DummyShader>::VAO & vao) {
     using namespace Game;
 
     vao.clear();
@@ -54,7 +54,7 @@ void drawAim(Shader<DummyShader>::VAO & vao) {
     vao.upload(GL_STATIC_DRAW);
 }
 
-void drawRectangle(Shader<DummyShader>::VAO & vao, GLfloat x₀, GLfloat y₀, GLfloat Δx, GLfloat Δy, Texture & T, glm::vec4 color, GLfloat mix) {
+void drawRectangle(ShaderProgram<DummyShader>::VAO & vao, GLfloat x₀, GLfloat y₀, GLfloat Δx, GLfloat Δy, Texture & T, glm::vec4 color, GLfloat mix) {
     auto index = vao.index();
 
     vao.emit(vec2(x₀ + 0,  y₀ + 0),  color, glm::vec2(T.left(),  T.up()),   mix);
@@ -66,7 +66,7 @@ void drawRectangle(Shader<DummyShader>::VAO & vao, GLfloat x₀, GLfloat y₀, G
     vao.push(index); vao.push(index + 2); vao.push(index + 3);
 }
 
-void drawHotbar(Shader<DummyShader>::VAO & vao) {
+void drawHotbar(ShaderProgram<DummyShader>::VAO & vao) {
     using namespace Game;
 
     const GLfloat size = 0.1f, gap = 0.01f;
@@ -523,13 +523,44 @@ auto fsread(const char * filepath) {
     }
 }
 
-auto modelShader(Model model) {
+auto readModelShader(Model model) {
     switch (model) {
         case Poincaré: return fsread("shaders/Model/Poincare.glsl");
         case Klein:    return fsread("shaders/Model/Klein.glsl");
         case Gans:     return fsread("shaders/Model/Gans.glsl");
         default:       return std::string();
     }
+}
+
+void uploadShaders() {
+    using namespace Game;
+
+    delete voxelShader;
+
+    auto cs₁ = fsread("shaders/Voxel/Common.glsl");
+    auto fs₁ = fsread("shaders/Voxel/Fragment.glsl");
+    auto vs₁ = fsread("shaders/Voxel/Vertex.glsl");
+    auto ms₁ = readModelShader(Render::standard->model);
+
+    FragmentShader fragment₁(cs₁, fs₁); VertexShader vertex₁(cs₁, vs₁, ms₁);
+    voxelShader = new ShaderProgram<VoxelShader>(fragment₁, vertex₁);
+
+    delete dummyShader;
+
+    auto cs₂ = fsread("shaders/Dummy/Common.glsl");
+    auto fs₂ = fsread("shaders/Dummy/Fragment.glsl");
+    auto vs₂ = fsread("shaders/Dummy/Vertex.glsl");
+
+    FragmentShader fragment₂(cs₂, fs₂); VertexShader vertex₂(cs₂, vs₂);
+    dummyShader = new ShaderProgram<DummyShader>(fragment₂, vertex₂);
+}
+
+void setupShaders(Config & config) {
+    voxelShader->activate();
+    voxelShader->uniform("fog.enabled", config.fog.enabled);
+    voxelShader->uniform("fog.near",    config.fog.near);
+    voxelShader->uniform("fog.far",     config.fog.far);
+    voxelShader->uniform("fog.color",   config.fog.color);
 }
 
 void setupGL(GLFWwindow * window, Config & config) {
@@ -543,29 +574,13 @@ void setupGL(GLFWwindow * window, Config & config) {
 
     glEnable(GL_BLEND); glEnable(GL_DEPTH_TEST);
 
-    auto common₁ = fsread("shaders/Voxel/Common.glsl");
-
-    FragmentShader fragment₁(common₁, fsread("shaders/Voxel/Fragment.glsl"));
-    VertexShader vertex₁(common₁, fsread("shaders/Voxel/Vertex.glsl"), modelShader(standard.model));
-
-    voxelShader = new Shader<VoxelShader>(fragment₁, vertex₁);
-    voxelShader->activate();
-
-    voxelShader->uniform("fog.enabled", config.fog.enabled);
-    voxelShader->uniform("fog.near",    config.fog.near);
-    voxelShader->uniform("fog.far",     config.fog.far);
-    voxelShader->uniform("fog.color",   config.fog.color);
+    uploadShaders();
+    setupShaders(config);
 
     Render::fov  = config.camera.fov;
     Render::near = config.camera.near;
     Render::far  = config.camera.far;
 
-    auto common₂ = fsread("shaders/Dummy/Common.glsl");
-
-    FragmentShader fragment₂(common₂, fsread("shaders/Dummy/Fragment.glsl"));
-    VertexShader vertex₂(common₂, fsread("shaders/Dummy/Vertex.glsl"));
-
-    dummyShader = new Shader<DummyShader>(fragment₂, vertex₂);
     dummyShader->activate();
 
     aimVao.initialize();

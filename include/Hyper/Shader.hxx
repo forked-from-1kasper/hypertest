@@ -91,12 +91,10 @@ public:
         if (status != GL_TRUE) {
             GLint loglen; glGetShaderiv(ref, GL_INFO_LOG_LENGTH, &loglen);
 
-            auto logbuf = new char[loglen];
+            std::vector<char> logbuf(loglen);
 
-            glGetShaderInfoLog(ref, loglen, 0, logbuf);
-            std::cout << "Shader compilation error:\n" << logbuf << std::endl;
-
-            delete[] logbuf;
+            glGetShaderInfoLog(ref, loglen, 0, logbuf.data());
+            std::cout << "Shader compilation error:\n" << logbuf.data() << std::endl;
         }
     }
 
@@ -151,7 +149,7 @@ namespace GVA {
 template<typename T> concept ShaderSpec =
 requires() { typename T::Index; typename T::Params; };
 
-template<ShaderSpec Spec> class Shader {
+template<ShaderSpec Spec> class ShaderProgram {
 private:
     GLuint ref;
 
@@ -170,7 +168,7 @@ public:
     using VBO = std::vector<Data>;
     using EBO = std::vector<Index>;
 
-    template<AnyShader... Ts> inline Shader(Ts & ... shaders) {
+    template<AnyShader... Ts> inline ShaderProgram(Ts & ... shaders) {
         ref = glCreateProgram();
 
         (shaders.attach(ref), ...);
@@ -182,16 +180,14 @@ public:
         if (status != GL_TRUE) {
             GLint loglen; glGetProgramiv(ref, GL_INFO_LOG_LENGTH, &loglen);
 
-            auto logbuf = new char[loglen];
+            std::vector<char> logbuf(loglen);
 
-            glGetProgramInfoLog(ref, loglen, 0, logbuf);
-            std::cout << "Shader program linking failure:\n" << logbuf << std::endl;
-
-            delete[] logbuf;
+            glGetProgramInfoLog(ref, loglen, 0, logbuf.data());
+            std::cout << "Shader program linking failure:\n" << logbuf.data() << std::endl;
         }
     }
 
-    inline ~Shader() { glDeleteProgram(ref); }
+    inline ~ShaderProgram() { glDeleteProgram(ref); }
 
     inline constexpr auto index() const { return ref; }
 

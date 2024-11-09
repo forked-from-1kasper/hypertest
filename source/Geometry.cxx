@@ -197,8 +197,8 @@ bool Chunk::walkable(Rank x, Real L, Rank z) {
     return Chunk::outside(L) || (get(x, Level(L), z).id == 0);
 }
 
-using VBO = Shader<VoxelShader>::VBO;
-using EBO = Shader<VoxelShader>::EBO;
+using VBO = ShaderProgram<VoxelShader>::VBO;
+using EBO = ShaderProgram<VoxelShader>::EBO;
 
 void drawParallelogram(VBO & vbo, EBO & ebo, Texture & T, const Parallelogram<GLfloat> & P, GLfloat h) {
     auto index = vbo.size();
@@ -301,7 +301,7 @@ void Chunk::updateMatrix(const Fuchsian<Integer> & origin) {
     _relative.normalize(); _awayness = _relative.origin().abs();
 }
 
-void Chunk::render(Shader<VoxelShader> * shader) {
+void Chunk::render(ShaderProgram<VoxelShader> * shader) {
     shader->uniform("relative.a", _relative.a);
     shader->uniform("relative.b", _relative.b);
     shader->uniform("relative.c", _relative.c);
