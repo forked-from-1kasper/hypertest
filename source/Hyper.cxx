@@ -24,10 +24,10 @@ void errorCallback(int error, const char * description) {
 
 glm::mat4 view, projection;
 
-ShaderProgram<DummyShader> * dummyShader = nullptr;
-ShaderProgram<VoxelShader> * voxelShader = nullptr;
+DummyShader * dummyShader = nullptr;
+VoxelShader * voxelShader = nullptr;
 
-ShaderProgram<DummyShader>::VAO aimVao, hotbarVao;
+DummyShader::VAO aimVao, hotbarVao;
 
 PBO<GLfloat, Action> pbo(GL_DEPTH_COMPONENT, 1, 1);
 
@@ -38,7 +38,7 @@ const auto origin = glm::vec2(0.0f);
 const auto white  = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 const auto black  = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-void drawAim(ShaderProgram<DummyShader>::VAO & vao) {
+void drawAim(DummyShader::VAO & vao) {
     using namespace Game;
 
     vao.clear();
@@ -54,7 +54,7 @@ void drawAim(ShaderProgram<DummyShader>::VAO & vao) {
     vao.upload(GL_STATIC_DRAW);
 }
 
-void drawRectangle(ShaderProgram<DummyShader>::VAO & vao, GLfloat x₀, GLfloat y₀, GLfloat Δx, GLfloat Δy, Texture & T, glm::vec4 color, GLfloat mix) {
+void drawRectangle(DummyShader::VAO & vao, GLfloat x₀, GLfloat y₀, GLfloat Δx, GLfloat Δy, Texture & T, glm::vec4 color, GLfloat mix) {
     auto index = vao.index();
 
     vao.emit(vec2(x₀ + 0,  y₀ + 0),  color, glm::vec2(T.left(),  T.up()),   mix);
@@ -66,7 +66,7 @@ void drawRectangle(ShaderProgram<DummyShader>::VAO & vao, GLfloat x₀, GLfloat 
     vao.push(index); vao.push(index + 2); vao.push(index + 3);
 }
 
-void drawHotbar(ShaderProgram<DummyShader>::VAO & vao) {
+void drawHotbar(DummyShader::VAO & vao) {
     using namespace Game;
 
     const GLfloat size = 0.1f, gap = 0.01f;
@@ -543,7 +543,7 @@ void uploadShaders() {
     auto ms₁ = readModelShader(Render::standard->model);
 
     FragmentShader fragment₁(cs₁, fs₁); VertexShader vertex₁(cs₁, vs₁, ms₁);
-    voxelShader = new ShaderProgram<VoxelShader>(fragment₁, vertex₁);
+    voxelShader = new VoxelShader(fragment₁, vertex₁);
 
     delete dummyShader;
 
@@ -552,7 +552,7 @@ void uploadShaders() {
     auto vs₂ = fsread("shaders/Dummy/Vertex.glsl");
 
     FragmentShader fragment₂(cs₂, fs₂); VertexShader vertex₂(cs₂, vs₂);
-    dummyShader = new ShaderProgram<DummyShader>(fragment₂, vertex₂);
+    dummyShader = new DummyShader(fragment₂, vertex₂);
 }
 
 void setupShaders(Config & config) {

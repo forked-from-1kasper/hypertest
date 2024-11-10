@@ -111,7 +111,7 @@ private:
     Fuchsian<Integer> _isometry; Möbius<Real> _relative; Real _awayness; // used for drawing
     Gaussian²<Integer> _pos; // used for indexing, should be equal to `isometry.origin()`
 
-    bool _working = false; std::future<void> worker; ShaderProgram<VoxelShader>::VAO vao;
+    bool _working = false; std::future<void> worker; VoxelShader::VAO vao;
 
     bool _ready = false, _dirty = false, _needRefresh = false, _needUnload = false, needUpdateVAO = false;
 
@@ -125,7 +125,7 @@ public:
     void updateMatrix(const Fuchsian<Integer> &);
     void refresh(NodeRegistry &);
 
-    void render(ShaderProgram<VoxelShader> *);
+    void render(VoxelShader *);
 
     bool walkable(Rank, Real, Rank);
 

@@ -241,7 +241,7 @@ public:
         inline void push() { indices.push_back(vertices.size()); }
         inline void push(const Index index) { indices.push_back(index); }
 
-        template<typename... Ts> inline void emit(const Ts&... ts)
+        template<typename... Ts> inline void emit(const Ts & ... ts)
         { vertices.push_back(Tuple(ts...)); }
 
         void clear() {
@@ -329,7 +329,7 @@ public:
     }
 };
 
-struct VoxelShader {
+struct VoxelShaderSpec {
     using Index = GLuint;
 
     using Params =
@@ -338,7 +338,9 @@ struct VoxelShader {
          Attrib<"_height",     GLfloat,                 GL_FLOAT, 1>>;
 };
 
-struct DummyShader {
+using VoxelShader = ShaderProgram<VoxelShaderSpec>;
+
+struct DummyShaderSpec {
     using Index = GLuint;
 
     using Params =
@@ -347,6 +349,8 @@ struct DummyShader {
          Attrib<"_texCoord",  glm::vec2, GL_FLOAT, 2>,
          Attrib<"_mixFactor", GLfloat,   GL_FLOAT, 1>>;
 };
+
+using DummyShader = ShaderProgram<DummyShaderSpec>;
 
 template<typename T, typename... Ts> inline void emit(std::vector<T> & vbo, const Ts &... ts)
 { vbo.push_back(Tuple(ts...)); }
