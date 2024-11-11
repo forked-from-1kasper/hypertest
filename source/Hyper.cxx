@@ -505,7 +505,7 @@ GLFWwindow * setupWindow(Config & config) {
     return window;
 }
 
-auto fsread(const char * filepath) {
+auto readText(const char * filepath) {
     std::ifstream fin; std::stringstream buf;
 
     fin.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -525,9 +525,9 @@ auto fsread(const char * filepath) {
 
 auto readModelShader(Model model) {
     switch (model) {
-        case Poincaré: return fsread("shaders/Model/Poincare.glsl");
-        case Klein:    return fsread("shaders/Model/Klein.glsl");
-        case Gans:     return fsread("shaders/Model/Gans.glsl");
+        case Poincaré: return readText("shaders/Model/Poincare.glsl");
+        case Klein:    return readText("shaders/Model/Klein.glsl");
+        case Gans:     return readText("shaders/Model/Gans.glsl");
         default:       return std::string();
     }
 }
@@ -537,9 +537,9 @@ void uploadShaders() {
 
     delete voxelShader;
 
-    auto cs₁ = fsread("shaders/Voxel/Common.glsl");
-    auto fs₁ = fsread("shaders/Voxel/Fragment.glsl");
-    auto vs₁ = fsread("shaders/Voxel/Vertex.glsl");
+    auto cs₁ = readText("shaders/Voxel/Common.glsl");
+    auto fs₁ = readText("shaders/Voxel/Fragment.glsl");
+    auto vs₁ = readText("shaders/Voxel/Vertex.glsl");
     auto ms₁ = readModelShader(Render::standard->model);
 
     FragmentShader fragment₁(cs₁, fs₁); VertexShader vertex₁(cs₁, vs₁, ms₁);
@@ -547,9 +547,9 @@ void uploadShaders() {
 
     delete dummyShader;
 
-    auto cs₂ = fsread("shaders/Dummy/Common.glsl");
-    auto fs₂ = fsread("shaders/Dummy/Fragment.glsl");
-    auto vs₂ = fsread("shaders/Dummy/Vertex.glsl");
+    auto cs₂ = readText("shaders/Dummy/Common.glsl");
+    auto fs₂ = readText("shaders/Dummy/Fragment.glsl");
+    auto vs₂ = readText("shaders/Dummy/Vertex.glsl");
 
     FragmentShader fragment₂(cs₂, fs₂); VertexShader vertex₂(cs₂, vs₂);
     dummyShader = new DummyShader(fragment₂, vertex₂);
