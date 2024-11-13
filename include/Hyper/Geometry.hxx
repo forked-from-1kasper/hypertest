@@ -104,7 +104,7 @@ struct Blob {
     Blob() : data{} {}
 } __attribute__((packed));
 
-class Chunk; using ChunkOperator = Chunk*(Chunk*);
+class Chunk; using ChunkOperator = Chunk *(Chunk *);
 
 class Chunk {
 private:
@@ -175,7 +175,7 @@ private:
     sqlite3 * engine;
 
 public:
-    std::vector<Chunk*> pool;
+    std::vector<Chunk *> pool;
     ChunkOperator * generator = nullptr;
 
     Atlas();

@@ -122,7 +122,7 @@ namespace Fundamentals {
                     = 2cos(θ/2) / (cos(θ/2) + sin(θ/2)) − 1
                     = 2/(1 + sin(θ/2)/cos(θ/2)) − 1
                     = 2/(1 + tan(θ/2)) − 1
-                    = 2 − √3
+                    = 2 − √3.
         (See also https://en.wikipedia.org/wiki/List_of_trigonometric_identities, “List of trigonometric identities”.)
 
         Applying this rule to the other side, we get L:
@@ -130,13 +130,13 @@ namespace Fundamentals {
            = (cos(τ/4) + cos(θ/2 + θ/2)) / (cos(τ/4) + cos(θ/2 − θ/2))
            = (0 + cos(θ)) / (0 + 1) (because cos(τ/4) = 0 and cos(0) = 1)
            = cos(θ)
-           = 1/2
+           = 1/2.
 
         Similarly, you can find the length of the entire diagonal:
         D² = (cos(θ) + cos(θ/2 + θ/2)) / (cos(θ) + cos(θ/2 − θ/2))
            = 2cos(θ) / (cos(θ) + 1)
            = 2 / 3,
-         D = √(2/3) = √6/3
+         D = √(2/3) = √6/3.
 
         Note that 2 × D½ ≠ D. However, gyrodistance in Poincaré disk model is given by the formula:
             d(u, v) = |−u ⨁ v| = |−u + v|/|1 − vu*|
