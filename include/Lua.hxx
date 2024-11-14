@@ -1,10 +1,5 @@
 #pragma once
 
-#include <functional>
-#include <exception>
-#include <optional>
-#include <iostream>
-
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>

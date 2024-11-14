@@ -40,6 +40,3 @@ template<typename T> Möbius<T> operator*(const Möbius<T> & A, const Möbius<T>
         A.c * B.b + A.d * B.d
     };
 }
-
-template<typename T> std::function<Gyrovector<T>(Gyrovector<T>)> Transform(const Möbius<T> & M)
-{ return [M](Gyrovector<T> A) { return M.apply(A); }; }

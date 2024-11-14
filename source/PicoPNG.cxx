@@ -1,3 +1,6 @@
+#include <iostream>
+#include <fstream>
+
 #include <PicoPNG.hxx>
 
 namespace PNG {

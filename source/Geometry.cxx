@@ -1,7 +1,5 @@
 #include <Hyper/Geometry.hxx>
 
-#include <iostream>
-
 namespace Tesselation {
     // Chunk’s neighbours in tesselation
     const Fuchsian<Integer> I { ℤi(+1, +0), ℤi(+0, +0), ℤi(+0, +0), ℤi(+1, +0) };
@@ -388,7 +386,7 @@ const char * initcmd   = "CREATE TABLE IF NOT EXISTS atlas("
            * insertcmd = "INSERT or REPLACE INTO atlas(bitfield, real1, imag1, real2, imag2, blob) VALUES(?, ?, ?, ?, ?, ?);";
 
 inline void warn(sqlite3 * engine)
-{ std::cerr << "SQLITE: " << sqlite3_errmsg(engine) << std::endl; }
+{ std::fprintf(stderr, "SQLITE: %s\n", sqlite3_errmsg(engine)); }
 
 void Atlas::connect(std::string & filename) {
     auto retval = sqlite3_open(filename.c_str(), &engine);
@@ -398,10 +396,11 @@ void Atlas::connect(std::string & filename) {
         throw std::runtime_error("`sqlite3_open` failed");
     }
 
-    char * errMsg; retval = sqlite3_exec(engine, initcmd, nullptr, 0, &errMsg);
+    char * errmsg; retval = sqlite3_exec(engine, initcmd, nullptr, 0, &errmsg);
 
     if (retval != SQLITE_OK) {
-        std::cerr << "SQLITE: " << errMsg << std::endl; sqlite3_free(errMsg);
+        std::fprintf(stderr, "SQLITE: %s\n", errmsg); sqlite3_free(errmsg);
+
         throw std::runtime_error("sqlite3 initialization failed");
     }
 }

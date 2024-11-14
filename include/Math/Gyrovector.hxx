@@ -1,7 +1,7 @@
 #pragma once
 
 #include <type_traits>
-#include <functional>
+//#include <functional>
 
 #include <Math/Basic.hxx>
 
@@ -40,6 +40,8 @@ struct Gyrovector {
 
     constexpr inline auto operator-() const { return Gyrovector<T>(Math::negc(val)); }
     constexpr inline auto operator+() const { return *this; }
+
+    constexpr inline auto translate(const Gyrovector<T> & N) { return N + *this; }
 };
 
 template<typename T> constexpr auto operator+(const Gyrovector<T> & A, const Gyrovector<T> & B)
@@ -59,23 +61,8 @@ template<typename T> constexpr Gyrovector<T> Coadd(const Gyrovector<T> & A, cons
     return A.scale(1 - b).add(B.scale(1 - a)).scale(1 / (1 - a * b));
 }
 
-template<typename T> std::function<Gyrovector<T>(Gyrovector<T>)> Gyr(const Gyrovector<T> & A, const Gyrovector<T> & B)
-{ return [A, B](Gyrovector<T> C) { return gyr(A, B, C); }; }
-
-template<typename T> std::function<Gyrovector<T>(T)> Line(const Gyrovector<T> & A, const Gyrovector<T> & B)
-{ auto N = (-A) + B; return [A, N](T t) { return A + (t * N); }; }
-
 template<typename T> constexpr Gyrovector<T> midpoint(const Gyrovector<T> & A, const Gyrovector<T> & B)
 { return A + 0.5 * (-A + B); }
-
-template<typename T> std::function<Gyrovector<T>(T)> Coline(const Gyrovector<T> & A, const Gyrovector<T> & B)
-{ auto N = Coadd(B, -A); return [A, N](T t) { return (t * N) + A; }; }
-
-template<typename T> std::function<Gyrovector<T>(Gyrovector<T>)> Translate(const Gyrovector<T> & N)
-{ return [N](Gyrovector<T> A) { return N + A; }; }
-
-template<typename T> std::function<Gyrovector<T>(Gyrovector<T>)> Scalar(const T k)
-{ return [k](Gyrovector<T> A) { return k * A; }; }
 
 template<typename T> T holonomy(const Gyrovector<T> & P₁, const Gyrovector<T> & P₂) {
     const Gyrovector<double> n₁(0.0, 1.0);
@@ -91,3 +78,21 @@ template<typename T> inline T gyroangle(const Gyrovector<T> & P₁, const Gyrove
 
 template<typename T> constexpr T det(const Gyrovector<T> & A, const Gyrovector<T> & B)
 { return A.x() * B.y() - B.x() * A.y(); }
+
+template<typename T> struct Line {
+    Gyrovector<T> origin, direction;
+
+    Line(const Gyrovector<T> & A, const Gyrovector<T> & B)
+    { origin = A; direction = (-A) + B; }
+
+    Gyrovector<T> apply(T t) const { return origin + t * direction; }
+};
+
+template<typename T> struct Coline {
+    Gyrovector<T> origin, direction;
+
+    Coline(const Gyrovector<T> & A, const Gyrovector<T> & B)
+    { origin = A; direction = Coadd(B, -A); }
+
+    Gyrovector<T> apply(T t) const { return t * direction + origin; }
+};

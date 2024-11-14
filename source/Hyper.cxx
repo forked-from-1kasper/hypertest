@@ -1,12 +1,9 @@
-#include <iostream>
-#include <cmath>
-#include <map>
+#include <cstdio>
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/mat4x4.hpp>
 
-#include <PicoPNG.hxx>
 #include <Lua.hxx>
 
 #include <Math/Gyrovector.hxx>
@@ -506,21 +503,28 @@ GLFWwindow * setupWindow(Config & config) {
 }
 
 auto readText(const char * filepath) {
-    std::ifstream fin; std::stringstream buf;
+    size_t fsize; std::vector<char> retval;
 
-    fin.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    auto fd = std::fopen(filepath, "rb");
+    if (fd == nullptr) goto error;
 
-    try {
-        fin.open(filepath);
-        buf << fin.rdbuf();
-        fin.close();
+    if (std::fseek(fd, 0, SEEK_END) != 0) goto error;
+    fsize = std::ftell(fd); if (fsize < 0) goto error;
 
-        return buf.str();
-    } catch (const std::system_error & e) {
-        std::cout << "Unable to read file:" << filepath << std::endl;
+    {
+        std::rewind(fd);
 
-        return std::string();
+        retval.resize(fsize + 1);
+        std::fread(retval.data(), fsize, 1, fd);
+        retval[fsize] = 0;
+
+        std::fclose(fd);
+
+        return retval;
     }
+
+    error: fprintf(stderr, "Unable to read “%s”: %s\n", filepath, std::strerror(errno));
+    return std::vector(1, '\0');
 }
 
 auto readModelShader(Model model) {
@@ -528,7 +532,7 @@ auto readModelShader(Model model) {
         case Poincaré: return readText("shaders/Model/Poincare.glsl");
         case Klein:    return readText("shaders/Model/Klein.glsl");
         case Gans:     return readText("shaders/Model/Gans.glsl");
-        default:       return std::string();
+        default:       return std::vector(1, '\0');
     }
 }
 
@@ -542,7 +546,9 @@ void uploadShaders() {
     auto vs₁ = readText("shaders/Voxel/Vertex.glsl");
     auto ms₁ = readModelShader(Render::standard->model);
 
-    FragmentShader fragment₁(cs₁, fs₁); VertexShader vertex₁(cs₁, vs₁, ms₁);
+    FragmentShader fragment₁(cs₁.data(), fs₁.data());
+    VertexShader vertex₁(cs₁.data(), vs₁.data(), ms₁.data());
+
     voxelShader = new VoxelShader(fragment₁, vertex₁);
 
     delete dummyShader;
@@ -551,7 +557,9 @@ void uploadShaders() {
     auto fs₂ = readText("shaders/Dummy/Fragment.glsl");
     auto vs₂ = readText("shaders/Dummy/Vertex.glsl");
 
-    FragmentShader fragment₂(cs₂, fs₂); VertexShader vertex₂(cs₂, vs₂);
+    FragmentShader fragment₂(cs₂.data(), fs₂.data());
+    VertexShader vertex₂(cs₂.data(), vs₂.data());
+
     dummyShader = new DummyShader(fragment₂, vertex₂);
 }
 

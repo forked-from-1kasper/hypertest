@@ -1,6 +1,5 @@
 #pragma once
 
-#include <ostream>
 #include <complex>
 
 #include <Meta/Enumerable.hxx>
@@ -128,12 +127,8 @@ template<EuclideanDomain T> struct Gaussian {
 
     template<EuclideanDomain U> auto transform() const { return Gaussian<U>(real, imag); }
 
-    template<typename U> constexpr auto field() const {
-        return std::complex<U>(Math::field<T, U>(real), Math::field<T, U>(imag));
-    }
-
-    friend std::ostream & operator<< (std::ostream & stream, const Gaussian<T> & z)
-    { return stream << z.real << " + " << z.imag << "i"; }
+    template<typename U> constexpr auto field() const
+    { return std::complex<U>(Math::field<T, U>(real), Math::field<T, U>(imag)); }
 };
 
 template<EuclideanDomain T> using Gaussian² = std::pair<Gaussian<T>, Gaussian<T>>;

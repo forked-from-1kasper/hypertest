@@ -1,4 +1,3 @@
-#include <iostream>
 #include <GL/glew.h>
 
 #include <Hyper/Sheet.hxx>
@@ -44,7 +43,7 @@ void Sheet::pack() {
 
         auto image = PNG::load(_files[k], width, height);
         if (width != size() || height != size())
-        { std::cerr << "Unexpected (" << width << " × " << height << ") texture size: " << _files[k] << std::endl; goto fin; }
+        { std::fprintf(stderr, "Unexpected (%ld × %ld) texture size: %s\n", width, height, _files[k].c_str()); goto fin; }
 
         glTexSubImage2D(GL_TEXTURE_2D, 0, i * size(), j * size(), size(), size(), GL_RGBA, GL_UNSIGNED_BYTE, image.data());
 

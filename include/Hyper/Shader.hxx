@@ -1,9 +1,8 @@
 #pragma once
 
-#include <iostream>
 #include <optional>
 #include <vector>
-#include <string>
+#include <cstdio>
 
 #include <GL/glew.h>
 
@@ -79,10 +78,11 @@ template<GLenum type> class AbstractShader {
 public:
     GLuint ref;
 
-    template<std::same_as<std::string>... Ts> inline AbstractShader(Ts... ts) {
+    template<std::convertible_to<const char *>... Ts> inline AbstractShader(Ts... ts) {
         ref = glCreateShader(type);
 
-        const char * bufarr[] = {ts.c_str()...};
+        const char * bufarr[] = {ts...};
+
         glShaderSource(ref, sizeof...(Ts), bufarr, 0);
 
         glCompileShader(ref);
@@ -94,7 +94,7 @@ public:
             std::vector<char> logbuf(loglen);
 
             glGetShaderInfoLog(ref, loglen, 0, logbuf.data());
-            std::cout << "Shader compilation error:\n" << logbuf.data() << std::endl;
+            std::fprintf(stderr, "Shader compilation error:\n%s\n", logbuf.data());
         }
     }
 
@@ -183,7 +183,8 @@ public:
             std::vector<char> logbuf(loglen);
 
             glGetProgramInfoLog(ref, loglen, 0, logbuf.data());
-            std::cout << "Shader program linking failure:\n" << logbuf.data() << std::endl;
+
+            std::fprintf(stderr, "Shader program linking failure:\n%s\n", logbuf.data());
         }
     }
 

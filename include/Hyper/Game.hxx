@@ -1,3 +1,5 @@
+#pragma once
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
@@ -5,8 +7,6 @@
 #include <Hyper/Physics.hxx>
 #include <Hyper/Geometry.hxx>
 #include <Hyper/Fundamentals.hxx>
-
-#pragma once
 
 enum class Action { Remove, Place };
 
