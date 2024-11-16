@@ -437,6 +437,7 @@ void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, in
             case GLFW_KEY_X:          rotateBlob();                                  break;
             case GLFW_KEY_C:          copyBlob();                                    break;
             case GLFW_KEY_V:          pasteBlob();                                   break;
+            case GLFW_KEY_BACKSLASH:  freeMouse(window);                             break;
         }
     }
 
@@ -638,31 +639,33 @@ void cleanUp(GLFWwindow * window) {
 }
 
 int main(int argc, char * argv[]) {
+    using namespace Game;
+
     LuaJIT luajit;
 
     Config config(&luajit, "config.lua");
 
-    Game::window = setupWindow(config);
-    setupGL(Game::window, config);
+    window = setupWindow(config);
+    setupGL(window, config);
 
     luajit.loadapi();
 
     for (int i = 1; i < argc; i++)
         luajit.go(argv[i]);
 
-    Game::atlas.connect(config.world);
+    atlas.connect(config.world);
     setupGame(config); setupSheet();
 
     updateHotbar(); // TODO: where it should be placed?
 
-    while (!glfwWindowShouldClose(Game::window)) {
-        display(Game::window);
-        glfwSwapBuffers(Game::window);
+    while (!glfwWindowShouldClose(window)) {
+        display(window);
+        glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    Game::atlas.disconnect();
-    cleanUp(Game::window);
+    atlas.disconnect();
+    cleanUp(window);
 
     return 0;
 }
