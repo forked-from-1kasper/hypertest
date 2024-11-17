@@ -654,9 +654,10 @@ int main(int argc, char * argv[]) {
         luajit.go(argv[i]);
 
     atlas.connect(config.world);
-    setupGame(config); setupSheet();
+    setupGame(config);
+    setupSheet();
 
-    updateHotbar(); // TODO: where it should be placed?
+    updateHotbar();
 
     while (!glfwWindowShouldClose(window)) {
         display(window);
