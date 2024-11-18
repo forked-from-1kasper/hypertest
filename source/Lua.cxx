@@ -43,7 +43,7 @@ LuaRef LuaJIT::loadfile(const char * filename) {
     return LuaRef(vm);
 }
 
-static const char proxyname[] = "hypertest";
+static const char proxyname[] = "core";
 
 LuaRef LuaJIT::go(const char * filename) {
     char * buff;
