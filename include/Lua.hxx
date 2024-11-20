@@ -93,7 +93,7 @@ public:
     LuaJIT();
     ~LuaJIT();
 
-    LuaRef loadfile(const char *);
+    LuaRef require(const char *);
 
     LuaRef go(const char *);
 
@@ -120,26 +120,34 @@ template<typename... Is> struct LuaTupleM {
 
 template<typename... Ts> using LuaTuple = Apply<LuaTupleM, Enumerate<Ts...>>;
 
-using LuaVec2 = LuaTuple<lua_Number, lua_Number>;
+using LuaNumber2 = LuaTuple<lua_Number, lua_Number>;
 
 template<> inline bool valid<glm::vec2>(lua_State * vm, const int index)
-{ return LuaVec2::valid(vm, index); }
+{ return LuaNumber2::valid(vm, index); }
 
 template<> inline glm::vec2 decode<glm::vec2>(lua_State * vm, const int index)
-{ return LuaVec2::decode<glm::vec2>(vm, index); }
+{ return LuaNumber2::decode<glm::vec2>(vm, index); }
 
-using LuaVec3 = LuaTuple<lua_Number, lua_Number, lua_Number>;
+using LuaNumber3 = LuaTuple<lua_Number, lua_Number, lua_Number>;
 
 template<> inline bool valid<glm::vec3>(lua_State * vm, const int index)
-{ return LuaVec3::valid(vm, index); }
+{ return LuaNumber3::valid(vm, index); }
 
 template<> inline glm::vec3 decode<glm::vec3>(lua_State * vm, const int index)
-{ return LuaVec3::decode<glm::vec3>(vm, index); }
+{ return LuaNumber3::decode<glm::vec3>(vm, index); }
 
-using LuaVec4 = LuaTuple<lua_Number, lua_Number, lua_Number, lua_Number>;
+using LuaNumber4 = LuaTuple<lua_Number, lua_Number, lua_Number, lua_Number>;
 
 template<> inline bool valid<glm::vec4>(lua_State * vm, const int index)
-{ return LuaVec4::valid(vm, index); }
+{ return LuaNumber4::valid(vm, index); }
 
 template<> inline glm::vec4 decode<glm::vec4>(lua_State * vm, const int index)
-{ return LuaVec4::decode<glm::vec4>(vm, index); }
+{ return LuaNumber4::decode<glm::vec4>(vm, index); }
+
+using LuaBool    = LuaVal<bool>;
+using LuaNumber  = LuaVal<lua_Number>;
+using LuaInteger = LuaVal<lua_Integer>;
+using LuaString  = LuaVal<const char *>;
+using LuaVec2    = LuaVal<glm::vec2>;
+using LuaVec3    = LuaVal<glm::vec3>;
+using LuaVec4    = LuaVal<glm::vec4>;

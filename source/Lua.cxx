@@ -33,7 +33,7 @@ inline LuaRef warning(lua_State * vm, int errcode) {
     return LuaRef(vm);
 }
 
-LuaRef LuaJIT::loadfile(const char * filename) {
+LuaRef LuaJIT::require(const char * filename) {
     if (auto error = luaL_loadfile(vm, filename))
         return warning(vm, error);
 
@@ -61,7 +61,7 @@ LuaRef LuaJIT::go(const char * filename) {
 
     lua_pop(vm, 1);
 
-    return loadfile(filename);
+    return require(filename);
 }
 
 namespace API {
