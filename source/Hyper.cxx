@@ -261,6 +261,7 @@ void display(GLFWwindow * window) {
     view = glm::translate(view, eye);
 
     voxelShader->activate();
+    glEnable(GL_DEPTH_TEST);
 
     voxelShader->uniform("view", view);
     voxelShader->uniform("projection", projection);
@@ -296,6 +297,7 @@ void display(GLFWwindow * window) {
     { auto [zbuffer, action] = *value; click(origin, zbuffer, action); }
 
     dummyShader->activate();
+    glDisable(GL_DEPTH_TEST);
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     hotbarVao.draw(GL_TRIANGLES);
@@ -581,7 +583,7 @@ void setupGL(GLFWwindow * window, Config & config) {
     glfwMakeContextCurrent(window);
     glewExperimental = GL_TRUE; glewInit();
 
-    glEnable(GL_BLEND); glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
 
     uploadShaders();
     setupShaders(config);
