@@ -532,10 +532,12 @@ auto readText(const char * filepath) {
 
 auto readModelShader(Model model) {
     switch (model) {
-        case Poincaré: return readText("shaders/Model/Poincare.glsl");
-        case Klein:    return readText("shaders/Model/Klein.glsl");
-        case Gans:     return readText("shaders/Model/Gans.glsl");
-        default:       return std::vector(1, '\0');
+        case Poincaré:    return readText("shaders/Model/Poincare.glsl");
+        case Klein:       return readText("shaders/Model/Klein.glsl");
+        case Gans:        return readText("shaders/Model/Gans.glsl");
+        case Equidistant: return readText("shaders/Model/Equidistant.glsl");
+        case Lambert:     return readText("shaders/Model/Lambert.glsl");
+        default:          return std::vector(1, '\0');
     }
 }
 

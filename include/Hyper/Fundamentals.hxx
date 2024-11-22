@@ -29,9 +29,11 @@ template<typename T, int N> using Array² = std::array<std::array<T, N>, N>;
 
 // Various machinery for projections
 enum {
-    Poincaré = 1,
-    Klein    = 2,
-    Gans     = 3
+    Poincaré    = 1,
+    Klein       = 2,
+    Gans        = 3,
+    Equidistant = 4,
+    Lambert     = 5,
 };
 
 struct Model {
@@ -55,6 +57,41 @@ struct Model {
                 return {2 * y₁ / σ, 2 * y₂ / σ};
             }
 
+            // http://www.madore.org/~david/programs/#prog_projections
+            // https://math.stackexchange.com/questions/1407550/what-hyperbolic-space-really-looks-like
+            case Equidistant: {
+                /*
+                         y = (x / |x|) tanh(τ|x|)
+                    →  |y| = (|x| / |x|) tanh(τ|x|) = tanh(τ|x|)
+                    ↔ τ|x| = atanh(|y|)
+                    ↔  |x| = atanh(|y|) / τ
+
+                    That is, x = (y / |y|) |x| = (y / |y|) atanh(|y|) / τ.
+                */
+                auto n = Math::hypot(y₁, y₂);
+
+                auto σ = n > 1e-10 ? Math::atanh(n) / (τ * n) : 0;
+                return {y₁ * σ, y₂ * σ};
+            }
+
+            case Lambert: {
+                /*
+                                   y  = x / √(1 + |x|²)
+                    →            |y|  = |x| / √(1 + |x|²)
+                    ↔            |y|² = |x|² / (1 + |x|²)
+                    ↔ |y|² (1 + |x|²) = |x|²
+                    ↔ |y|² + |x|²|y|² = |x|²
+                    ↔ |x|² (1 − |y|²) = |y|²
+                    ↔            |x|² = |y|² / (1 − |y|²)
+                    ↔        1 + |x|² = (1 − |y|² + |y²|) / (1 − |y|²) = 1 / (1 − |y|²)
+
+                    That is, x = y √(1 + |x|²) = y / √(1 − |y|²).
+                */
+
+                auto σ = Math::sqrt(1 - y₁ * y₁ - y₂ * y₂);
+                return {y₁ / σ, y₂ / σ};
+            }
+
             default: return {};
         }
     }
@@ -71,6 +108,18 @@ struct Model {
 
             case Gans: {
                 auto σ = 1.0 + Math::sqrt(x₁ * x₁ + x₂ * x₂ + 1.0);
+                return {x₁ / σ, x₂ / σ};
+            }
+
+            case Equidistant: {
+                auto n = Math::hypot(x₁, x₂);
+
+                auto σ = n > 1e-10 ? Math::tanh(τ * n) / n : 0;
+                return {x₁ * σ, x₂ * σ};
+            }
+
+            case Lambert: {
+                auto σ = Math::sqrt(1.0 + x₁ * x₁ + x₂ * x₂);
                 return {x₁ / σ, x₂ / σ};
             }
 
