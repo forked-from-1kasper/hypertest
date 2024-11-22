@@ -1,5 +1,8 @@
 #version 330 core
 
+const float pi = 3.1415926535897932384626433832795;
+const float tau = pi * 2.0;
+
 struct Moebius { vec2 a, b, c, d; };
 
 #define norm(z) dot(z, z)
