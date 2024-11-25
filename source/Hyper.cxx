@@ -40,8 +40,7 @@ void drawAim(DummyShader::VAO & vao) {
 
     vao.clear();
 
-    auto wpixel = 1.0 / GLfloat(Game::Window::width);
-    auto hpixel = 1.0 / GLfloat(Game::Window::height);
+    auto wpixel = 1.0 / GLfloat(Window::width), hpixel = 1.0 / GLfloat(Window::height);
 
     vao.push(); vao.emit(glm::vec3(-GLfloat(GUI::aimSize) * wpixel, 0, 0), white, origin, 1.0f);
     vao.push(); vao.emit(glm::vec3(+GLfloat(GUI::aimSize) * wpixel, 0, 0), white, origin, 1.0f);
@@ -71,7 +70,7 @@ void drawHotbar(DummyShader::VAO & vao) {
 
     auto hotbarLength = hotbarSize * (size + gap);
     auto x₀ = -hotbarLength / 2, y₀ = gap - 1;
-    auto T₀ = Game::Registry::sheet.get(0);
+    auto T₀ = Registry::sheet.get(0);
 
     vao.clear();
 
@@ -467,7 +466,7 @@ void setupWindowSize(GLFWwindow * window, int width, int height) {
     glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
     glViewport(0, 0, frameBufferWidth, frameBufferHeight);
 
-    projection = glm::perspective(glm::radians(fov), Game::Window::aspect, near, far);
+    projection = glm::perspective(glm::radians(fov), Window::aspect, near, far);
 
     updateHotbar();
     drawAim(aimVao);
