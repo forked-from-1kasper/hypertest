@@ -4,8 +4,6 @@ namespace Game {
 
 using namespace Fundamentals;
 
-GLFWwindow * window;
-
 namespace Registry {
     Sheet sheet(textureSize, sheetSize);
     NodeRegistry node;

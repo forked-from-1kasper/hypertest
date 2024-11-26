@@ -11,8 +11,6 @@
 enum class Action { Remove, Place };
 
 namespace Game {
-    extern GLFWwindow * window;
-
     namespace Registry {
         extern NodeRegistry node;
         extern Sheet sheet;

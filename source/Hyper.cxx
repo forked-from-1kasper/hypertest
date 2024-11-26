@@ -90,9 +90,10 @@ void drawHotbar(DummyShader::VAO & vao) {
 void updateHotbar() { drawHotbar(hotbarVao); }
 
 Real chunkDiameter(const Real n) {
-    static const auto i = Gyrovector<Real>(Fundamentals::D½, 0);
-    static const auto j = Gyrovector<Real>(0, Fundamentals::D½);
-    static const auto k = Coadd(i, j);
+    using namespace Fundamentals;
+
+    constexpr Gyrovector<Real> i(D½, 0), j(0, D½), k = Coadd(i, j);
+
     return (n * k).abs();
 }
 
@@ -200,20 +201,22 @@ void pollNeighbours() {
     atlas.updateMatrix(player.camera().position.action());
 
     for (size_t k = 0; k < Tesselation::neighbours.size(); k++) {
-        auto G = Game::player.chunk()->isometry() * Tesselation::neighbours[k];
-        Game::atlas.poll(player.camera().position.action(), G);
+        auto G = player.chunk()->isometry() * Tesselation::neighbours[k];
+        atlas.poll(player.camera().position.action(), G);
     }
 
     /*for (size_t i = 0; i < Tesselation::neighbours.size(); i++)
         for (size_t j = 0; j < Tesselation::neighbours.size(); j++) {
-            auto G = Game::player.chunk()->isometry() * Tesselation::neighbours[i] * Tesselation::neighbours[j];
-            Game::atlas.poll(player.camera().position.action(), G);
+            auto G = player.chunk()->isometry() * Tesselation::neighbours[i] * Tesselation::neighbours[j];
+            atlas.poll(player.camera().position.action(), G);
     }*/
 }
 
 void returnToSpawn() {
-    Game::player.teleport(Position(), 5);
-    Game::player.roc(0); pollNeighbours();
+    using namespace Game;
+
+    player.teleport(Position(), 5);
+    player.roc(0); pollNeighbours();
 }
 
 const double saveInterval = 1.0;
@@ -315,7 +318,7 @@ void setupSheet() {
 
     Registry::sheet.pack();
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, Game::Registry::sheet.texture());
+    glBindTexture(GL_TEXTURE_2D, Registry::sheet.texture());
 
     voxelShader->activate();
     voxelShader->uniform("textureSheet", 0);
@@ -648,7 +651,7 @@ int main(int argc, char * argv[]) {
 
     Config config(&luajit, "config.lua");
 
-    window = setupWindow(config);
+    auto window = setupWindow(config);
     setupGL(window, config);
 
     luajit.loadapi();
