@@ -143,17 +143,6 @@ std::optional<std::pair<Chunk *, Gyrovector<Real>>> getNeighbour(const Gyrovecto
     return std::nullopt;
 }
 
-const Real elevationRate = 3.0;
-
-void pressLShift() { if (Game::player.noclip) Game::player.roc(-elevationRate); }
-void releaseLShift() { if (Game::player.noclip) Game::player.roc(0); }
-
-void pressSpace() {
-    if (Game::player.noclip) Game::player.roc(elevationRate);
-    else if (!Game::player.camera().flying) Game::player.jump();
-}
-void releaseSpace() { if (Game::player.noclip) Game::player.roc(0); }
-
 void setBlock(Chunk * C, Rank i, Real L, Rank k, NodeId id) {
     if (C == nullptr || !C->ready() || Chunk::outside(L))
         return;
@@ -210,13 +199,6 @@ void pollNeighbours() {
             auto G = player.chunk()->isometry() * Tesselation::neighbours[i] * Tesselation::neighbours[j];
             atlas.poll(player.camera().position.action(), G);
     }*/
-}
-
-void returnToSpawn() {
-    using namespace Game;
-
-    player.teleport(Position(), 5);
-    player.roc(0); pollNeighbours();
 }
 
 const double saveInterval = 1.0;
@@ -415,45 +397,86 @@ void rotateBlob() {
     player.chunk()->requestRefresh();
 }
 
+const Real elevationRate = 3.0;
+
+inline void pressLShift() { if (Game::player.flymode) Game::player.roc(-elevationRate); }
+inline void releaseLShift() { if (Game::player.flymode) Game::player.roc(0); }
+
+inline void pressSpace() {
+    if (Game::player.flymode) Game::player.roc(elevationRate);
+    else if (!Game::player.camera().flying) Game::player.jump();
+}
+
+inline void releaseSpace() { if (Game::player.flymode) Game::player.roc(0); }
+
+inline void closeWindow(GLFWwindow * window) {
+    glfwSetWindowShouldClose(window, GL_TRUE);
+}
+
+inline void hotbarSelect(size_t slot) {
+    Game::activeSlot = slot;
+    updateHotbar();
+}
+
+inline void returnToSpawn() {
+    using namespace Game;
+
+    player.teleport(Position(), 5);
+    player.roc(0); pollNeighbours();
+}
+
+inline void toggleFlyMode() {
+    using namespace Game;
+
+    player.roc(0);
+    player.flymode = !player.flymode;
+}
+
+inline void toggleNoclip() {
+    using namespace Game;
+
+    player.noclip = !player.noclip;
+}
+
 void keyboardCallback(GLFWwindow * window, int key, int scancode, int action, int mods) {
     using namespace Game;
 
-    if (action == GLFW_PRESS) {
-        switch (key) {
-            case GLFW_KEY_ESCAPE:     glfwSetWindowShouldClose(window, GL_TRUE);     break;
-            case GLFW_KEY_W:          Keyboard::forward  = true;                     break;
-            case GLFW_KEY_S:          Keyboard::backward = true;                     break;
-            case GLFW_KEY_A:          Keyboard::left     = true;                     break;
-            case GLFW_KEY_D:          Keyboard::right    = true;                     break;
-            case GLFW_KEY_O:          returnToSpawn();                               break;
-            case GLFW_KEY_K:          player.roc(0); player.noclip = !player.noclip; break;
-            case GLFW_KEY_SPACE:      Keyboard::space = true; pressSpace();          break;
-            case GLFW_KEY_LEFT_SHIFT: Keyboard::lshift = true; pressLShift();        break;
-            case GLFW_KEY_1:          activeSlot = 0; updateHotbar();                break;
-            case GLFW_KEY_2:          activeSlot = 1; updateHotbar();                break;
-            case GLFW_KEY_3:          activeSlot = 2; updateHotbar();                break;
-            case GLFW_KEY_4:          activeSlot = 3; updateHotbar();                break;
-            case GLFW_KEY_5:          activeSlot = 4; updateHotbar();                break;
-            case GLFW_KEY_6:          activeSlot = 5; updateHotbar();                break;
-            case GLFW_KEY_7:          activeSlot = 6; updateHotbar();                break;
-            case GLFW_KEY_8:          activeSlot = 7; updateHotbar();                break;
-            case GLFW_KEY_9:          activeSlot = 8; updateHotbar();                break;
-            case GLFW_KEY_X:          rotateBlob();                                  break;
-            case GLFW_KEY_C:          copyBlob();                                    break;
-            case GLFW_KEY_V:          pasteBlob();                                   break;
-            case GLFW_KEY_BACKSLASH:  freeMouse(window);                             break;
-        }
+    bool enabled = action != GLFW_RELEASE;
+
+    if (action == GLFW_PRESS || action == GLFW_RELEASE) switch (key) {
+        case GLFW_KEY_W:          Keyboard::forward  = enabled; break;
+        case GLFW_KEY_S:          Keyboard::backward = enabled; break;
+        case GLFW_KEY_A:          Keyboard::left     = enabled; break;
+        case GLFW_KEY_D:          Keyboard::right    = enabled; break;
+        case GLFW_KEY_SPACE:      Keyboard::space    = enabled; break;
+        case GLFW_KEY_LEFT_SHIFT: Keyboard::lshift   = enabled; break;
     }
 
-    if (action == GLFW_RELEASE) {
-        switch (key) {
-            case GLFW_KEY_W:          Keyboard::forward  = false;                  break;
-            case GLFW_KEY_S:          Keyboard::backward = false;                  break;
-            case GLFW_KEY_A:          Keyboard::left     = false;                  break;
-            case GLFW_KEY_D:          Keyboard::right    = false;                  break;
-            case GLFW_KEY_SPACE:      Keyboard::space    = false; releaseSpace();  break;
-            case GLFW_KEY_LEFT_SHIFT: Keyboard::lshift   = false; releaseLShift(); break;
-        }
+    if (action == GLFW_PRESS) switch (key) {
+        case GLFW_KEY_ESCAPE:     closeWindow(window); break;
+        case GLFW_KEY_O:          returnToSpawn();     break;
+        case GLFW_KEY_H:          toggleNoclip();      break;
+        case GLFW_KEY_K:          toggleFlyMode();     break;
+        case GLFW_KEY_1:          hotbarSelect(0);     break;
+        case GLFW_KEY_2:          hotbarSelect(1);     break;
+        case GLFW_KEY_3:          hotbarSelect(2);     break;
+        case GLFW_KEY_4:          hotbarSelect(3);     break;
+        case GLFW_KEY_5:          hotbarSelect(4);     break;
+        case GLFW_KEY_6:          hotbarSelect(5);     break;
+        case GLFW_KEY_7:          hotbarSelect(6);     break;
+        case GLFW_KEY_8:          hotbarSelect(7);     break;
+        case GLFW_KEY_9:          hotbarSelect(8);     break;
+        case GLFW_KEY_X:          rotateBlob();        break;
+        case GLFW_KEY_C:          copyBlob();          break;
+        case GLFW_KEY_V:          pasteBlob();         break;
+        case GLFW_KEY_BACKSLASH:  freeMouse(window);   break;
+        case GLFW_KEY_SPACE:      pressSpace();        break;
+        case GLFW_KEY_LEFT_SHIFT: pressLShift();       break;
+    }
+
+    if (action == GLFW_RELEASE) switch (key) {
+        case GLFW_KEY_SPACE:      releaseSpace();  break;
+        case GLFW_KEY_LEFT_SHIFT: releaseLShift(); break;
     }
 }
 
@@ -486,9 +509,9 @@ GLFWwindow * setupWindow(Config & config) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
+    #ifdef __APPLE__
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    #endif
 
     Window::width  = config.window.width;
     Window::height = config.window.height;
@@ -546,28 +569,32 @@ auto readModelShader(Model model) {
 void uploadShaders() {
     using namespace Game;
 
-    delete voxelShader;
+    {
+        delete voxelShader;
 
-    auto cs₁ = readText("shaders/Voxel/Common.glsl");
-    auto fs₁ = readText("shaders/Voxel/Fragment.glsl");
-    auto vs₁ = readText("shaders/Voxel/Vertex.glsl");
-    auto ms₁ = readModelShader(Render::standard->model);
+        auto cs₁ = readText("shaders/Voxel/Common.glsl");
+        auto fs₁ = readText("shaders/Voxel/Fragment.glsl");
+        auto vs₁ = readText("shaders/Voxel/Vertex.glsl");
+        auto ms₁ = readModelShader(Render::standard->model);
 
-    FragmentShader fragment₁(cs₁.data(), fs₁.data());
-    VertexShader vertex₁(cs₁.data(), vs₁.data(), ms₁.data());
+        FragmentShader fragment₁(cs₁.data(), fs₁.data());
+        VertexShader vertex₁(cs₁.data(), vs₁.data(), ms₁.data());
 
-    voxelShader = new VoxelShader(fragment₁, vertex₁);
+        voxelShader = new VoxelShader(fragment₁, vertex₁);
+    }
 
-    delete dummyShader;
+    {
+        delete dummyShader;
 
-    auto cs₂ = readText("shaders/Dummy/Common.glsl");
-    auto fs₂ = readText("shaders/Dummy/Fragment.glsl");
-    auto vs₂ = readText("shaders/Dummy/Vertex.glsl");
+        auto cs₂ = readText("shaders/Dummy/Common.glsl");
+        auto fs₂ = readText("shaders/Dummy/Fragment.glsl");
+        auto vs₂ = readText("shaders/Dummy/Vertex.glsl");
 
-    FragmentShader fragment₂(cs₂.data(), fs₂.data());
-    VertexShader vertex₂(cs₂.data(), vs₂.data());
+        FragmentShader fragment₂(cs₂.data(), fs₂.data());
+        VertexShader vertex₂(cs₂.data(), vs₂.data());
 
-    dummyShader = new DummyShader(fragment₂, vertex₂);
+        dummyShader = new DummyShader(fragment₂, vertex₂);
+    }
 }
 
 void setupShaders(Config & config) {
@@ -664,6 +691,8 @@ int main(int argc, char * argv[]) {
     setupSheet();
 
     updateHotbar();
+
+    glfwSetTime(0);
 
     while (!glfwWindowShouldClose(window)) {
         display(window);

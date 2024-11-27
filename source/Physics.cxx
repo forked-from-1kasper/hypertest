@@ -48,6 +48,8 @@ glm::vec3 Object::right() const {
 }
 
 bool Entity::stuck(Chunk * C, Rank x, Real y, Rank z) {
+    if (flymode && noclip) return false;
+
     if (C == nullptr || !C->ready()) return false;
 
     auto y₁ = std::floor(y), y₂ = std::floor(y + height);
@@ -111,7 +113,7 @@ bool Entity::moveVertically(const Real dt) {
     constexpr Real vmax = 32.0;
 
     auto γ⁻² = std::clamp<Real>(1 - Math::sqr(_camera.roc / vmax), 0, 1);
-    auto roc = noclip ? _camera.roc : _camera.roc - dt * gravity * std::pow(γ⁻², 1.5);
+    auto roc = flymode ? _camera.roc : _camera.roc - dt * gravity * std::pow(γ⁻², 1.5);
 
     if (jumped) { roc += jumpSpeed; jumped = false; }
 

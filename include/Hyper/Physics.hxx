@@ -65,7 +65,8 @@ private:
 
 public:
     Real eye = 0.0, height = 0.0, walkSpeed = 0.0, jumpSpeed = 0.0, gravity = 0.0;
-    bool noclip = false;
+
+    bool flymode = false, noclip = false;
 
     Entity(Atlas * atlas) : _i(0), _j(0), _atlas(atlas), _chunk(nullptr) {}
 
