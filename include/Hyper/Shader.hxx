@@ -334,9 +334,8 @@ struct VoxelShaderSpec {
     using Index = GLuint;
 
     using Params =
-    List<Attrib<"_texCoord",   Tuple<GLfloat, GLfloat>, GL_FLOAT, 2>,
-         Attrib<"_gyrovector", Gyrovector<GLfloat>,     GL_FLOAT, 2>,
-         Attrib<"_height",     GLfloat,                 GL_FLOAT, 1>>;
+    List<Attrib<"_texCoord", vec2, GL_FLOAT, 2>,
+         Attrib<"_vertex",   vec3, GL_FLOAT, 3>>;
 };
 
 using VoxelShader = ShaderProgram<VoxelShaderSpec>;
@@ -345,10 +344,10 @@ struct DummyShaderSpec {
     using Index = GLuint;
 
     using Params =
-    List<Attrib<"_vertex",    glm::vec3, GL_FLOAT, 3>,
-         Attrib<"_color",     glm::vec4, GL_FLOAT, 4>,
-         Attrib<"_texCoord",  glm::vec2, GL_FLOAT, 2>,
-         Attrib<"_mixFactor", GLfloat,   GL_FLOAT, 1>>;
+    List<Attrib<"_vertex",    vec3,    GL_FLOAT, 3>,
+         Attrib<"_color",     vec4,    GL_FLOAT, 4>,
+         Attrib<"_texCoord",  vec2,    GL_FLOAT, 2>,
+         Attrib<"_mixFactor", GLfloat, GL_FLOAT, 1>>;
 };
 
 using DummyShader = ShaderProgram<DummyShaderSpec>;

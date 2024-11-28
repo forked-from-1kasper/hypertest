@@ -1,9 +1,16 @@
 #pragma once
 
 #include <type_traits>
-//#include <functional>
+
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
 #include <Math/Basic.hxx>
+
+using vec2 = glm::vec2;
+using vec3 = glm::vec3;
+using vec4 = glm::vec4;
 
 template<typename T>
 struct Gyrovector {
@@ -41,7 +48,11 @@ struct Gyrovector {
     constexpr inline auto operator-() const { return Gyrovector<T>(Math::negc(val)); }
     constexpr inline auto operator+() const { return *this; }
 
-    constexpr inline auto translate(const Gyrovector<T> & N) { return N + *this; }
+    constexpr inline auto translate(const Gyrovector<T> & N) const { return N + *this; }
+
+    constexpr inline vec2 v2() const { return vec2(x(), y()); }
+
+    constexpr inline vec3 v3(float h) const { return vec3(x(), y(), h); }
 };
 
 template<typename T> constexpr auto operator+(const Gyrovector<T> & A, const Gyrovector<T> & B)

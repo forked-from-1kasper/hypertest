@@ -21,13 +21,13 @@ namespace GL {
     template<> void uniform<std::complex<double>>(GLuint index, const char * name, const std::complex<double> & value)
     { std::complex<float> z(value.real(), value.imag()); glUniform2fv(glGetUniformLocation(index, name), 1, (GLfloat*) &z); }
 
-    template<> void uniform<glm::vec2>(GLuint index, const char * name, const glm::vec2 & value)
+    template<> void uniform<vec2>(GLuint index, const char * name, const vec2 & value)
     { glUniform2fv(glGetUniformLocation(index, name), 1, glm::value_ptr(value)); }
 
-    template<> void uniform<glm::vec3>(GLuint index, const char * name, const glm::vec3 & value)
+    template<> void uniform<vec3>(GLuint index, const char * name, const vec3 & value)
     { glUniform3fv(glGetUniformLocation(index, name), 1, glm::value_ptr(value)); }
 
-    template<> void uniform<glm::vec4>(GLuint index, const char * name, const glm::vec4 & value)
+    template<> void uniform<vec4>(GLuint index, const char * name, const vec4 & value)
     { glUniform4fv(glGetUniformLocation(index, name), 1, glm::value_ptr(value)); }
 
     template<> void uniform<glm::mat4>(GLuint index, const char * name, const glm::mat4 & value)

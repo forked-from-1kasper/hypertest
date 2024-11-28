@@ -2,8 +2,6 @@
 
 #include <array>
 
-#include <glm/vec3.hpp>
-#include <glm/vec2.hpp>
 #include <glm/glm.hpp>
 #include <gmpxx.h>
 
@@ -128,10 +126,10 @@ struct Model {
     }
 
     inline constexpr auto apply(const Gyrovector<Real> & v) const
-    { auto [x₁, x₂] = apply(v.x(), v.y()); return glm::vec2(x₁, x₂); }
+    { auto [x₁, x₂] = apply(v.x(), v.y()); return vec2(x₁, x₂); }
 
-    inline constexpr auto unapply(const glm::vec3 w) const
-    { auto [x, z] = unapply(w.x, w.z); return glm::vec3(x, w.y, z); }
+    inline constexpr auto unapply(const vec3 w) const
+    { auto [x, z] = unapply(w.x, w.z); return vec3(x, w.y, z); }
 
     inline constexpr auto length(Real value) const
     { auto [x₁, x₂] = apply(value, 0); return Math::hypot(x₁, x₂); }

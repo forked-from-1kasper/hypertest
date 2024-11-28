@@ -1,6 +1,6 @@
 in  vec2  _texCoord;
-in  vec2  _gyrovector;
-in  float _height;
+in  vec3  _vertex;
+
 out vec2  texCoord;
 out float fogFactor;
 
@@ -20,16 +20,10 @@ float getFogFactor(in float d) {
 }
 
 void main() {
-    vec2 gyrovector;
+    vec2 v = applyModel(apply(origin, apply(relative, _vertex.xy)));
+    vec4 vec = view * vec4(v.x, _vertex.z, v.y, 1.0);
 
-    apply(relative, _gyrovector, gyrovector);
-    apply(origin, gyrovector, gyrovector);
-
-    applyModel(gyrovector);
-
-    vec4 vertex = view * vec4(gyrovector.x, _height, gyrovector.y, 1.0);
-
-    gl_Position = projection * vertex;
-    fogFactor   = getFogFactor(length(vertex));
+    gl_Position = projection * vec;
+    fogFactor   = getFogFactor(length(vec));
     texCoord    = _texCoord;
 }

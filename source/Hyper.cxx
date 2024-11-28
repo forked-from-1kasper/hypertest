@@ -28,12 +28,10 @@ DummyShader::VAO aimVao, hotbarVao;
 
 PBO<GLfloat, Action> pbo(GL_DEPTH_COMPONENT, 1, 1);
 
-inline auto vec2(GLfloat x, GLfloat y) { return glm::vec3(x / Game::Window::aspect, y, 0); }
+const auto origin = vec2(0.0f);
 
-const auto origin = glm::vec2(0.0f);
-
-const auto white  = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-const auto black  = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+const auto white  = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+const auto black  = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
 void drawAim(DummyShader::VAO & vao) {
     using namespace Game;
@@ -42,21 +40,23 @@ void drawAim(DummyShader::VAO & vao) {
 
     auto wpixel = 1.0 / GLfloat(Window::width), hpixel = 1.0 / GLfloat(Window::height);
 
-    vao.push(); vao.emit(glm::vec3(-GLfloat(GUI::aimSize) * wpixel, 0, 0), white, origin, 1.0f);
-    vao.push(); vao.emit(glm::vec3(+GLfloat(GUI::aimSize) * wpixel, 0, 0), white, origin, 1.0f);
-    vao.push(); vao.emit(glm::vec3(0, -GLfloat(GUI::aimSize) * hpixel, 0), white, origin, 1.0f);
-    vao.push(); vao.emit(glm::vec3(0, +GLfloat(GUI::aimSize) * hpixel, 0), white, origin, 1.0f);
+    vao.push(); vao.emit(vec3(-GLfloat(GUI::aimSize) * wpixel, 0, 0), white, origin, 1.0f);
+    vao.push(); vao.emit(vec3(+GLfloat(GUI::aimSize) * wpixel, 0, 0), white, origin, 1.0f);
+    vao.push(); vao.emit(vec3(0, -GLfloat(GUI::aimSize) * hpixel, 0), white, origin, 1.0f);
+    vao.push(); vao.emit(vec3(0, +GLfloat(GUI::aimSize) * hpixel, 0), white, origin, 1.0f);
 
     vao.upload(GL_STATIC_DRAW);
 }
 
+inline auto aspect(GLfloat x, GLfloat y) { return vec3(x / Game::Window::aspect, y, 0); }
+
 void drawRectangle(DummyShader::VAO & vao, GLfloat x₀, GLfloat y₀, GLfloat Δx, GLfloat Δy, Texture & T, glm::vec4 color, GLfloat mix) {
     auto index = vao.index();
 
-    vao.emit(vec2(x₀ + 0,  y₀ + 0),  color, glm::vec2(T.left(),  T.up()),   mix);
-    vao.emit(vec2(x₀ + Δx, y₀ + 0),  color, glm::vec2(T.right(), T.up()),   mix);
-    vao.emit(vec2(x₀ + Δx, y₀ + Δy), color, glm::vec2(T.right(), T.down()), mix);
-    vao.emit(vec2(x₀ + 0,  y₀ + Δy), color, glm::vec2(T.left(),  T.down()), mix);
+    vao.emit(aspect(x₀ + 0,  y₀ + 0),  color, vec2(T.left(),  T.up()),   mix);
+    vao.emit(aspect(x₀ + Δx, y₀ + 0),  color, vec2(T.right(), T.up()),   mix);
+    vao.emit(aspect(x₀ + Δx, y₀ + Δy), color, vec2(T.right(), T.down()), mix);
+    vao.emit(aspect(x₀ + 0,  y₀ + Δy), color, vec2(T.left(),  T.down()), mix);
 
     vao.push(index); vao.push(index + 1); vao.push(index + 2);
     vao.push(index); vao.push(index + 2); vao.push(index + 3);
@@ -104,16 +104,16 @@ bool move(Entity & E, const Gyrovector<Real> & v, Real Δt) {
     auto R = E.move(v, Δt); return P || R;
 }
 
-glm::vec3 unproject(const glm::mat4 & view, const glm::mat4 & projection, const GLfloat depth) {
+vec3 unproject(const glm::mat4 & view, const glm::mat4 & projection, const GLfloat depth) {
     auto v = glm::inverse(view) * glm::inverse(projection) * glm::vec4(0.0f, 0.0f, depth, 1.0f);
-    return glm::vec3(v.x / v.w, v.y / v.w, v.z / v.w);
+    return vec3(v.x / v.w, v.y / v.w, v.z / v.w);
 }
 
-glm::vec3 trace(const glm::mat4 & view, const glm::mat4 & projection, const GLfloat zbuffer, const GLfloat H, bool forward) {
+vec3 trace(const glm::mat4 & view, const glm::mat4 & projection, const GLfloat zbuffer, const GLfloat H, bool forward) {
     using namespace Game;
     using namespace Render;
 
-    auto h = glm::vec3(0.0f, H, 0.0f);
+    auto h = vec3(0.0f, H, 0.0f);
 
     auto w₀ = standard->model.unapply(unproject(view, projection, 2.0f * zbuffer - 1.0f));
     auto dist₀ = glm::length(w₀ - h);
@@ -238,10 +238,10 @@ void display(GLFWwindow * window) {
     }
 
     auto direction = player.camera().direction(), right = player.camera().right(), up = glm::cross(right, direction);
-    auto eye = glm::vec3(0.0f, -player.camera().climb - player.eye, 0.0f);
+    auto eye = vec3(0.0f, -player.camera().climb - player.eye, 0.0f);
 
-    view = glm::lookAt(glm::vec3(0.0f), direction, up);
-    view = glm::scale(view, glm::vec3(1.0f, Render::standard->meter, 1.0f));
+    view = glm::lookAt(vec3(0.0f), direction, up);
+    view = glm::scale(view, vec3(1.0f, Render::standard->meter, 1.0f));
     view = glm::translate(view, eye);
 
     voxelShader->activate();

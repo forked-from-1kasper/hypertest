@@ -191,7 +191,9 @@ Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometr
 Chunk::~Chunk() { join(); delete _blob; vao.free(); }
 
 bool Chunk::walkable(Rank x, Real L, Rank z) {
-    if (x >= Fundamentals::chunkSize || z >= Fundamentals::chunkSize) return true;
+    using namespace Fundamentals;
+
+    if (chunkSize <= x || chunkSize <= z) return true;
     return Chunk::outside(L) || (get(x, Level(L), z).id == 0);
 }
 
@@ -200,10 +202,11 @@ using EBO = VoxelShader::EBO;
 
 void drawParallelogram(VBO & vbo, EBO & ebo, Texture & T, const Parallelogram<GLfloat> & P, GLfloat h) {
     auto index = vbo.size();
-    emit(vbo, Tuple(T.left(),  T.up()),   P.A, h); // 1
-    emit(vbo, Tuple(T.right(), T.up()),   P.B, h); // 2
-    emit(vbo, Tuple(T.right(), T.down()), P.C, h); // 3
-    emit(vbo, Tuple(T.left(),  T.down()), P.D, h); // 4
+
+    emit(vbo, vec2(T.left(),  T.up()),   P.A.v3(h)); // + 0
+    emit(vbo, vec2(T.right(), T.up()),   P.B.v3(h)); // + 1
+    emit(vbo, vec2(T.right(), T.down()), P.C.v3(h)); // + 2
+    emit(vbo, vec2(T.left(),  T.down()), P.D.v3(h)); // + 3
 
     ebo.push_back(index); ebo.push_back(index + 1); ebo.push_back(index + 2);
     ebo.push_back(index); ebo.push_back(index + 2); ebo.push_back(index + 3);
@@ -211,10 +214,11 @@ void drawParallelogram(VBO & vbo, EBO & ebo, Texture & T, const Parallelogram<GL
 
 void drawSide(VBO & vbo, EBO & ebo, Texture & T, const Gyrovector<GLfloat> & A, const Gyrovector<GLfloat> & B, GLfloat h₁, GLfloat h₂) {
     auto index = vbo.size();
-    emit(vbo, Tuple(T.right(), T.up()),   A, h₁); // 1
-    emit(vbo, Tuple(T.right(), T.down()), A, h₂); // 2
-    emit(vbo, Tuple(T.left(),  T.down()), B, h₂); // 3
-    emit(vbo, Tuple(T.left(),  T.up()),   B, h₁); // 4
+
+    emit(vbo, vec2(T.right(), T.up()),   A.v3(h₁)); // + 0
+    emit(vbo, vec2(T.right(), T.down()), A.v3(h₂)); // + 1
+    emit(vbo, vec2(T.left(),  T.down()), B.v3(h₂)); // + 2
+    emit(vbo, vec2(T.left(),  T.up()),   B.v3(h₁)); // + 3
 
     ebo.push_back(index); ebo.push_back(index + 1); ebo.push_back(index + 2);
     ebo.push_back(index); ebo.push_back(index + 2); ebo.push_back(index + 3);
@@ -235,9 +239,11 @@ void drawRightParallelogrammicPrism(VBO & vbo, EBO & ebo, Cube & C, Mask m, GLfl
 }
 
 template<typename T> Parallelogram<T> Chunk::parallelogram(Rank i, Rank j) {
+    using namespace Tesselation;
+
     return {
-        Tesselation::corners[i + 0][j + 0], Tesselation::corners[i + 1][j + 0],
-        Tesselation::corners[i + 1][j + 1], Tesselation::corners[i + 0][j + 1]
+        corners[i + 0][j + 0], corners[i + 1][j + 0],
+        corners[i + 1][j + 1], corners[i + 0][j + 1]
     };
 }
 

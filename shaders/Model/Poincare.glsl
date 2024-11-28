@@ -1,1 +1,2 @@
-void applyModel(inout vec2 z) {}
+vec2 applyModel(vec2 z)
+{ return z; }

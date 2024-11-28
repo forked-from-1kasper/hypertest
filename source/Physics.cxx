@@ -31,16 +31,16 @@ void Object::rotate(const Real Δyaw, const Real Δpitch, const Real Δroll) {
     roll  = std::fmod(roll + Δroll, τ);
 }
 
-glm::vec3 Object::direction() const {
-    return glm::vec3(
+vec3 Object::direction() const {
+    return vec3(
         cos(pitch) * sin(yaw),
         sin(pitch),
         cos(pitch) * cos(yaw)
     );
 }
 
-glm::vec3 Object::right() const {
-    return glm::vec3(
+vec3 Object::right() const {
+    return vec3(
         cos(roll) * sin(yaw - τ/4),
         sin(roll),
         cos(roll) * cos(yaw - τ/4)
