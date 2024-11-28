@@ -351,6 +351,3 @@ struct DummyShaderSpec {
 };
 
 using DummyShader = ShaderProgram<DummyShaderSpec>;
-
-template<typename T, typename... Ts> inline void emit(std::vector<T> & vbo, const Ts &... ts)
-{ vbo.push_back(Tuple(ts...)); }

@@ -159,8 +159,6 @@ public:
     inline void set(size_t i, size_t j, size_t k, const Node & node)
     { _dirty = true; _blob->data[i][j][k] = node; }
 
-    template<typename T> static Parallelogram<T> parallelogram(Rank, Rank);
-
     static bool touch(const Gyrovector<Real> &, Rank, Rank);
     static std::pair<Rank, Rank> round(const Gyrovector<Real> &);
 

@@ -197,48 +197,47 @@ bool Chunk::walkable(Rank x, Real L, Rank z) {
     return Chunk::outside(L) || (get(x, Level(L), z).id == 0);
 }
 
-using VBO = VoxelShader::VBO;
-using EBO = VoxelShader::EBO;
+using VAO = VoxelShader::VAO;
 
-void drawParallelogram(VBO & vbo, EBO & ebo, Texture & T, const Parallelogram<GLfloat> & P, GLfloat h) {
-    auto index = vbo.size();
+void drawParallelogram(VAO & vao, Texture & T, const Parallelogram<GLfloat> & P, GLfloat h) {
+    auto index = vao.index();
 
-    emit(vbo, vec2(T.left(),  T.up()),   P.A.v3(h)); // + 0
-    emit(vbo, vec2(T.right(), T.up()),   P.B.v3(h)); // + 1
-    emit(vbo, vec2(T.right(), T.down()), P.C.v3(h)); // + 2
-    emit(vbo, vec2(T.left(),  T.down()), P.D.v3(h)); // + 3
+    vao.emit(vec2(T.left(),  T.up()),   P.A.v3(h)); // + 0
+    vao.emit(vec2(T.right(), T.up()),   P.B.v3(h)); // + 1
+    vao.emit(vec2(T.right(), T.down()), P.C.v3(h)); // + 2
+    vao.emit(vec2(T.left(),  T.down()), P.D.v3(h)); // + 3
 
-    ebo.push_back(index); ebo.push_back(index + 1); ebo.push_back(index + 2);
-    ebo.push_back(index); ebo.push_back(index + 2); ebo.push_back(index + 3);
+    vao.push(index); vao.push(index + 1); vao.push(index + 2);
+    vao.push(index); vao.push(index + 2); vao.push(index + 3);
 }
 
-void drawSide(VBO & vbo, EBO & ebo, Texture & T, const Gyrovector<GLfloat> & A, const Gyrovector<GLfloat> & B, GLfloat h₁, GLfloat h₂) {
-    auto index = vbo.size();
+void drawSide(VAO & vao, Texture & T, const Gyrovector<GLfloat> & A, const Gyrovector<GLfloat> & B, GLfloat h₁, GLfloat h₂) {
+    auto index = vao.index();
 
-    emit(vbo, vec2(T.right(), T.up()),   A.v3(h₁)); // + 0
-    emit(vbo, vec2(T.right(), T.down()), A.v3(h₂)); // + 1
-    emit(vbo, vec2(T.left(),  T.down()), B.v3(h₂)); // + 2
-    emit(vbo, vec2(T.left(),  T.up()),   B.v3(h₁)); // + 3
+    vao.emit(vec2(T.right(), T.up()),   A.v3(h₁)); // + 0
+    vao.emit(vec2(T.right(), T.down()), A.v3(h₂)); // + 1
+    vao.emit(vec2(T.left(),  T.down()), B.v3(h₂)); // + 2
+    vao.emit(vec2(T.left(),  T.up()),   B.v3(h₁)); // + 3
 
-    ebo.push_back(index); ebo.push_back(index + 1); ebo.push_back(index + 2);
-    ebo.push_back(index); ebo.push_back(index + 2); ebo.push_back(index + 3);
+    vao.push(index); vao.push(index + 1); vao.push(index + 2);
+    vao.push(index); vao.push(index + 2); vao.push(index + 3);
 }
 
 struct Mask { bool top : 1, bottom : 1, back : 1, front : 1, left : 1, right : 1; };
 
-void drawRightParallelogrammicPrism(VBO & vbo, EBO & ebo, Cube & C, Mask m, GLfloat h, GLfloat Δh, const Parallelogram<GLfloat> & P) {
+void drawRightParallelogrammicPrism(VAO & vao, Cube & C, Mask m, GLfloat h, GLfloat Δh, const Parallelogram<GLfloat> & P) {
     const auto h₁ = h, h₂ = h + Δh;
 
-    if (m.top)     drawParallelogram(vbo, ebo, C.top, P, h₂);
-    if (m.bottom)  drawParallelogram(vbo, ebo, C.bottom, P.rev(), h₁);
+    if (m.top)     drawParallelogram(vao, C.top, P, h₂);
+    if (m.bottom)  drawParallelogram(vao, C.bottom, P.rev(), h₁);
 
-    if (m.back)  drawSide(vbo, ebo, C.back,  P.B, P.A, h₁, h₂);
-    if (m.right) drawSide(vbo, ebo, C.right, P.C, P.B, h₁, h₂);
-    if (m.front) drawSide(vbo, ebo, C.front, P.D, P.C, h₁, h₂);
-    if (m.left)  drawSide(vbo, ebo, C.left,  P.A, P.D, h₁, h₂);
+    if (m.back)  drawSide(vao, C.back,  P.B, P.A, h₁, h₂);
+    if (m.right) drawSide(vao, C.right, P.C, P.B, h₁, h₂);
+    if (m.front) drawSide(vao, C.front, P.D, P.C, h₁, h₂);
+    if (m.left)  drawSide(vao, C.left,  P.A, P.D, h₁, h₂);
 }
 
-template<typename T> Parallelogram<T> Chunk::parallelogram(Rank i, Rank j) {
+template<typename T> inline Parallelogram<T> parallelogram(Rank i, Rank j) {
     using namespace Tesselation;
 
     return {
@@ -247,13 +246,8 @@ template<typename T> Parallelogram<T> Chunk::parallelogram(Rank i, Rank j) {
     };
 }
 
-template Parallelogram<GLfloat> Chunk::parallelogram(Rank, Rank);
-template Parallelogram<Real>    Chunk::parallelogram(Rank, Rank);
-
-void drawNode(VBO & vbo, EBO & ebo, Cube & C, Mask m, Rank x, Level y, Rank z) {
-    auto P = Chunk::parallelogram<GLfloat>(x, z);
-    drawRightParallelogrammicPrism(vbo, ebo, C, m, GLfloat(y), 1.0f, P);
-}
+void drawNode(VAO & vao, Cube & C, Mask m, Rank x, Level y, Rank z)
+{ drawRightParallelogrammicPrism(vao, C, m, GLfloat(y), 1.0f, parallelogram<GLfloat>(x, z)); }
 
 void Chunk::refresh(NodeRegistry & nodeRegistry) {
     using namespace Fundamentals;
@@ -287,7 +281,7 @@ void Chunk::refresh(NodeRegistry & nodeRegistry) {
 
                     if (nodeRegistry.has(id)) {
                         nodeDef = nodeRegistry.get(id);
-                        drawNode(vao.vertices, vao.indices, nodeDef.cube, m, i, j, k);
+                        drawNode(vao, nodeDef.cube, m, i, j, k);
                     }
                 }
             }
