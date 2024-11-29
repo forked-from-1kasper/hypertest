@@ -13,8 +13,6 @@
 #include <Hyper/Shader.hxx>
 #include <Hyper/Game.hxx>
 
-using namespace std::complex_literals;
-
 void errorCallback(int error, const char * description) {
     fprintf(stderr, "Error: %s\n", description);
 }
@@ -210,6 +208,8 @@ void display(GLFWwindow * window) {
     auto dt = glfwGetTime() - globaltime;
     globaltime += dt; saveTimer += dt;
 
+    using namespace std::complex_literals;
+
     auto dir = 0i;
     if (Keyboard::forward)  dir += +1i;
     if (Keyboard::backward) dir += -1i;
@@ -332,15 +332,15 @@ void freeMouse(GLFWwindow * window) {
 void mouseButtonCallback(GLFWwindow * window, int button, int action, int mods) {
     using namespace Game;
 
-    if (Mouse::grabbed) switch (button) {
-        case GLFW_MOUSE_BUTTON_LEFT: case GLFW_MOUSE_BUTTON_RIGHT: {
-            if (action == GLFW_PRESS)
-                pbo.issue((button == GLFW_MOUSE_BUTTON_LEFT) ? Action::Remove : Action::Place);
-            break;
+    if (Mouse::grabbed) {
+        if (action == GLFW_PRESS) switch (button) {
+            case GLFW_MOUSE_BUTTON_LEFT:  pbo.issue(Action::Remove); break;
+            case GLFW_MOUSE_BUTTON_RIGHT: pbo.issue(Action::Place);  break;
         }
+    } else if (Window::hovered && Window::focused) {
+        if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_LEFT)
+            grabMouse(window);
     }
-
-    if (Window::hovered && Window::focused && !Mouse::grabbed) grabMouse(window);
 }
 
 void cursorEnterCallback(GLFWwindow * window, int entered) {
