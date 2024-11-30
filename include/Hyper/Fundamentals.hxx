@@ -136,9 +136,6 @@ struct Model {
 };
 
 namespace Fundamentals {
-    constexpr unsigned long textureSize = 16;
-    constexpr unsigned long sheetSize = 1024;
-
     constexpr Level worldTop = 255;
 
     constexpr Rank exterior = 255;

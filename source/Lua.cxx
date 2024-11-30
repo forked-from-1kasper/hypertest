@@ -75,12 +75,28 @@ namespace API {
         auto id = size_t(luaL_checkinteger(vm, 2));
 
         if (id < Game::hotbarSize) Game::hotbar[index] = id;
+
         return 0;
     }
 
     int attachTexture(lua_State * vm) {
-        auto filename = luaL_checkstring(vm, 2);
-        auto retval = Game::Registry::sheet.attach(filename);
+        using namespace Game::Registry;
+
+        lua_Integer rgba = luaL_checkinteger(vm, 2);
+
+        int r = (rgba >> 24) & 0xFF;
+        int g = (rgba >> 16) & 0xFF;
+        int b = (rgba >>  8) & 0xFF;
+        int a = (rgba >>  0) & 0xFF;
+
+        vec4 color(
+            float(r) / 255.0f,
+            float(g) / 255.0f,
+            float(b) / 255.0f,
+            float(a) / 255.0f
+        );
+
+        auto retval = sheet.attach(color);
 
         lua_pushnumber(vm, retval);
         return 1;

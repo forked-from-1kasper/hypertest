@@ -334,8 +334,8 @@ struct FaceShaderSpec {
     using Index = GLuint;
 
     using Params =
-    List<Attrib<"_texCoord", vec2, GL_FLOAT, 2>,
-         Attrib<"_vertex",   vec3, GL_FLOAT, 3>>;
+    List<Attrib<"_color",  vec4, GL_FLOAT, 4>,
+         Attrib<"_vertex", vec3, GL_FLOAT, 3>>;
 };
 
 using FaceShader = ShaderProgram<FaceShaderSpec>;

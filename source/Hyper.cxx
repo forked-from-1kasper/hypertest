@@ -23,7 +23,7 @@ DummyShader * dummyShader = nullptr;
 FaceShader  * faceShader  = nullptr;
 EdgeShader  * edgeShader  = nullptr;
 
-DummyShader::VAO aimVao, hotbarVao;
+DummyShader::VAO aimVao;
 
 PBO<GLfloat, Action> pbo(GL_DEPTH_COMPONENT, 1, 1);
 
@@ -47,46 +47,7 @@ void drawAim(DummyShader::VAO & vao) {
     vao.upload(GL_STATIC_DRAW);
 }
 
-inline auto aspect(GLfloat x, GLfloat y) { return vec3(x / Game::Window::aspect, y, 0); }
-
-void drawRectangle(DummyShader::VAO & vao, GLfloat x₀, GLfloat y₀, GLfloat Δx, GLfloat Δy, Texture & T, glm::vec4 color, GLfloat mix) {
-    auto index = vao.index();
-
-    vao.emit(aspect(x₀ + 0,  y₀ + 0),  color, vec2(T.left(),  T.up()),   mix);
-    vao.emit(aspect(x₀ + Δx, y₀ + 0),  color, vec2(T.right(), T.up()),   mix);
-    vao.emit(aspect(x₀ + Δx, y₀ + Δy), color, vec2(T.right(), T.down()), mix);
-    vao.emit(aspect(x₀ + 0,  y₀ + Δy), color, vec2(T.left(),  T.down()), mix);
-
-    vao.push(index); vao.push(index + 1); vao.push(index + 2);
-    vao.push(index); vao.push(index + 2); vao.push(index + 3);
-}
-
-void drawHotbar(DummyShader::VAO & vao) {
-    using namespace Game;
-
-    const GLfloat size = 0.1f, gap = 0.01f;
-    const auto gray = glm::vec4(0.5f);
-
-    auto hotbarLength = hotbarSize * (size + gap);
-    auto x₀ = -hotbarLength / 2, y₀ = gap - 1;
-    auto T₀ = Registry::sheet.get(0);
-
-    vao.clear();
-
-    for (size_t i = 0; i < hotbarSize; i++) {
-        auto id = hotbar[i]; auto x = x₀ + i * (size + gap), y = y₀, side = size;
-        if (i == activeSlot) { x -= gap/2; y -= gap/2; side += gap; }
-
-        if (id != 0 && Registry::node.has(id)) {
-            auto nodeDef = Registry::node.get(id);
-            drawRectangle(vao, x, y, side, side, nodeDef.cube.front, black, 0.0f);
-        } else drawRectangle(vao, x, y, side, side, T₀, gray, 1.0f);
-    }
-
-    vao.upload(GL_STATIC_DRAW);
-}
-
-void updateHotbar() { drawHotbar(hotbarVao); }
+void updateHotbar() {}
 
 Real chunkDiameter(const Real n) {
     using namespace Fundamentals;
@@ -305,7 +266,6 @@ void display(GLFWwindow * window) {
     dummyShader->activate();
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    hotbarVao.draw(GL_TRIANGLES);
 
     glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
     aimVao.draw(GL_LINES);
@@ -317,20 +277,7 @@ void display(GLFWwindow * window) {
 void setupSheet() {
     using namespace Game;
 
-    glEnable(GL_TEXTURE_2D); glEnable(GL_CULL_FACE);
-
-    Registry::sheet.pack();
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, Registry::sheet.texture());
-
-    faceShader->activate();
-    faceShader->uniform("textureSheet", 0);
-
-    edgeShader->activate();
-    edgeShader->uniform("textureSheet", 0);
-
-    dummyShader->activate();
-    dummyShader->uniform("textureSheet", 0);
+    glEnable(GL_CULL_FACE);
 }
 
 void grabMouse(GLFWwindow * window) {
@@ -669,7 +616,6 @@ void setupGL(GLFWwindow * window, Config & config) {
     dummyShader->activate();
 
     aimVao.initialize();
-    hotbarVao.initialize();
 
     GUI::aimSize = config.gui.aimSize;
     setupWindowSize(window, Window::width, Window::height);
@@ -705,7 +651,6 @@ void setupGame(Config & config) {
 void cleanUp(GLFWwindow * window) {
     pbo.free();
     aimVao.free();
-    hotbarVao.free();
 
     delete dummyShader;
     delete faceShader;

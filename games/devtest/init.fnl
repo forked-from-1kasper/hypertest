@@ -1,6 +1,6 @@
-(local texture₁ (core.register core.TEXTURE (.. core.dirname "/textures/texture1.png")))
-(local texture₂ (core.register core.TEXTURE (.. core.dirname "/textures/texture2.png")))
-(local texture₃ (core.register core.TEXTURE (.. core.dirname "/textures/texture3.png")))
+(local texture₁ (core.register core.TEXTURE 0xEEEEEEFF))
+(local texture₂ (core.register core.TEXTURE 0x00FF00FF))
+(local texture₃ (core.register core.TEXTURE 0x0000FFFF))
 
 (local node₁ (core.register core.NODE {:name "Stuff 1" :textures [texture₁ texture₁ texture₁ texture₁ texture₁ texture₁]}))
 (local node₂ (core.register core.NODE {:name "Stuff 2" :textures [texture₂ texture₂ texture₂ texture₂ texture₂ texture₂]}))

@@ -1,9 +1,7 @@
-in  vec2  texCoord;
+in  vec4  color;
 in  float fogFactor;
 out vec4  fragColor;
 
-uniform sampler2D textureSheet;
-
 void main() {
-    fragColor = mix(texture(textureSheet, texCoord), fog.color, fogFactor);
+    fragColor = mix(color, fog.color, fogFactor);
 }

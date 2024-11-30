@@ -5,7 +5,7 @@ namespace Game {
 using namespace Fundamentals;
 
 namespace Registry {
-    Sheet sheet(textureSize, sheetSize);
+    Sheet sheet;
     NodeRegistry node;
 }
 

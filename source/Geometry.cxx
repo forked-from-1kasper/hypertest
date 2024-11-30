@@ -201,10 +201,10 @@ bool Chunk::walkable(Rank x, Real L, Rank z) {
 void drawParallelogram(FaceShader::VAO & vao, Texture & T, const Parallelogram<GLfloat> & P, GLfloat h) {
     auto index = vao.index();
 
-    vao.emit(vec2(T.left(),  T.up()),   P.A.v3(h)); // + 0
-    vao.emit(vec2(T.right(), T.up()),   P.B.v3(h)); // + 1
-    vao.emit(vec2(T.right(), T.down()), P.C.v3(h)); // + 2
-    vao.emit(vec2(T.left(),  T.down()), P.D.v3(h)); // + 3
+    vao.emit(T.lu(), P.A.v3(h)); // + 0
+    vao.emit(T.ru(), P.B.v3(h)); // + 1
+    vao.emit(T.rd(), P.C.v3(h)); // + 2
+    vao.emit(T.ld(), P.D.v3(h)); // + 3
 
     vao.push(index); vao.push(index + 1); vao.push(index + 2);
     vao.push(index); vao.push(index + 2); vao.push(index + 3);
@@ -213,10 +213,10 @@ void drawParallelogram(FaceShader::VAO & vao, Texture & T, const Parallelogram<G
 void drawSide(FaceShader::VAO & vao, Texture & T, const Gyrovector<GLfloat> & A, const Gyrovector<GLfloat> & B, GLfloat h₁, GLfloat h₂) {
     auto index = vao.index();
 
-    vao.emit(vec2(T.right(), T.up()),   A.v3(h₁)); // + 0
-    vao.emit(vec2(T.right(), T.down()), A.v3(h₂)); // + 1
-    vao.emit(vec2(T.left(),  T.down()), B.v3(h₂)); // + 2
-    vao.emit(vec2(T.left(),  T.up()),   B.v3(h₁)); // + 3
+    vao.emit(T.ru(), A.v3(h₁)); // + 0
+    vao.emit(T.rd(), A.v3(h₂)); // + 1
+    vao.emit(T.ld(), B.v3(h₂)); // + 2
+    vao.emit(T.lu(), B.v3(h₁)); // + 3
 
     vao.push(index); vao.push(index + 1); vao.push(index + 2);
     vao.push(index); vao.push(index + 2); vao.push(index + 3);
