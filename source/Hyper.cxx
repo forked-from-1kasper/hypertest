@@ -238,6 +238,7 @@ void display(GLFWwindow * window) {
 
     glBlendFunc(GL_ONE, GL_ZERO);
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_MULTISAMPLE);
 
     faceShader->activate();
     uploadMVP(faceShader, origin);
@@ -262,6 +263,7 @@ void display(GLFWwindow * window) {
     { auto [zbuffer, action] = *value; click(origin, zbuffer, action); }
 
     glDisable(GL_DEPTH_TEST);
+    glDisable(GL_MULTISAMPLE);
 
     dummyShader->activate();
 
@@ -475,6 +477,8 @@ GLFWwindow * setupWindow(Config & config) {
 
     glfwSetErrorCallback(errorCallback);
     if (!glfwInit()) throw std::runtime_error("glfwInit failure");
+
+    if (config.window.msaa > 0) glfwWindowHint(GLFW_SAMPLES, config.window.msaa);
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);

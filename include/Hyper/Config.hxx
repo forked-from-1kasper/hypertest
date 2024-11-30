@@ -19,6 +19,7 @@ struct Config {
     struct {
         int width  = 800;
         int height = 600;
+        int msaa   = 0;
     } window;
 
     struct {

@@ -11,6 +11,9 @@ Config::Config(LuaJIT * luajit, const char * filename) {
 
             if (LuaInteger height_v = window_v.getitem("height"))
                 window.height = height_v.decode();
+
+            if (LuaInteger msaa_v = window_v.getitem("msaa"))
+                window.msaa = msaa_v.decode();
         }
 
         if (LuaTable camera_v = config.getitem("camera")) {
