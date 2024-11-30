@@ -21,6 +21,7 @@ glm::mat4 view, projection;
 
 DummyShader * dummyShader = nullptr;
 VoxelShader * voxelShader = nullptr;
+EdgeShader  * edgeShader  = nullptr;
 
 DummyShader::VAO aimVao, hotbarVao;
 
@@ -124,14 +125,14 @@ vec3 trace(const glm::mat4 & view, const glm::mat4 & projection, const GLfloat z
 
 std::optional<std::pair<Chunk *, Gyrovector<Real>>> getNeighbour(const Gyrovector<Real> & P) {
     if (Chunk::isInsideOfDomain(P)) {
-        auto Q = Game::player.chunk()->relative().inverse().apply(P);
+        auto Q = Game::player.chunk()->domain().inverse().apply(P);
         return std::optional(std::pair(Game::player.chunk(), Q));
     }
 
     for (size_t k = 0; k < Tesselation::neighbours.size(); k++) {
         auto G = Game::player.chunk()->isometry() * Tesselation::neighbours[k];
         if (auto C = Game::atlas.lookup(G.origin())) {
-            auto Q = C->relative().inverse().apply(P);
+            auto Q = C->domain().inverse().apply(P);
 
             if (Chunk::isInsideOfDomain(Q))
                 return std::optional(std::pair(C, Q));
@@ -199,6 +200,17 @@ void pollNeighbours() {
     }*/
 }
 
+template<ShaderSpec Spec>
+inline void uploadMVP(ShaderProgram<Spec> * shader, Aut𝔻<Real> & origin) {
+    shader->uniform("view", view);
+    shader->uniform("projection", projection);
+
+    shader->uniform("origin.a", origin.a);
+    shader->uniform("origin.b", origin.b);
+    shader->uniform("origin.c", origin.c());
+    shader->uniform("origin.d", origin.d());
+}
+
 const double saveInterval = 1.0;
 
 double globaltime = 0, saveTimer = 0;
@@ -224,6 +236,22 @@ void display(GLFWwindow * window) {
     bool chunkChanged = move(player, velocity, dt);
     if (chunkChanged) pollNeighbours();
 
+    for (auto it = atlas.pool.begin(); it != atlas.pool.end();) {
+        auto chunk = *it;
+
+        if (!chunk->ready()) { it++; continue; }
+
+        if (chunk->needRefresh())
+            chunk->refresh(Registry::node);
+
+        if (Render::distance < chunk->awayness())
+            chunk->unload();
+
+        if (chunk->needUnload() && !chunk->dirty()) {
+            delete chunk; it = atlas.pool.erase(it);
+        } else it++;
+    }
+
     auto origin = player.camera().position.domain().inverse();
 
     if (Mouse::grabbed) {
@@ -244,44 +272,37 @@ void display(GLFWwindow * window) {
     view = glm::scale(view, vec3(1.0f, Render::standard->meter, 1.0f));
     view = glm::translate(view, eye);
 
-    voxelShader->activate();
-    glEnable(GL_DEPTH_TEST);
-
-    voxelShader->uniform("view", view);
-    voxelShader->uniform("projection", projection);
-
-    voxelShader->uniform("origin.a", origin.a);
-    voxelShader->uniform("origin.b", origin.b);
-    voxelShader->uniform("origin.c", origin.c());
-    voxelShader->uniform("origin.d", origin.d());
-
-    glBlendFunc(GL_ONE, GL_ZERO);
-
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    for (auto it = atlas.pool.begin(); it != atlas.pool.end();) {
-        auto chunk = *it;
+    glBlendFunc(GL_ONE, GL_ZERO);
+    glEnable(GL_DEPTH_TEST);
 
-        if (!chunk->ready()) { it++; continue; }
+    voxelShader->activate();
+    uploadMVP(voxelShader, origin);
 
-        if (chunk->needRefresh())
-            chunk->refresh(Registry::node);
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(1.0, 1.0);
 
-        if (chunk->awayness() <= Render::distance)
+    for (auto & chunk : atlas.pool)
+        if (chunk->ready())
             chunk->render(voxelShader);
-        else chunk->unload();
 
-        if (chunk->needUnload() && !chunk->dirty()) {
-            delete chunk; it = atlas.pool.erase(it);
-        } else it++;
-    }
+    glDisable(GL_POLYGON_OFFSET_FILL);
+
+    edgeShader->activate();
+    uploadMVP(edgeShader, origin);
+
+    for (auto & chunk : atlas.pool)
+        if (chunk->ready())
+            chunk->renderEdge(edgeShader);
 
     if (auto value = pbo.read(Window::width/2 - 1, Window::height/2))
     { auto [zbuffer, action] = *value; click(origin, zbuffer, action); }
 
-    dummyShader->activate();
     glDisable(GL_DEPTH_TEST);
+
+    dummyShader->activate();
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     hotbarVao.draw(GL_TRIANGLES);
@@ -304,6 +325,9 @@ void setupSheet() {
 
     voxelShader->activate();
     voxelShader->uniform("textureSheet", 0);
+
+    edgeShader->activate();
+    edgeShader->uniform("textureSheet", 0);
 
     dummyShader->activate();
     dummyShader->uniform("textureSheet", 0);
@@ -569,40 +593,59 @@ auto readModelShader(Model model) {
 void uploadShaders() {
     using namespace Game;
 
+    auto ms = readModelShader(Render::standard->model);
+
     {
         delete voxelShader;
 
-        auto cs₁ = readText("shaders/Voxel/Common.glsl");
-        auto fs₁ = readText("shaders/Voxel/Fragment.glsl");
-        auto vs₁ = readText("shaders/Voxel/Vertex.glsl");
-        auto ms₁ = readModelShader(Render::standard->model);
+        auto cs = readText("shaders/Voxel/Common.glsl");
+        auto fs = readText("shaders/Voxel/Fragment.glsl");
+        auto vs = readText("shaders/Voxel/Vertex.glsl");
 
-        FragmentShader fragment₁(cs₁.data(), fs₁.data());
-        VertexShader vertex₁(cs₁.data(), vs₁.data(), ms₁.data());
+        FragmentShader fragment(cs.data(), fs.data(), ms.data());
+        VertexShader vertex(cs.data(), vs.data(), ms.data());
 
-        voxelShader = new VoxelShader(fragment₁, vertex₁);
+        voxelShader = new VoxelShader(fragment, vertex);
+    }
+
+    {
+        delete edgeShader;
+
+        auto cs = readText("shaders/Voxel/Common.glsl");
+        auto fs = readText("shaders/Voxel/EdgeFragment.glsl");
+        auto vs = readText("shaders/Voxel/EdgeVertex.glsl");
+
+        FragmentShader fragment(cs.data(), fs.data(), ms.data());
+        VertexShader vertex(cs.data(), vs.data(), ms.data());
+
+        edgeShader = new EdgeShader(fragment, vertex);
     }
 
     {
         delete dummyShader;
 
-        auto cs₂ = readText("shaders/Dummy/Common.glsl");
-        auto fs₂ = readText("shaders/Dummy/Fragment.glsl");
-        auto vs₂ = readText("shaders/Dummy/Vertex.glsl");
+        auto cs = readText("shaders/Dummy/Common.glsl");
+        auto fs = readText("shaders/Dummy/Fragment.glsl");
+        auto vs = readText("shaders/Dummy/Vertex.glsl");
 
-        FragmentShader fragment₂(cs₂.data(), fs₂.data());
-        VertexShader vertex₂(cs₂.data(), vs₂.data());
+        FragmentShader fragment(cs.data(), fs.data());
+        VertexShader vertex(cs.data(), vs.data());
 
-        dummyShader = new DummyShader(fragment₂, vertex₂);
+        dummyShader = new DummyShader(fragment, vertex);
     }
 }
 
+template<ShaderSpec Spec>
+inline void uploadFog(ShaderProgram<Spec> * shader, Config & config) {
+    shader->uniform("fog.enabled", config.fog.enabled);
+    shader->uniform("fog.near",    config.fog.near);
+    shader->uniform("fog.far",     config.fog.far);
+    shader->uniform("fog.color",   config.fog.color);
+}
+
 void setupShaders(Config & config) {
-    voxelShader->activate();
-    voxelShader->uniform("fog.enabled", config.fog.enabled);
-    voxelShader->uniform("fog.near",    config.fog.near);
-    voxelShader->uniform("fog.far",     config.fog.far);
-    voxelShader->uniform("fog.color",   config.fog.color);
+    voxelShader->activate(); uploadFog(voxelShader, config);
+    edgeShader->activate(); uploadFog(edgeShader, config);
 }
 
 void setupGL(GLFWwindow * window, Config & config) {
@@ -666,6 +709,7 @@ void cleanUp(GLFWwindow * window) {
 
     delete dummyShader;
     delete voxelShader;
+    delete edgeShader;
 
     glfwDestroyWindow(window);
     glfwTerminate();

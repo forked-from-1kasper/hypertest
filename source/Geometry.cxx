@@ -186,9 +186,10 @@ Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometr
     updateMatrix(origin);
 
     vao.initialize();
+    edges.initialize();
 }
 
-Chunk::~Chunk() { join(); delete _blob; vao.free(); }
+Chunk::~Chunk() { join(); delete _blob; vao.free(); edges.free(); }
 
 bool Chunk::walkable(Rank x, Real L, Rank z) {
     using namespace Fundamentals;
@@ -197,9 +198,7 @@ bool Chunk::walkable(Rank x, Real L, Rank z) {
     return Chunk::outside(L) || (get(x, Level(L), z).id == 0);
 }
 
-using VAO = VoxelShader::VAO;
-
-void drawParallelogram(VAO & vao, Texture & T, const Parallelogram<GLfloat> & P, GLfloat h) {
+void drawParallelogram(VoxelShader::VAO & vao, Texture & T, const Parallelogram<GLfloat> & P, GLfloat h) {
     auto index = vao.index();
 
     vao.emit(vec2(T.left(),  T.up()),   P.A.v3(h)); // + 0
@@ -211,7 +210,7 @@ void drawParallelogram(VAO & vao, Texture & T, const Parallelogram<GLfloat> & P,
     vao.push(index); vao.push(index + 2); vao.push(index + 3);
 }
 
-void drawSide(VAO & vao, Texture & T, const Gyrovector<GLfloat> & A, const Gyrovector<GLfloat> & B, GLfloat h₁, GLfloat h₂) {
+void drawSide(VoxelShader::VAO & vao, Texture & T, const Gyrovector<GLfloat> & A, const Gyrovector<GLfloat> & B, GLfloat h₁, GLfloat h₂) {
     auto index = vao.index();
 
     vao.emit(vec2(T.right(), T.up()),   A.v3(h₁)); // + 0
@@ -225,7 +224,7 @@ void drawSide(VAO & vao, Texture & T, const Gyrovector<GLfloat> & A, const Gyrov
 
 struct Mask { bool top : 1, bottom : 1, back : 1, front : 1, left : 1, right : 1; };
 
-void drawRightParallelogrammicPrism(VAO & vao, Cube & C, Mask m, GLfloat h, GLfloat Δh, const Parallelogram<GLfloat> & P) {
+void drawRightParallelogrammicPrism(VoxelShader::VAO & vao, Cube & C, Mask m, GLfloat h, GLfloat Δh, const Parallelogram<GLfloat> & P) {
     const auto h₁ = h, h₂ = h + Δh;
 
     if (m.top)     drawParallelogram(vao, C.top, P, h₂);
@@ -246,14 +245,88 @@ template<typename T> inline Parallelogram<T> parallelogram(Rank i, Rank j) {
     };
 }
 
-void drawNode(VAO & vao, Cube & C, Mask m, Rank x, Level y, Rank z)
+void drawNode(VoxelShader::VAO & vao, Cube & C, Mask m, Rank x, Level y, Rank z)
 { drawRightParallelogrammicPrism(vao, C, m, GLfloat(y), 1.0f, parallelogram<GLfloat>(x, z)); }
 
-void Chunk::refresh(NodeRegistry & nodeRegistry) {
+void Chunk::emitFaces(NodeRegistry & nodeRegistry) {
     using namespace Fundamentals;
 
+    vao.clear();
+
+    for (int i = 0; i < chunkSize; i++) for (int j = 0; j <= worldTop; j++) for (int k = 0; k < chunkSize; k++) {
+        auto id = get(i, j, k).id;
+
+        if (id == 0) continue;
+
+        Mask mask;
+
+        mask.top    = (j == worldTop)      || (get(i + 0, j + 1, k + 0).id == 0);
+        mask.bottom = (j == 0)             || (get(i + 0, j - 1, k + 0).id == 0);
+        mask.back   = (k == 0)             || (get(i + 0, j + 0, k - 1).id == 0);
+        mask.front  = (k == chunkSize - 1) || (get(i + 0, j + 0, k + 1).id == 0);
+        mask.left   = (i == 0)             || (get(i - 1, j + 0, k + 0).id == 0);
+        mask.right  = (i == chunkSize - 1) || (get(i + 1, j + 0, k + 0).id == 0);
+
+        if (nodeRegistry.has(id)) {
+            auto nodeDef = nodeRegistry.get(id);
+            drawNode(vao, nodeDef.cube, mask, i, j, k);
+        }
+    }
+}
+
+inline bool invisible(bool b₀₀, bool b₀₁, bool b₁₀, bool b₁₁)
+{ return (!b₀₀ && !b₀₁ && !b₁₀ && !b₁₁) ||
+          (b₀₀ &&  b₀₁ &&  b₁₀ &&  b₁₁) ||
+         (!b₀₀ && !b₀₁ &&  b₁₀ &&  b₁₁) ||
+          (b₀₀ &&  b₀₁ && !b₁₀ && !b₁₁) ||
+         (!b₀₀ &&  b₀₁ && !b₁₀ &&  b₁₁) ||
+          (b₀₀ && !b₀₁ &&  b₁₀ && !b₁₁); }
+
+inline void emitLine(EdgeShader::VAO & vao, vec3 && v1, vec3 && v2) {
+    vao.push(); vao.emit(v1);
+    vao.push(); vao.emit(v2);
+}
+
+void Chunk::emitEdges(NodeRegistry &) {
+    using namespace Fundamentals;
+
+    using namespace Tesselation;
+
+    edges.clear();
+
+    for (int i = 0; i <= chunkSize; i++) for (int j = 0; j < worldHeight; j++) for (int k = 0; k <= chunkSize; k++) {
+        bool b₀₀ = (i == 0         || k == 0)         || get(i - 1, j, k - 1).id == 0;
+        bool b₀₁ = (i == 0         || k == chunkSize) || get(i - 1, j, k + 0).id == 0;
+        bool b₁₀ = (i == chunkSize || k == 0)         || get(i + 0, j, k - 1).id == 0;
+        bool b₁₁ = (i == chunkSize || k == chunkSize) || get(i + 0, j, k + 0).id == 0;
+
+        if (!invisible(b₀₀, b₀₁, b₁₀, b₁₁)) emitLine(edges, corners[i][k].v3(j), corners[i][k].v3(j + 1));
+    }
+
+    for (int i = 0; i < chunkSize; i++) for (int j = 0; j <= worldHeight; j++) for (int k = 0; k <= chunkSize; k++) {
+        bool b₀₀ = (j == 0           || k == 0)         || get(i, j - 1, k - 1).id == 0;
+        bool b₀₁ = (j == 0           || k == chunkSize) || get(i, j - 1, k + 0).id == 0;
+        bool b₁₀ = (j == worldHeight || k == 0)         || get(i, j + 0, k - 1).id == 0;
+        bool b₁₁ = (j == worldHeight || k == chunkSize) || get(i, j + 0, k + 0).id == 0;
+
+        if (!invisible(b₀₀, b₀₁, b₁₀, b₁₁)) emitLine(edges, corners[i][k].v3(j), corners[i + 1][k].v3(j));
+    }
+
+    for (int i = 0; i <= chunkSize; i++) for (int j = 0; j <= worldHeight; j++) for (int k = 0; k < chunkSize; k++) {
+        bool b₀₀ = (j == 0           || i == 0)         || get(i - 1, j - 1, k).id == 0;
+        bool b₀₁ = (j == 0           || i == chunkSize) || get(i + 0, j - 1, k).id == 0;
+        bool b₁₀ = (j == worldHeight || i == 0)         || get(i - 1, j + 0, k).id == 0;
+        bool b₁₁ = (j == worldHeight || i == chunkSize) || get(i + 0, j + 0, k).id == 0;
+
+        if (!invisible(b₀₀, b₀₁, b₁₀, b₁₁)) emitLine(edges, corners[i][k].v3(j), corners[i][k + 1].v3(j));
+    }
+}
+
+void Chunk::refresh(NodeRegistry & nodeRegistry) {
     if (needUpdateVAO) {
         vao.upload(GL_DYNAMIC_DRAW);
+        edges.upload(GL_DYNAMIC_DRAW);
+
         needUpdateVAO = false;
         _needRefresh  = false;
         return;
@@ -261,33 +334,9 @@ void Chunk::refresh(NodeRegistry & nodeRegistry) {
 
     if (working()) return; _working = true;
 
-    Rank i = 0, k = 0; Level j = 0; NodeDef nodeDef; Mask m; NodeId id = 0;
-    worker = std::async(std::launch::async, [&nodeRegistry, i, j, k, nodeDef, m, id, this]() mutable {
-        vao.clear();
-
-        for (j = 0; true; j++) {
-            for (k = 0; k < chunkSize; k++) {
-                for (i = 0; i < chunkSize; i++) {
-                    id = get(i, j, k).id;
-
-                    if (id == 0) continue; // don’t draw air
-
-                    m.top    = (j == worldTop)      || (get(i + 0, j + 1, k + 0).id == 0);
-                    m.bottom = (j == 0)             || (get(i + 0, j - 1, k + 0).id == 0);
-                    m.back   = (k == 0)             || (get(i + 0, j + 0, k - 1).id == 0);
-                    m.front  = (k == chunkSize - 1) || (get(i + 0, j + 0, k + 1).id == 0);
-                    m.left   = (i == 0)             || (get(i - 1, j + 0, k + 0).id == 0);
-                    m.right  = (i == chunkSize - 1) || (get(i + 1, j + 0, k + 0).id == 0);
-
-                    if (nodeRegistry.has(id)) {
-                        nodeDef = nodeRegistry.get(id);
-                        drawNode(vao, nodeDef.cube, m, i, j, k);
-                    }
-                }
-            }
-
-            if (j == worldTop) break;
-        }
+    worker = std::async(std::launch::async, [&nodeRegistry, this]() mutable {
+        emitFaces(nodeRegistry);
+        emitEdges(nodeRegistry);
 
         needUpdateVAO = true;
         _working = false;
@@ -295,18 +344,25 @@ void Chunk::refresh(NodeRegistry & nodeRegistry) {
 }
 
 void Chunk::updateMatrix(const Fuchsian<Integer> & origin) {
-    _relative = (origin.inverse() * _isometry).field<Real>();
-    _relative.normalize(); _awayness = _relative.origin().abs();
+    _domain = (origin.inverse() * _isometry).field<Real>();
+    _domain.normalize();
+
+    _awayness = _domain.origin().abs();
 }
 
-void Chunk::render(VoxelShader * shader) {
-    shader->uniform("relative.a", _relative.a);
-    shader->uniform("relative.b", _relative.b);
-    shader->uniform("relative.c", _relative.c);
-    shader->uniform("relative.d", _relative.d);
-
-    vao.draw(GL_TRIANGLES);
+template<ShaderSpec Spec>
+inline void uploadDomain(Chunk * chunk, ShaderProgram<Spec> * shader) {
+    shader->uniform("domain.a", chunk->domain().a);
+    shader->uniform("domain.b", chunk->domain().b);
+    shader->uniform("domain.c", chunk->domain().c);
+    shader->uniform("domain.d", chunk->domain().d);
 }
+
+void Chunk::render(VoxelShader * shader)
+{ uploadDomain(this, shader); vao.draw(GL_TRIANGLES); }
+
+void Chunk::renderEdge(EdgeShader * shader)
+{ uploadDomain(this, shader); edges.draw(GL_LINES); }
 
 bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {
     const auto & A = Tesselation::corners[i + 0][j + 0];

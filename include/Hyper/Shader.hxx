@@ -340,6 +340,15 @@ struct VoxelShaderSpec {
 
 using VoxelShader = ShaderProgram<VoxelShaderSpec>;
 
+struct EdgeShaderSpec {
+    using Index = GLuint;
+
+    using Params =
+    List<Attrib<"_vertex", vec3, GL_FLOAT, 3>>;
+};
+
+using EdgeShader = ShaderProgram<EdgeShaderSpec>;
+
 struct DummyShaderSpec {
     using Index = GLuint;
 

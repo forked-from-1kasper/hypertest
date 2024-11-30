@@ -108,10 +108,11 @@ class Chunk; using ChunkOperator = Chunk *(Chunk *);
 
 class Chunk {
 private:
-    Fuchsian<Integer> _isometry; Möbius<Real> _relative; Real _awayness; // used for drawing
+    Fuchsian<Integer> _isometry; Möbius<Real> _domain; Real _awayness; // used for drawing
     Gaussian²<Integer> _pos; // used for indexing, should be equal to `isometry.origin()`
 
-    bool _working = false; std::future<void> worker; VoxelShader::VAO vao;
+    bool _working = false; std::future<void> worker;
+    VoxelShader::VAO vao; EdgeShader::VAO edges;
 
     bool _ready = false, _dirty = false, _needRefresh = false, _needUnload = false, needUpdateVAO = false;
 
@@ -122,10 +123,14 @@ public:
 
     ~Chunk();
 
+    void emitFaces(NodeRegistry &);
+    void emitEdges(NodeRegistry &);
+
     void updateMatrix(const Fuchsian<Integer> &);
     void refresh(NodeRegistry &);
 
     void render(VoxelShader *);
+    void renderEdge(EdgeShader *);
 
     bool walkable(Rank, Real, Rank);
 
@@ -147,7 +152,7 @@ public:
     inline constexpr auto awayness() const { return _awayness; }
 
     inline const auto isometry() const { return _isometry; }
-    inline const auto relative() const { return _relative; }
+    inline const auto domain()   const { return _domain;   }
     inline const auto pos()      const { return _pos;      }
 
     inline Blob * blob() { if (_blob != nullptr) _dirty = true; return _blob; }
