@@ -185,11 +185,11 @@ Chunk::Chunk(const Fuchsian<Integer> & origin, const Fuchsian<Integer> & isometr
     _pos = isometry.origin();
     updateMatrix(origin);
 
-    vao.initialize();
+    faces.initialize();
     edges.initialize();
 }
 
-Chunk::~Chunk() { join(); delete _blob; vao.free(); edges.free(); }
+Chunk::~Chunk() { join(); delete _blob; faces.free(); edges.free(); }
 
 bool Chunk::walkable(Rank x, Real L, Rank z) {
     using namespace Fundamentals;
@@ -198,7 +198,7 @@ bool Chunk::walkable(Rank x, Real L, Rank z) {
     return Chunk::outside(L) || (get(x, Level(L), z).id == 0);
 }
 
-void drawParallelogram(VoxelShader::VAO & vao, Texture & T, const Parallelogram<GLfloat> & P, GLfloat h) {
+void drawParallelogram(FaceShader::VAO & vao, Texture & T, const Parallelogram<GLfloat> & P, GLfloat h) {
     auto index = vao.index();
 
     vao.emit(vec2(T.left(),  T.up()),   P.A.v3(h)); // + 0
@@ -210,7 +210,7 @@ void drawParallelogram(VoxelShader::VAO & vao, Texture & T, const Parallelogram<
     vao.push(index); vao.push(index + 2); vao.push(index + 3);
 }
 
-void drawSide(VoxelShader::VAO & vao, Texture & T, const Gyrovector<GLfloat> & A, const Gyrovector<GLfloat> & B, GLfloat h₁, GLfloat h₂) {
+void drawSide(FaceShader::VAO & vao, Texture & T, const Gyrovector<GLfloat> & A, const Gyrovector<GLfloat> & B, GLfloat h₁, GLfloat h₂) {
     auto index = vao.index();
 
     vao.emit(vec2(T.right(), T.up()),   A.v3(h₁)); // + 0
@@ -224,7 +224,7 @@ void drawSide(VoxelShader::VAO & vao, Texture & T, const Gyrovector<GLfloat> & A
 
 struct Mask { bool top : 1, bottom : 1, back : 1, front : 1, left : 1, right : 1; };
 
-void drawRightParallelogrammicPrism(VoxelShader::VAO & vao, Cube & C, Mask m, GLfloat h, GLfloat Δh, const Parallelogram<GLfloat> & P) {
+void drawRightParallelogrammicPrism(FaceShader::VAO & vao, Cube & C, Mask m, GLfloat h, GLfloat Δh, const Parallelogram<GLfloat> & P) {
     const auto h₁ = h, h₂ = h + Δh;
 
     if (m.top)     drawParallelogram(vao, C.top, P, h₂);
@@ -245,13 +245,13 @@ template<typename T> inline Parallelogram<T> parallelogram(Rank i, Rank j) {
     };
 }
 
-void drawNode(VoxelShader::VAO & vao, Cube & C, Mask m, Rank x, Level y, Rank z)
+void drawNode(FaceShader::VAO & vao, Cube & C, Mask m, Rank x, Level y, Rank z)
 { drawRightParallelogrammicPrism(vao, C, m, GLfloat(y), 1.0f, parallelogram<GLfloat>(x, z)); }
 
 void Chunk::emitFaces(NodeRegistry & nodeRegistry) {
     using namespace Fundamentals;
 
-    vao.clear();
+    faces.clear();
 
     for (int i = 0; i < chunkSize; i++) for (int j = 0; j <= worldTop; j++) for (int k = 0; k < chunkSize; k++) {
         auto id = get(i, j, k).id;
@@ -269,7 +269,7 @@ void Chunk::emitFaces(NodeRegistry & nodeRegistry) {
 
         if (nodeRegistry.has(id)) {
             auto nodeDef = nodeRegistry.get(id);
-            drawNode(vao, nodeDef.cube, mask, i, j, k);
+            drawNode(faces, nodeDef.cube, mask, i, j, k);
         }
     }
 }
@@ -324,7 +324,7 @@ void Chunk::emitEdges(NodeRegistry &) {
 
 void Chunk::refresh(NodeRegistry & nodeRegistry) {
     if (needUpdateVAO) {
-        vao.upload(GL_DYNAMIC_DRAW);
+        faces.upload(GL_DYNAMIC_DRAW);
         edges.upload(GL_DYNAMIC_DRAW);
 
         needUpdateVAO = false;
@@ -358,10 +358,10 @@ inline void uploadDomain(Chunk * chunk, ShaderProgram<Spec> * shader) {
     shader->uniform("domain.d", chunk->domain().d);
 }
 
-void Chunk::render(VoxelShader * shader)
-{ uploadDomain(this, shader); vao.draw(GL_TRIANGLES); }
+void Chunk::renderFaces(FaceShader * shader)
+{ uploadDomain(this, shader); faces.draw(GL_TRIANGLES); }
 
-void Chunk::renderEdge(EdgeShader * shader)
+void Chunk::renderEdges(EdgeShader * shader)
 { uploadDomain(this, shader); edges.draw(GL_LINES); }
 
 bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {

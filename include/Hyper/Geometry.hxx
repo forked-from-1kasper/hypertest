@@ -112,7 +112,7 @@ private:
     Gaussian²<Integer> _pos; // used for indexing, should be equal to `isometry.origin()`
 
     bool _working = false; std::future<void> worker;
-    VoxelShader::VAO vao; EdgeShader::VAO edges;
+    FaceShader::VAO faces; EdgeShader::VAO edges;
 
     bool _ready = false, _dirty = false, _needRefresh = false, _needUnload = false, needUpdateVAO = false;
 
@@ -126,11 +126,11 @@ public:
     void emitFaces(NodeRegistry &);
     void emitEdges(NodeRegistry &);
 
+    void renderFaces(FaceShader *);
+    void renderEdges(EdgeShader *);
+
     void updateMatrix(const Fuchsian<Integer> &);
     void refresh(NodeRegistry &);
-
-    void render(VoxelShader *);
-    void renderEdge(EdgeShader *);
 
     bool walkable(Rank, Real, Rank);
 

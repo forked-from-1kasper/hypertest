@@ -330,7 +330,7 @@ public:
     }
 };
 
-struct VoxelShaderSpec {
+struct FaceShaderSpec {
     using Index = GLuint;
 
     using Params =
@@ -338,7 +338,7 @@ struct VoxelShaderSpec {
          Attrib<"_vertex",   vec3, GL_FLOAT, 3>>;
 };
 
-using VoxelShader = ShaderProgram<VoxelShaderSpec>;
+using FaceShader = ShaderProgram<FaceShaderSpec>;
 
 struct EdgeShaderSpec {
     using Index = GLuint;

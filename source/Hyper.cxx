@@ -20,7 +20,7 @@ void errorCallback(int error, const char * description) {
 glm::mat4 view, projection;
 
 DummyShader * dummyShader = nullptr;
-VoxelShader * voxelShader = nullptr;
+FaceShader  * faceShader  = nullptr;
 EdgeShader  * edgeShader  = nullptr;
 
 DummyShader::VAO aimVao, hotbarVao;
@@ -278,15 +278,15 @@ void display(GLFWwindow * window) {
     glBlendFunc(GL_ONE, GL_ZERO);
     glEnable(GL_DEPTH_TEST);
 
-    voxelShader->activate();
-    uploadMVP(voxelShader, origin);
+    faceShader->activate();
+    uploadMVP(faceShader, origin);
 
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0, 1.0);
 
     for (auto & chunk : atlas.pool)
         if (chunk->ready())
-            chunk->render(voxelShader);
+            chunk->renderFaces(faceShader);
 
     glDisable(GL_POLYGON_OFFSET_FILL);
 
@@ -295,7 +295,7 @@ void display(GLFWwindow * window) {
 
     for (auto & chunk : atlas.pool)
         if (chunk->ready())
-            chunk->renderEdge(edgeShader);
+            chunk->renderEdges(edgeShader);
 
     if (auto value = pbo.read(Window::width/2 - 1, Window::height/2))
     { auto [zbuffer, action] = *value; click(origin, zbuffer, action); }
@@ -323,8 +323,8 @@ void setupSheet() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, Registry::sheet.texture());
 
-    voxelShader->activate();
-    voxelShader->uniform("textureSheet", 0);
+    faceShader->activate();
+    faceShader->uniform("textureSheet", 0);
 
     edgeShader->activate();
     edgeShader->uniform("textureSheet", 0);
@@ -596,16 +596,16 @@ void uploadShaders() {
     auto ms = readModelShader(Render::standard->model);
 
     {
-        delete voxelShader;
+        delete faceShader;
 
         auto cs = readText("shaders/Voxel/Common.glsl");
-        auto fs = readText("shaders/Voxel/Fragment.glsl");
-        auto vs = readText("shaders/Voxel/Vertex.glsl");
+        auto fs = readText("shaders/Voxel/FaceFragment.glsl");
+        auto vs = readText("shaders/Voxel/FaceVertex.glsl");
 
         FragmentShader fragment(cs.data(), fs.data(), ms.data());
         VertexShader vertex(cs.data(), vs.data(), ms.data());
 
-        voxelShader = new VoxelShader(fragment, vertex);
+        faceShader = new FaceShader(fragment, vertex);
     }
 
     {
@@ -644,7 +644,7 @@ inline void uploadFog(ShaderProgram<Spec> * shader, Config & config) {
 }
 
 void setupShaders(Config & config) {
-    voxelShader->activate(); uploadFog(voxelShader, config);
+    faceShader->activate(); uploadFog(faceShader, config);
     edgeShader->activate(); uploadFog(edgeShader, config);
 }
 
@@ -708,7 +708,7 @@ void cleanUp(GLFWwindow * window) {
     hotbarVao.free();
 
     delete dummyShader;
-    delete voxelShader;
+    delete faceShader;
     delete edgeShader;
 
     glfwDestroyWindow(window);

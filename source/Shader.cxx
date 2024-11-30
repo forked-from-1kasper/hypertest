@@ -34,5 +34,6 @@ namespace GL {
     { glUniformMatrix4fv(glGetUniformLocation(index, name), 1, GL_FALSE, glm::value_ptr(value)); }
 }
 
-template class ShaderProgram<VoxelShaderSpec>;
+template class ShaderProgram<FaceShaderSpec>;
+template class ShaderProgram<EdgeShaderSpec>;
 template class ShaderProgram<DummyShaderSpec>;
