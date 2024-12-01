@@ -34,6 +34,8 @@ namespace Game {
         extern Real       fov, near, far;
         extern Real       distance;
         extern Standard * standard;
+
+        extern vec4 background;
     }
 
     namespace GUI {

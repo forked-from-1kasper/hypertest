@@ -16,3 +16,5 @@
 (core.setHotbar 0 node₂)
 (core.setHotbar 1 node₃)
 (core.setHotbar 8 node₁)
+
+(core.background 1.0 1.0 1.0 1.0)

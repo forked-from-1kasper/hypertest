@@ -11,7 +11,7 @@ return {
     camera = {
         chunkRenderDistance = 5,
         fov                 = 80,
-        near                = 1e-3,
+        near                = 1e-2,
         far                 = 150,
         model               = 3,
     },

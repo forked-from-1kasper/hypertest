@@ -233,7 +233,7 @@ void display(GLFWwindow * window) {
     view = glm::scale(view, vec3(1.0f, Render::standard->meter, 1.0f));
     view = glm::translate(view, eye);
 
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClearColor(Render::background[0], Render::background[1], Render::background[2], Render::background[3]);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glBlendFunc(GL_ONE, GL_ZERO);

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <glm/vec3.hpp>
-
 #include <Math/Fuchsian.hxx>
 #include <Math/AutD.hxx>
 

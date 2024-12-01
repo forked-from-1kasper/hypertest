@@ -146,13 +146,25 @@ namespace API {
 
         return 0;
     }
+
+    static int background(lua_State * vm) {
+        using namespace Game;
+
+        Render::background[0] = luaL_checknumber(vm, 1);
+        Render::background[1] = luaL_checknumber(vm, 2);
+        Render::background[2] = luaL_checknumber(vm, 3);
+        Render::background[3] = luaL_checknumber(vm, 4);
+
+        return 0;
+    }
 }
 
 static const luaL_Reg externs[] = {
-    {"register",  API::attach},
-    {"override",  API::override},
-    {"setHotbar", API::setHotbar},
-    {NULL,        NULL}
+    {"register",   API::attach},
+    {"override",   API::override},
+    {"setHotbar",  API::setHotbar},
+    {"background", API::background},
+    {NULL,         NULL}
 };
 
 void LuaJIT::loadapi() {
