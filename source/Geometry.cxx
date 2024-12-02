@@ -213,10 +213,10 @@ void drawParallelogram(FaceShader::VAO & vao, Texture & T, const Parallelogram<G
 void drawSide(FaceShader::VAO & vao, Texture & T, const Gyrovector<GLfloat> & A, const Gyrovector<GLfloat> & B, GLfloat h₁, GLfloat h₂) {
     auto index = vao.index();
 
-    vao.emit(T.ru(), A.v3(h₁)); // + 0
-    vao.emit(T.rd(), A.v3(h₂)); // + 1
-    vao.emit(T.ld(), B.v3(h₂)); // + 2
-    vao.emit(T.lu(), B.v3(h₁)); // + 3
+    vao.emit(T.rd(), A.v3(h₁)); // + 0
+    vao.emit(T.ru(), A.v3(h₂)); // + 1
+    vao.emit(T.lu(), B.v3(h₂)); // + 2
+    vao.emit(T.ld(), B.v3(h₁)); // + 3
 
     vao.push(index); vao.push(index + 1); vao.push(index + 2);
     vao.push(index); vao.push(index + 2); vao.push(index + 3);

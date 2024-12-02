@@ -9,8 +9,13 @@ class Texture {
     vec4 _lu, _ru, _rd, _ld;
 
 public:
-    inline Texture() {};
-    inline Texture(vec4 & rgba) : _lu(rgba), _ru(rgba), _rd(rgba), _ld(rgba) {};
+    inline Texture() {}
+
+    inline Texture(const vec4 & rgba) :
+    _lu(rgba), _ru(rgba), _rd(rgba), _ld(rgba) {}
+
+    inline Texture(const vec4 & lu, const vec4 & ru, const vec4 & rd, const vec4 & ld) :
+    _lu(lu), _ru(ru), _rd(rd), _ld(ld) {}
 
     inline constexpr auto & lu() { return _lu; }
     inline constexpr auto & ru() { return _ru; }
@@ -23,9 +28,10 @@ private:
     std::vector<Texture> _textures;
 
 public:
-    inline size_t attach(vec4 & rgba) {
+
+    template<typename... Ts> inline size_t attach(const Ts &... ts) {
         size_t index = _textures.size();
-        _textures.emplace_back(rgba);
+        _textures.emplace_back(ts...);
 
         return index;
     }

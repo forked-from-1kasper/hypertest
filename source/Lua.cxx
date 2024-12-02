@@ -79,24 +79,24 @@ namespace API {
         return 0;
     }
 
+    vec4 readRGBA(lua_State * vm, int argn) {
+        lua_Integer rgba = luaL_checkinteger(vm, argn);
+
+        int r = (rgba >> 24) & 0xFF, g = (rgba >> 16) & 0xFF;
+        int b = (rgba >>  8) & 0xFF, a = (rgba >>  0) & 0xFF;
+
+        return vec4(float(r) / 255.0f, float(g) / 255.0f, float(b) / 255.0f, float(a) / 255.0f);
+    }
+
     int attachTexture(lua_State * vm) {
         using namespace Game::Registry;
 
-        lua_Integer rgba = luaL_checkinteger(vm, 2);
+        size_t retval;
 
-        int r = (rgba >> 24) & 0xFF;
-        int g = (rgba >> 16) & 0xFF;
-        int b = (rgba >>  8) & 0xFF;
-        int a = (rgba >>  0) & 0xFF;
-
-        vec4 color(
-            float(r) / 255.0f,
-            float(g) / 255.0f,
-            float(b) / 255.0f,
-            float(a) / 255.0f
-        );
-
-        auto retval = sheet.attach(color);
+        if (lua_gettop(vm) > 2)
+            retval = sheet.attach(readRGBA(vm, 2), readRGBA(vm, 3), readRGBA(vm, 4), readRGBA(vm, 5));
+        else
+            retval = sheet.attach(readRGBA(vm, 2));
 
         lua_pushnumber(vm, retval);
         return 1;
