@@ -7,6 +7,6 @@ void main() {
     vec4 vertex = view * vec4(model(_vertex).xzy, 1.0);
 
     gl_Position = projection * vertex;
-    fogFactor   = getFogFactor(length(vertex));
+    fogFactor   = getFogFactor(length(vertex.xyz / vertex.w));
     color       = _color;
 }
