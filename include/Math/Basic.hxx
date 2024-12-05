@@ -12,8 +12,14 @@ template<typename T> inline constexpr T Tau   = 2.0 * Pi<T>;
 inline constexpr auto ln2 = Ln2<double>, sqrt2 = Sqrt2<double>, π = Pi<double>, τ = Tau<double>;
 
 namespace Math {
+    template<typename T> inline constexpr T abs(T x) {
+        if (std::is_constant_evaluated())
+            return T(0) < x ? x : -x;
+        else
+            return std::abs(x);
+    }
+
     template<typename T> inline constexpr T sqr(T x)  { return x * x; }
-    template<typename T> inline constexpr T abs(T x)  { return x > 0 ? x : -x; }
     template<typename T> inline constexpr T sign(T x) { return (x > 0) - (x < 0); }
 
     template<typename...> struct EqualM;
@@ -31,14 +37,15 @@ namespace Math {
     template<typename... Ts> inline bool samesign(Ts... ts) { return equal((ts < 0)...); }
 
     template<typename T> constexpr T NewtonRaphson(T x, T curr, T prev)
-    { return curr == prev ? curr : NewtonRaphson<T>(x, 0.5 * (curr + x / curr), curr); }
+    { return curr == prev ? curr : NewtonRaphson<T>(x, T(0.5) * (curr + x / curr), curr); }
 
     // https://en.cppreference.com/w/cpp/numeric/math/sqrt (constexpr since C++26)
     template<typename T> inline constexpr T sqrt(T x) {
         if (std::is_constant_evaluated())
             // https://en.wikipedia.org/wiki/Newton%27s_method
             return 0 <= x && x < std::numeric_limits<double>::infinity()
-                 ? NewtonRaphson<T>(x, x, 0) : std::numeric_limits<double>::quiet_NaN();
+                 ? NewtonRaphson<T>(x, x, T(0))
+                 : std::numeric_limits<double>::quiet_NaN();
         else return std::sqrt(x);
     }
 
@@ -49,14 +56,38 @@ namespace Math {
         else return std::hypot(x, y);
     }
 
+    template<typename T> inline constexpr T floor(T x) {
+        if (std::is_constant_evaluated()) {
+            auto y = static_cast<T>(static_cast<intmax_t>(x));
+            return T(0) <= x ? y : x == y ? x : y - T(1);
+        } else return std::floor(x);
+    }
+
+    template<typename T> inline constexpr T ceil(T x) {
+        if (std::is_constant_evaluated()) {
+            auto y = static_cast<T>(static_cast<intmax_t>(x));
+            return x < T(0) ? y : x == y ? x : y + T(1);
+        } else return std::ceil(x);
+    }
+
+    template<typename T> inline constexpr T trunc(T x) {
+        if (std::is_constant_evaluated())
+            return static_cast<T>(static_cast<intmax_t>(x));
+        else
+            return std::trunc(x);
+    }
+
     template<typename T> inline constexpr T modulo(T x, T y) {
         if constexpr(std::is_floating_point<T>()) {
             if (std::is_constant_evaluated())
-                return x - static_cast<long long>(x / y) * y;
+                return x - trunc<T>(x / y) * y;
             else
                 return std::fmod(x, y);
         } else return x % y;
     }
+
+    template<typename T> inline constexpr T remainder(T x, T y)
+    { auto n = abs<T>(y); return x - n * floor<T>(x / n); }
 
     // Just an arbitrary small number, not the actual precision.
     template<typename T> inline constexpr T epsilon = 1e-13;

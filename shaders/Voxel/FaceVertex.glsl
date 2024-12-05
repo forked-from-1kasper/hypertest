@@ -4,7 +4,7 @@ out vec4  color;
 out float fogFactor;
 
 void main() {
-    vec4 vertex = view * vec4(model(_vertex).xzy, 1.0);
+    vec4 vertex = view * model(_vertex, gl_InstanceID);
 
     gl_Position = projection * vertex;
     fogFactor   = getFogFactor(length(vertex.xyz / vertex.w));

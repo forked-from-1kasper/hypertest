@@ -135,7 +135,7 @@ namespace GVA {
     template<size_t stride, NonEmptyList T> inline void bind(GLuint program, size_t index) {
         glBindAttribLocation(program, index, Head<T>::param);
         bind<stride, Tail<T>>(program, index + 1);
-    };
+    }
 
     template<size_t stride, AnyList T> inline void bind(GLuint program)
     { bind<stride, T>(program, 0); }
@@ -205,7 +205,7 @@ public:
         VBO vertices;
         EBO indices;
 
-        void initialize() {
+        inline void initialize() {
             glGenVertexArrays(1, &vao);
             glGenBuffers(1, &vbo);
             glGenBuffers(1, &ebo);
@@ -216,7 +216,7 @@ public:
             attrib();
         }
 
-        void upload(const GLenum usage) {
+        inline void upload(const GLenum usage) {
             glBindVertexArray(vao);
 
             glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -230,12 +230,17 @@ public:
             count = indices.size();
         }
 
-        void draw(const GLenum type) {
+        inline void bindVAO() {
             glBindVertexArray(vao);
             glBindBuffer(GL_ARRAY_BUFFER, vbo);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-            glDrawElements(type, count, indexType, nullptr);
         }
+
+        inline void draw(const GLenum type)
+        { bindVAO(); glDrawElements(type, count, indexType, nullptr); }
+
+        inline void drawInstanced(const GLenum type, GLsizei ninstance)
+        { bindVAO(); glDrawElementsInstanced(type, count, indexType, nullptr, ninstance); }
 
         inline Index index() { return vertices.size(); }
 
@@ -245,12 +250,12 @@ public:
         template<typename... Ts> inline void emit(const Ts & ... ts)
         { vertices.push_back(Tuple(ts...)); }
 
-        void clear() {
+        inline void clear() {
             vertices.clear();
             indices.clear();
         }
 
-        void free() {
+        inline void free() {
             glDeleteBuffers(1, &vbo);
             glDeleteBuffers(1, &ebo);
             glDeleteVertexArrays(1, &vao);

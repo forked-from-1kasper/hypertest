@@ -55,7 +55,7 @@ bool Entity::stuck(Chunk * C, Rank x, Real y, Rank z) {
     auto y₁ = std::floor(y), y₂ = std::floor(y + height);
 
     for (int L = y₁; L <= y₂; L++)
-        if (!Chunk::outside(L) && !C->walkable(x, L, z))
+        if (!C->walkable(x, L, z))
             return true;
 
     return false;
@@ -117,7 +117,7 @@ bool Entity::moveVertically(const Real dt) {
 
     if (jumped) { roc += jumpSpeed; jumped = false; }
 
-    auto L = _camera.climb + dt * roc;
+    auto L = Chunk::clamp(_camera.climb + dt * roc);
 
     if (stuck(_chunk, _i, L, _j)) { _camera.roc = 0; _camera.flying = false; }
     else { _camera.climb = L; _camera.roc = roc; _camera.flying = true; }

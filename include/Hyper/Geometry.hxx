@@ -126,8 +126,8 @@ public:
     void emitFaces(NodeRegistry &);
     void emitEdges(NodeRegistry &);
 
-    void renderFaces(FaceShader *);
-    void renderEdges(EdgeShader *);
+    void renderFaces(FaceShader *, unsigned int);
+    void renderEdges(EdgeShader *, unsigned int);
 
     void updateMatrix(const Fuchsian<Integer> &);
     void refresh(NodeRegistry &);
@@ -170,7 +170,8 @@ public:
     static bool isInsideOfDomain(const Gyrovector<Real> &);
     static std::optional<size_t> matchNeighbour(const Gyrovector<Real> &);
 
-    inline static bool outside(Real L) { return L < 0 || L >= Fundamentals::worldHeight; }
+    static inline Real clamp(Real x)
+    { return Math::remainder<Real>(x, Fundamentals::worldHeight); }
 };
 
 class Atlas {

@@ -31,8 +31,9 @@ namespace Game {
             Standard(const Model m) : meter(m.length(Tesselation::meter)), model(m) {}
         };
 
-        extern Real       fov, near, far;
-        extern Real       distance;
+        extern unsigned int vmax; extern Real hmax;
+
+        extern Real fov, near, far;
         extern Standard * standard;
 
         extern vec4 background;

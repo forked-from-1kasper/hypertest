@@ -104,13 +104,13 @@ std::optional<std::pair<Chunk *, Gyrovector<Real>>> getNeighbour(const Gyrovecto
 }
 
 void setBlock(Chunk * C, Rank i, Real L, Rank k, NodeId id) {
-    if (C == nullptr || !C->ready() || Chunk::outside(L))
+    if (C == nullptr || !C->ready())
         return;
 
     if (i >= Fundamentals::chunkSize || k >= Fundamentals::chunkSize)
         return;
 
-    auto j = Level(std::floor(L));
+    auto j = Level(std::floor(Chunk::clamp(L)));
 
     if (id != 0 && C->get(i, j, k).id != 0)
         return;
@@ -139,6 +139,7 @@ void click(const Aut𝔻<Real> & origin, const GLfloat zbuffer, const Action act
                 if (id != 0 && Game::Registry::node.has(id))
                     setBlock(C, i, v.y, k, id);
             }
+
             if (action == Action::Remove) setBlock(C, i, v.y, k, 0);
         }
     }
@@ -205,7 +206,7 @@ void display(GLFWwindow * window) {
         if (chunk->needRefresh())
             chunk->refresh(Registry::node);
 
-        if (Render::distance < chunk->awayness())
+        if (Render::hmax < chunk->awayness())
             chunk->unload();
 
         if (chunk->needUnload() && !chunk->dirty()) {
@@ -240,6 +241,8 @@ void display(GLFWwindow * window) {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
 
+    unsigned int nvert = 2 * Render::vmax + 1;
+
     faceShader->activate();
     uploadMVP(faceShader, origin);
 
@@ -248,7 +251,7 @@ void display(GLFWwindow * window) {
 
     for (auto & chunk : atlas.pool)
         if (chunk->ready())
-            chunk->renderFaces(faceShader);
+            chunk->renderFaces(faceShader, nvert);
 
     glDisable(GL_POLYGON_OFFSET_FILL);
 
@@ -257,7 +260,7 @@ void display(GLFWwindow * window) {
 
     for (auto & chunk : atlas.pool)
         if (chunk->ready())
-            chunk->renderEdges(edgeShader);
+            chunk->renderEdges(edgeShader, nvert);
 
     if (auto value = pbo.read(Window::width/2 - 1, Window::height/2))
     { auto [zbuffer, action] = *value; click(origin, zbuffer, action); }
@@ -587,7 +590,11 @@ void uploadShaders() {
 }
 
 template<ShaderSpec Spec>
-inline void uploadFog(ShaderProgram<Spec> * shader, Config & config) {
+inline void uploadPrims(ShaderProgram<Spec> * shader, Config & config) {
+    shader->uniform("vrd",         float(config.camera.verticalRenderDistance));
+    shader->uniform("hrd",         float(config.camera.horizontalRenderDistance));
+    shader->uniform("worldHeight", float(Fundamentals::worldHeight));
+
     shader->uniform("fog.enabled", config.fog.enabled);
     shader->uniform("fog.near",    config.fog.near);
     shader->uniform("fog.far",     config.fog.far);
@@ -595,8 +602,8 @@ inline void uploadFog(ShaderProgram<Spec> * shader, Config & config) {
 }
 
 void setupShaders(Config & config) {
-    faceShader->activate(); uploadFog(faceShader, config);
-    edgeShader->activate(); uploadFog(edgeShader, config);
+    faceShader->activate(); uploadPrims(faceShader, config);
+    edgeShader->activate(); uploadPrims(edgeShader, config);
 }
 
 void setupGL(GLFWwindow * window, Config & config) {
@@ -630,9 +637,21 @@ void setupGL(GLFWwindow * window, Config & config) {
 Chunk * buildFloor(Chunk * chunk) {
     using namespace Fundamentals;
 
-    for (size_t i = 0; i < chunkSize; i++)
+    /*for (size_t i = 0; i < chunkSize; i++)
         for (size_t j = 0; j < chunkSize; j++)
-            chunk->set(i, 0, j, {1});
+            chunk->set(i, 0, j, {1});*/
+
+    for (size_t i = 0; i < chunkSize; i++) {
+        chunk->set(i, 0, 6, {1});
+        chunk->set(i, 0, 7, {1});
+        chunk->set(i, 0, 8, {1});
+        chunk->set(i, 0, 9, {1});
+
+        chunk->set(6, 0, i, {1});
+        chunk->set(7, 0, i, {1});
+        chunk->set(8, 0, i, {1});
+        chunk->set(9, 0, i, {1});
+    }
 
     return chunk;
 }
@@ -642,7 +661,9 @@ void setupGame(Config & config) {
     using namespace Game;
 
     atlas.generator = &buildFloor;
-    Render::distance = chunkDiameter(config.camera.chunkRenderDistance);
+
+    Render::vmax = config.camera.verticalRenderDistance;
+    Render::hmax = chunkDiameter(config.camera.horizontalRenderDistance);
 
     atlas.poll(Tesselation::I, Tesselation::I);
 

@@ -24,8 +24,12 @@ uniform mat4 view;
 uniform Moebius domain;
 uniform Moebius origin;
 
-vec3 model(vec3 v)
-{ return vec3(applyModel(apply(origin, apply(domain, v.xy))), v.z); }
+uniform float hrd, vrd, worldHeight;
+
+vec4 model(vec3 v, int iid) {
+    vec2 w = applyModel(apply(origin, apply(domain, v.xy)));
+    return vec4(w.x, v.z + (iid - vrd) * worldHeight, w.y, 1.0);
+}
 
 struct Fog { bool enabled; vec4 color; float near, far; };
 

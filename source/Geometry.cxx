@@ -195,7 +195,7 @@ bool Chunk::walkable(Rank x, Real L, Rank z) {
     using namespace Fundamentals;
 
     if (chunkSize <= x || chunkSize <= z) return true;
-    return Chunk::outside(L) || (get(x, Level(L), z).id == 0);
+    return get(x, Level(Chunk::clamp(L)), z).id == 0;
 }
 
 void drawParallelogram(FaceShader::VAO & vao, Texture & T, const Parallelogram<GLfloat> & P, GLfloat h) {
@@ -358,11 +358,11 @@ inline void uploadDomain(Chunk * chunk, ShaderProgram<Spec> * shader) {
     shader->uniform("domain.d", chunk->domain().d);
 }
 
-void Chunk::renderFaces(FaceShader * shader)
-{ uploadDomain(this, shader); faces.draw(GL_TRIANGLES); }
+void Chunk::renderFaces(FaceShader * shader, unsigned int count)
+{ uploadDomain(this, shader); faces.drawInstanced(GL_TRIANGLES, count); }
 
-void Chunk::renderEdges(EdgeShader * shader)
-{ uploadDomain(this, shader); edges.draw(GL_LINES); }
+void Chunk::renderEdges(EdgeShader * shader, unsigned int count)
+{ uploadDomain(this, shader); edges.drawInstanced(GL_LINES, count); }
 
 bool Chunk::touch(const Gyrovector<Real> & w, Rank i, Rank j) {
     const auto & A = Tesselation::corners[i + 0][j + 0];

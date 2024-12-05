@@ -16,8 +16,9 @@ NodeId hotbar[hotbarSize] = {0};
 size_t activeSlot = 0;
 
 namespace Render {
-    Real       fov, near, far;
-    Real       distance;
+    unsigned int vmax; Real hmax;
+
+    Real fov, near, far;
     Standard * standard;
 
     vec4 background = {1.0f, 1.0f, 1.0f, 1.0f};

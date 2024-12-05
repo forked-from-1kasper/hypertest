@@ -17,8 +17,11 @@ Config::Config(LuaJIT * luajit, const char * filename) {
         }
 
         if (LuaTable camera_v = config.getitem("camera")) {
-            if (LuaNumber crd_v = camera_v.getitem("chunkRenderDistance"))
-                camera.chunkRenderDistance = crd_v.decode();
+            if (LuaInteger vrd_v = camera_v.getitem("verticalRenderDistance"))
+                camera.verticalRenderDistance = vrd_v.decode();
+
+            if (LuaNumber hrd_v = camera_v.getitem("horizontalRenderDistance"))
+                camera.horizontalRenderDistance = hrd_v.decode();
 
             if (LuaNumber fov_v = camera_v.getitem("fov"))
                 camera.fov = fov_v.decode();
