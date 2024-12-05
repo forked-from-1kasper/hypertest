@@ -58,7 +58,7 @@ public:
 
     inline operator bool() const { return !lua_isnil(vm, index); }
 
-    inline void invalidate() { lua_pushnil(vm); lua_replace(vm, index - 1); }
+    inline void invalidate() { lua_pushnil(vm); lua_replace(vm, index); }
 };
 
 template<typename T> class LuaVal : public LuaRef {
