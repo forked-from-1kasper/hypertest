@@ -22,6 +22,10 @@ else
 		override LDFLAGS += -lsqlite3 -lgmpxx -lgmp -lluajit-5.1 -lglfw -lGLEW -lGL -lGLU
 	endif
 
+	ifeq ($(UNAME),FreeBSD)
+		override LDFLAGS += -lsqlite3 -lgmpxx -lgmp -lluajit-5.1 -lglfw -lGLEW -lGL -lGLU
+	endif
+
 	ifeq ($(UNAME),Darwin)
 		override LDFLAGS += -lsqlite3 -lgmpxx -lgmp -lluajit-5.1 -lglfw -lGLEW -framework CoreVideo -framework OpenGL -framework IOKit -framework Cocoa -framework Carbon
 	endif
